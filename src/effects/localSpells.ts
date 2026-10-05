@@ -9,166 +9,225 @@ import { constants } from "../constants";
 
 export const SETUP_MESSAGE_CHANNEL = `${APP_KEY}/setup`;
 export interface ClientSetupMessageData {
-    type: "GET_LOCAL_SPELLS"|"LIST_LOCAL_SPELLS";
-    payload?: string[];
-    source: string;
+  type: "GET_LOCAL_SPELLS" | "LIST_LOCAL_SPELLS";
+  payload?: string[];
+  source: string;
 }
 export interface ServerSetupMessageData {
-    type: "LOCAL_SPELLS"|"LOCAL_SPELLS_LIST";
-    destination: string;
-    localSpells: Record<string, Spell>;
-    localSpellsList: [string, string][];
+  type: "LOCAL_SPELLS" | "LOCAL_SPELLS_LIST";
+  destination: string;
+  localSpells: Record<string, Spell>;
+  localSpellsList: [string, string][];
 }
 
-function getLocalSpellsDifference(roomId: string, spellList: [string, string][]) {
-    const currentSpellListJSON = localStorage.getItem(`${constants.SPELL_LIST_METADATA_KEY}/${roomId}`);
-    const currentSpellList: [string, string][] = JSON.parse(currentSpellListJSON ?? "[]");
+function getLocalSpellsDifference(
+  roomId: string,
+  spellList: [string, string][],
+) {
+  const currentSpellListJSON = localStorage.getItem(
+    `${constants.SPELL_LIST_METADATA_KEY}/${roomId}`,
+  );
+  const currentSpellList: [string, string][] = JSON.parse(
+    currentSpellListJSON ?? "[]",
+  );
 
-    const currentSpellMap = new Map(currentSpellList);
-    const spellMap = new Map(spellList);
+  const currentSpellMap = new Map(currentSpellList);
+  const spellMap = new Map(spellList);
 
-    const newSpells: [string, string][] = [];
-    const deletedSpells: [string, string][] = [];
+  const newSpells: [string, string][] = [];
+  const deletedSpells: [string, string][] = [];
 
-    for (const [key, value] of spellList) {
-        if (!currentSpellMap.has(key) || currentSpellMap.get(key) !== value) {
-            newSpells.push([key, value]);
-        }
+  for (const [key, value] of spellList) {
+    if (!currentSpellMap.has(key) || currentSpellMap.get(key) !== value) {
+      newSpells.push([key, value]);
     }
+  }
 
-    for (const [key, value] of currentSpellList) {
-        if (!spellMap.has(key) || spellMap.get(key) !== value) {
-            deletedSpells.push([key, value]);
-        }
+  for (const [key, value] of currentSpellList) {
+    if (!spellMap.has(key) || spellMap.get(key) !== value) {
+      deletedSpells.push([key, value]);
     }
-    return [newSpells, deletedSpells];
+  }
+  return [newSpells, deletedSpells];
 }
 
 function deleteLocalSpells(roomId: string, spellList: [string, string][]) {
-    const currentSpellListJSON = localStorage.getItem(`${constants.SPELL_LIST_METADATA_KEY}/${roomId}`);
-    const currentSpellList: [string, string][] = JSON.parse(currentSpellListJSON ?? "[]");
-    const newSpellList = currentSpellList.filter(spell => !spellList.map(spell => spell[0]).includes(spell[0]));
-    const newSpellListJSON = JSON.stringify(newSpellList);
-    localStorage.setItem(`${constants.SPELL_LIST_METADATA_KEY}/${roomId}`, newSpellListJSON);
-    for (const spell of spellList) {
-        localStorage.removeItem(`${APP_KEY}/spells/${roomId}/${spell[0]}`);
-    }
+  const currentSpellListJSON = localStorage.getItem(
+    `${constants.SPELL_LIST_METADATA_KEY}/${roomId}`,
+  );
+  const currentSpellList: [string, string][] = JSON.parse(
+    currentSpellListJSON ?? "[]",
+  );
+  const newSpellList = currentSpellList.filter(
+    (spell) => !spellList.map((spell) => spell[0]).includes(spell[0]),
+  );
+  const newSpellListJSON = JSON.stringify(newSpellList);
+  localStorage.setItem(
+    `${constants.SPELL_LIST_METADATA_KEY}/${roomId}`,
+    newSpellListJSON,
+  );
+  for (const spell of spellList) {
+    localStorage.removeItem(`${APP_KEY}/spells/${roomId}/${spell[0]}`);
+  }
 }
 
 function addLocalSpells(roomId: string, spells: Record<string, Spell>) {
-    const spellList = Object.entries(spells).map(([spellIDs, spell]) => [spellIDs, objectHash.sha1(spell)]);
-    const currentSpellListJSON = localStorage.getItem(`${constants.SPELL_LIST_METADATA_KEY}/${roomId}`);
-    const currentSpellList: [string, string][] = JSON.parse(currentSpellListJSON ?? "[]");
-    const currentSpellMap = new Map(currentSpellList);
-    const newSpellList = [...currentSpellList, ...spellList.filter(s => !currentSpellMap.has(s[0]))];
-    const newSpellListJSON = JSON.stringify(newSpellList);
-    localStorage.setItem(`${constants.SPELL_LIST_METADATA_KEY}/${roomId}`, newSpellListJSON);
-    for (const [spellID, spell] of Object.entries(spells)) {
-        localStorage.setItem(`${APP_KEY}/spells/${roomId}/${spellID}`, JSON.stringify(spell));
-    }
+  const spellList = Object.entries(spells).map(([spellIDs, spell]) => [
+    spellIDs,
+    objectHash.sha1(spell),
+  ]);
+  const currentSpellListJSON = localStorage.getItem(
+    `${constants.SPELL_LIST_METADATA_KEY}/${roomId}`,
+  );
+  const currentSpellList: [string, string][] = JSON.parse(
+    currentSpellListJSON ?? "[]",
+  );
+  const currentSpellMap = new Map(currentSpellList);
+  const newSpellList = [
+    ...currentSpellList,
+    ...spellList.filter((s) => !currentSpellMap.has(s[0])),
+  ];
+  const newSpellListJSON = JSON.stringify(newSpellList);
+  localStorage.setItem(
+    `${constants.SPELL_LIST_METADATA_KEY}/${roomId}`,
+    newSpellListJSON,
+  );
+  for (const [spellID, spell] of Object.entries(spells)) {
+    localStorage.setItem(
+      `${APP_KEY}/spells/${roomId}/${spellID}`,
+      JSON.stringify(spell),
+    );
+  }
 }
 
 export function setupPlayerLocalSpells() {
-    const unsubscribe = OBR.broadcast.onMessage(SETUP_MESSAGE_CHANNEL, async message => {
-        const playerID = await OBR.player.getId();
-        const data = message.data as ServerSetupMessageData;
-        if (data.destination !== "all" && data.destination !== playerID) {
-            return;
+  const unsubscribe = OBR.broadcast.onMessage(
+    SETUP_MESSAGE_CHANNEL,
+    async (message) => {
+      const playerID = await OBR.player.getId();
+      const data = message.data as ServerSetupMessageData;
+      if (data.destination !== "all" && data.destination !== playerID) {
+        return;
+      }
+      if (data.type === "LOCAL_SPELLS_LIST") {
+        const [newSpells, deletedSpells] = getLocalSpellsDifference(
+          OBR.room.id,
+          data.localSpellsList,
+        );
+        if (newSpells.length > 0) {
+          OBR.broadcast.sendMessage(
+            SETUP_MESSAGE_CHANNEL,
+            {
+              type: "GET_LOCAL_SPELLS",
+              payload: newSpells.map((spell) => spell[0]),
+            },
+            { destination: "REMOTE" },
+          );
         }
-        if (data.type === "LOCAL_SPELLS_LIST") {
-            const [newSpells, deletedSpells] = getLocalSpellsDifference(OBR.room.id, data.localSpellsList);
-            if (newSpells.length > 0) {
-                OBR.broadcast.sendMessage(
-                    SETUP_MESSAGE_CHANNEL,
-                    {
-                        type: "GET_LOCAL_SPELLS",
-                        payload: newSpells.map(spell => spell[0])
-                    },
-                    { destination: "REMOTE" }
-                );
-            }
-            if (newSpells.length > 0 || deletedSpells.length > 0) {
-                deleteLocalSpells(OBR.room.id, deletedSpells);
-                log_info(`Deleted ${deletedSpells.length} spell(s) (expecting ${newSpells.length} to be added)`);
-            }
+        if (newSpells.length > 0 || deletedSpells.length > 0) {
+          deleteLocalSpells(OBR.room.id, deletedSpells);
+          log_info(
+            `Deleted ${deletedSpells.length} spell(s) (expecting ${newSpells.length} to be added)`,
+          );
         }
-        else if (data.type === "LOCAL_SPELLS") {
-            const nSpells = Object.keys(data.localSpells).length;
-            if (nSpells > 0) {
-                addLocalSpells(OBR.room.id, data.localSpells);
-                log_info(`Added ${nSpells} new spell(s)`);
-            }
+      } else if (data.type === "LOCAL_SPELLS") {
+        const nSpells = Object.keys(data.localSpells).length;
+        if (nSpells > 0) {
+          addLocalSpells(OBR.room.id, data.localSpells);
+          log_info(`Added ${nSpells} new spell(s)`);
         }
-        else {
-            log_warn(`Invalid message type "${data.type}"`);
-        }
-    });
-    OBR.broadcast.sendMessage(
-        SETUP_MESSAGE_CHANNEL,
-        {
-            type: "LIST_LOCAL_SPELLS"
-        },
-        { destination: "REMOTE" }
-    );
+      } else {
+        log_warn(`Invalid message type "${data.type}"`);
+      }
+    },
+  );
+  OBR.broadcast.sendMessage(
+    SETUP_MESSAGE_CHANNEL,
+    {
+      type: "LIST_LOCAL_SPELLS",
+    },
+    { destination: "REMOTE" },
+  );
 
-    return unsubscribe;
+  return unsubscribe;
 }
 
 export function sendSpellsUpdate(destination: string) {
-    const localSpellsListJSON = localStorage.getItem(constants.SPELL_LIST_METADATA_KEY);
-    const localSpellsListWithoutHash = JSON.parse(localSpellsListJSON ?? "[]");
-    const localSpellsList = (localSpellsListWithoutHash as string[]).map(
-        (spellID: string) => [spellID, getSpell(`$.${spellID}`, true)] as [string, Spell|undefined]
-    ).filter(
-        o => o[1] != undefined
-    ).map(
-        ([spellID, spell]) => [spellID, objectHash.sha1(spell!)]
-    );
+  const localSpellsListJSON = localStorage.getItem(
+    constants.SPELL_LIST_METADATA_KEY,
+  );
+  const localSpellsListWithoutHash = JSON.parse(localSpellsListJSON ?? "[]");
+  const localSpellsList = (localSpellsListWithoutHash as string[])
+    .map(
+      (spellID: string) =>
+        [spellID, getSpell(`$.${spellID}`, true)] as [
+          string,
+          Spell | undefined,
+        ],
+    )
+    .filter((o) => o[1] != undefined)
+    .map(([spellID, spell]) => [spellID, objectHash.sha1(spell!)]);
 
-    OBR.broadcast.sendMessage(
-        SETUP_MESSAGE_CHANNEL,
-        {
-            type: "LOCAL_SPELLS_LIST",
-            destination: destination,
-            localSpells: [],
-            localSpellsList
-        },
-        { destination: "REMOTE" }
-    );
+  OBR.broadcast.sendMessage(
+    SETUP_MESSAGE_CHANNEL,
+    {
+      type: "LOCAL_SPELLS_LIST",
+      destination: destination,
+      localSpells: [],
+      localSpellsList,
+    },
+    { destination: "REMOTE" },
+  );
 }
 
 export function setupGMLocalSpells() {
-    const unsubscribe = OBR.broadcast.onMessage(SETUP_MESSAGE_CHANNEL, async message => {
-        const playerConnections = Object.fromEntries((await OBR.party.getPlayers()).map(player => ([player.connectionId, player.id])));
-        const data = message.data as ClientSetupMessageData;
-        if (data.type === "LIST_LOCAL_SPELLS") {
-            log_info(`Client[${playerConnections[message.connectionId]}] asked for a list of spells`);
-            sendSpellsUpdate(playerConnections[message.connectionId]);
+  const unsubscribe = OBR.broadcast.onMessage(
+    SETUP_MESSAGE_CHANNEL,
+    async (message) => {
+      const playerConnections = Object.fromEntries(
+        (await OBR.party.getPlayers()).map((player) => [
+          player.connectionId,
+          player.id,
+        ]),
+      );
+      const data = message.data as ClientSetupMessageData;
+      if (data.type === "LIST_LOCAL_SPELLS") {
+        log_info(
+          `Client[${playerConnections[message.connectionId]}] asked for a list of spells`,
+        );
+        sendSpellsUpdate(playerConnections[message.connectionId]);
+      } else if (
+        data.type === "GET_LOCAL_SPELLS" &&
+        data.payload != undefined
+      ) {
+        const localSpells = Object.fromEntries(
+          data.payload.map((spellID) => [
+            spellID,
+            getSpell(`$.${spellID}`, true),
+          ]),
+        );
+        log_info(
+          `Client[${playerConnections[message.connectionId]}] asked to get`,
+          data.payload,
+        );
+        log_info("Replying with", localSpells);
+        for (const [spellID, spell] of Object.entries(localSpells)) {
+          OBR.broadcast.sendMessage(
+            SETUP_MESSAGE_CHANNEL,
+            {
+              type: "LOCAL_SPELLS",
+              destination: playerConnections[message.connectionId],
+              localSpells: { [spellID]: spell },
+              localSpellsList: [],
+            },
+            { destination: "REMOTE" },
+          );
         }
-        else if (data.type === "GET_LOCAL_SPELLS" && data.payload != undefined) {
-            const localSpells = Object.fromEntries(data.payload.map(spellID => ([
-                spellID,
-                getSpell(`$.${spellID}`, true)
-            ])));
-            log_info(`Client[${playerConnections[message.connectionId]}] asked to get`, data.payload);
-            log_info("Replying with", localSpells);
-            for (const [spellID, spell] of Object.entries(localSpells)) {
-                OBR.broadcast.sendMessage(
-                    SETUP_MESSAGE_CHANNEL,
-                    {
-                        type: "LOCAL_SPELLS",
-                        destination: playerConnections[message.connectionId],
-                        localSpells: { [spellID]: spell },
-                        localSpellsList: []
-                    },
-                    { destination: "REMOTE" }
-                );
-            }
-        }
-        else {
-            log_warn(`Invalid message type "${data.type}"`, data);
-        }
-    });
+      } else {
+        log_warn(`Invalid message type "${data.type}"`, data);
+      }
+    },
+  );
 
-    return unsubscribe;
+  return unsubscribe;
 }

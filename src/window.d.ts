@@ -1,9 +1,9 @@
 import { InteractionRecord } from "./types/misc";
 
-export { };
+export {};
 
 declare global {
-    interface Window {
-        interactionRecord: InteractionRecord;
-    }
+  interface Window {
+    interactionRecord: InteractionRecord;
+  }
 }

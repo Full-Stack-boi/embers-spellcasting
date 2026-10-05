@@ -273,7 +273,7 @@
                 "name": "Length (in cells)",
                 "id": "length",
                 "type": "number",
-                "defaultValue": 5,
+                "defaultValue": 3,
                 "content": {
                     "min": 1
                 }

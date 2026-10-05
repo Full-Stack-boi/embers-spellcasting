@@ -1,0 +1,66 @@
+import type { ManualActionFormula } from "../../../../../types/manualFormula";
+
+export const SOULKNIFE_FORMULAS: Record<string, ManualActionFormula> = {
+  psychicBlades: {
+    id: "embers:rogue:soulknife:psychic-blades",
+    name: "Psychic Blades",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["rogue"],
+    subclass: "soulknife",
+    activationType: "action",
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Psionic Dagger Manifestation",
+        description:
+          "Manifest a blade of psionic energy dealing 1d6 Psychic damage with Finesse and Thrown 60 ft; make a Bonus Action second strike dealing 1d4 Psychic damage.",
+      },
+    ],
+    description:
+      "Manifest shimmering blades of pure psionic energy from your hands.",
+    source: "Player's Handbook (2024), Rogue: Soulknife",
+  },
+
+  psiBolsteredKnack: {
+    id: "embers:rogue:soulknife:psi-bolstered-knack",
+    name: "Psi-Bolstered Knack",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["rogue"],
+    subclass: "soulknife",
+    activationType: "special",
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Psionic Skill Surge",
+        description:
+          "When you fail an ability check using a proficient skill, add a Psionic Talent die to the roll; if you still fail, the die is not expended.",
+      },
+    ],
+    description:
+      "Boost failed skill checks with mental focus without losing psionic dice.",
+    source: "Player's Handbook (2024), Rogue: Soulknife",
+  },
+
+  psychicTeleportation: {
+    id: "embers:rogue:soulknife:psychic-teleportation",
+    name: "Psychic Teleportation",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["rogue"],
+    subclass: "soulknife",
+    activationType: "bonus",
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Blade Blink",
+        description:
+          "Bonus Action throw a psychic blade and teleport up to 10x the roll of a Psionic Talent die to an unoccupied space it reaches.",
+      },
+    ],
+    description:
+      "Hurl a psionic blade through the ether and instantly blink to its landing site.",
+    source: "Player's Handbook (2024), Rogue: Soulknife",
+  },
+};
