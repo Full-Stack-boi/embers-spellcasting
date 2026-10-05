@@ -6,24 +6,33 @@ import { resolve } from "path";
 
 // https://vite.dev/config/
 export default defineConfig({
-    plugins: [
-        react(),
-        raw({
-            match: /\.frag$/,
-        })
-    ],
-    server: {
-        headers: {
-            "Cache-Control": "public, max-age=60"
-        },
-        cors: true
+  plugins: [
+    react(),
+    raw({
+      match: /\.frag$/,
+    }),
+  ],
+  server: {
+    headers: {
+      "Cache-Control": "public, max-age=60",
     },
-    build: {
-        rollupOptions: {
-            input: {
-                main: resolve(__dirname, "index.html"),
-                background: resolve(__dirname, "background.html"),
-            }
-        }
-    }
+    cors: {
+      origin: "https://www.owlbear.rodeo",
+    },
+    proxy: {
+      "/api/ddb": {
+        target: "https://character-service.dndbeyond.com",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/ddb/, ""),
+      },
+    },
+  },
+  build: {
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, "index.html"),
+        background: resolve(__dirname, "background.html"),
+      },
+    },
+  },
 });
