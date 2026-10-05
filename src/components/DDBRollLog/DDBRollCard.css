@@ -1,0 +1,499 @@
+.ddb-roll-card-wrapper {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 12px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    user-select: none;
+    animation: ddbCardSlideIn 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes ddbCardSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px) scale(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.ddb-roll-card-caster {
+    font-size: 13px;
+    font-weight: 600;
+    color: #94a3b8;
+    margin-bottom: 4px;
+    padding-left: 2px;
+    letter-spacing: 0.2px;
+}
+
+.ddb-roll-card {
+    background: linear-gradient(180deg, #131b2a 0%, #0d131f 100%);
+    border: 1.5px solid #2563eb;
+    border-radius: 9px;
+    padding: 10px 14px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55), 0 0 10px rgba(37, 99, 235, 0.15);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+.ddb-roll-card.is-crit {
+    border-color: #eab308;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6), 0 0 14px rgba(234, 179, 8, 0.3);
+}
+
+.ddb-roll-card.is-miss {
+    border-color: #ef4444;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6), 0 0 14px rgba(239, 68, 68, 0.25);
+}
+
+/* Conditional Trigger Highlight */
+.ddb-roll-card.is-condition-trigger {
+    border-color: #a855f7;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6), 0 0 14px rgba(168, 85, 247, 0.35);
+}
+
+.ddb-roll-card.is-condition-trigger .ddb-roll-card-total-num {
+    color: #e9d5ff;
+}
+
+.tag-trigger {
+    color: #c084fc;
+}
+
+/* Header */
+.ddb-roll-card-header {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.ddb-roll-card-title-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.ddb-roll-card-action-name {
+    font-size: 12px;
+    font-weight: 800;
+    color: #f1f5f9;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+}
+
+.ddb-roll-card-tag {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.tag-check {
+    color: #c084fc; /* Purple */
+}
+
+.tag-to-hit,
+.tag-attack {
+    color: #38bdf8; /* Cyan */
+}
+
+.tag-damage {
+    color: #fb923c; /* Warm Orange / Red */
+}
+
+.tag-save {
+    color: #34d399; /* Green */
+}
+
+.tag-spell {
+    color: #e879f9; /* Vibrant Magenta / Curse */
+}
+
+.ddb-roll-card-target-row {
+    font-size: 10px;
+    font-weight: 700;
+    color: #64748b;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+/* Middle calculation row */
+.ddb-roll-card-calc-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2px 0;
+    gap: 6px;
+    width: 100%;
+    min-width: 0;
+}
+
+.ddb-roll-card-left-calc {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.ddb-roll-card-dice-line {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    min-width: 0;
+}
+
+.ddb-roll-card-die-icon {
+    color: #cbd5e1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.ddb-roll-card-breakdown {
+    font-size: 18px;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: -0.2px;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    line-height: 1.25;
+    min-width: 0;
+}
+
+.ddb-roll-card-breakdown.is-long {
+    font-size: 14px;
+    letter-spacing: -0.1px;
+    line-height: 1.2;
+}
+
+.ddb-roll-card-breakdown.is-extra-long {
+    font-size: 12px;
+    letter-spacing: 0;
+    line-height: 1.2;
+}
+
+.ddb-roll-card-formula {
+    font-size: 11px;
+    color: #94a3b8;
+    margin-left: 28px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Divider & equals */
+.ddb-roll-card-divider-wrap {
+    display: flex;
+    align-items: center;
+    padding: 0 6px;
+    height: 38px;
+    flex-shrink: 0;
+}
+
+.ddb-roll-card-vdivider {
+    width: 1px;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.ddb-roll-card-equals {
+    font-size: 18px;
+    font-weight: 600;
+    color: #64748b;
+    margin-left: 6px;
+}
+
+/* Right total */
+.ddb-roll-card-right-total {
+    min-width: 48px;
+    text-align: right;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-shrink: 0;
+}
+
+.ddb-roll-card-total-num {
+    font-size: 30px;
+    font-weight: 800;
+    color: #f8fafc;
+    line-height: 1;
+    letter-spacing: -0.5px;
+    white-space: nowrap;
+}
+
+/* Footer row */
+.ddb-roll-card-footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ddb-roll-card-flame-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.ddb-roll-card-footer-line {
+    flex: 1;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.ddb-roll-card-subtitle {
+    font-size: 11px;
+    font-weight: 600;
+    color: #94a3b8;
+    letter-spacing: 0.2px;
+}
+
+/* Timestamp */
+.ddb-roll-card-timestamp {
+    align-self: flex-end;
+    font-size: 9px;
+    font-weight: 700;
+    color: #64748b;
+    letter-spacing: 0.6px;
+    margin-top: 3px;
+    text-transform: uppercase;
+}
+
+/* ==========================================================================
+   Grouped Multi-Roll Cards (Multi-Beam / Multi-Ray / Multi-Attack)
+   ========================================================================== */
+.ddb-roll-card.is-grouped {
+    gap: 8px;
+    padding: 10px 12px;
+}
+
+.ddb-subroll-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+}
+
+.ddb-subroll-item {
+    background: rgba(15, 23, 42, 0.65);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    border-radius: 6px;
+    padding: 6px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.ddb-subroll-item:hover {
+    background: rgba(15, 23, 42, 0.9);
+    border-color: rgba(59, 130, 246, 0.4);
+}
+
+.ddb-subroll-item.is-crit {
+    border-color: rgba(234, 179, 8, 0.5);
+    background: rgba(45, 35, 15, 0.5);
+}
+
+.ddb-subroll-item.is-miss {
+    border-color: rgba(239, 68, 68, 0.35);
+}
+
+.ddb-subroll-item-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.ddb-subroll-unit-badge {
+    background: rgba(37, 99, 235, 0.25);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.35);
+    border-radius: 3px;
+    padding: 1px 5px;
+    letter-spacing: 0.5px;
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: 9.5px;
+}
+
+.ddb-subroll-target-badge {
+    color: #94a3b8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 160px;
+}
+
+.ddb-subroll-crit-pill {
+    background: rgba(234, 179, 8, 0.2);
+    color: #facc15;
+    border: 1px solid rgba(234, 179, 8, 0.4);
+    border-radius: 3px;
+    padding: 0 4px;
+    font-size: 9px;
+    font-weight: 800;
+    margin-left: auto;
+}
+
+.ddb-subroll-miss-pill {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    border-radius: 3px;
+    padding: 0 4px;
+    font-size: 9px;
+    font-weight: 800;
+    margin-left: auto;
+}
+
+.ddb-subroll-item-body {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 4px;
+    padding: 4px 6px;
+}
+
+.ddb-subroll-cell {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.ddb-subroll-label {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    color: #64748b;
+    text-transform: uppercase;
+}
+
+.ddb-subroll-dmg-type {
+    color: #fb923c;
+    font-weight: 700;
+}
+
+.ddb-subroll-value-row {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    min-width: 0;
+}
+
+.ddb-subroll-total-val {
+    font-size: 16px;
+    font-weight: 800;
+    color: #f8fafc;
+    line-height: 1.1;
+    flex-shrink: 0;
+}
+
+.ddb-subroll-total-val.ddb-dmg-num {
+    color: #fdba74;
+}
+
+.ddb-subroll-breakdown-val {
+    font-size: 10px;
+    color: #94a3b8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.ddb-subroll-divider {
+    width: 1px;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+}
+
+.ddb-subroll-extra-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 1px;
+}
+
+.ddb-subroll-extra-pill {
+    font-size: 9.5px;
+    font-weight: 700;
+    color: #e879f9;
+    background: rgba(168, 85, 247, 0.12);
+    border: 1px solid rgba(168, 85, 247, 0.25);
+    border-radius: 3px;
+    padding: 1px 4px;
+}
+
+.ddb-subroll-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ddb-subroll-footer-info {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.ddb-subroll-footer-label {
+    font-size: 9.5px;
+    font-weight: 800;
+    color: #94a3b8;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.ddb-subroll-footer-total {
+    font-size: 15px;
+    font-weight: 800;
+    color: #f8fafc;
+}
+
+.ddb-subroll-footer-sub {
+    font-size: 9.5px;
+    color: #64748b;
+    font-weight: 700;
+}
+
+.ddb-trigger-btn {
+    margin-left: auto;
+    background: rgba(37, 99, 235, 0.2);
+    border: 1px solid rgba(56, 189, 248, 0.5);
+    color: #38bdf8;
+    border-radius: 4px;
+    padding: 2px 7px;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    transition: all 0.15s ease;
+}
+
+.ddb-trigger-btn:hover {
+    background: rgba(37, 99, 235, 0.4);
+    border-color: #38bdf8;
+    color: #ffffff;
+}

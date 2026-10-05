@@ -1,0 +1,788 @@
+/* ========================================================= */
+/* D&D BEYOND ABILITY CHECKS, SAVES & SKILLS COMPONENT       */
+/* SPACIOUS, RESPONSIVE TABBED DESIGN (SIDEBAR-OPTIMIZED)    */
+/* ========================================================= */
+
+.ddb-checks-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 6px 4px 28px 4px;
+    gap: 10px;
+    background: #0d1117;
+    color: #e5e7eb;
+    font-family: Roboto, "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+    user-select: none;
+    overflow-x: hidden;
+}
+
+/* Custom Scrollbar */
+.ddb-checks-container::-webkit-scrollbar {
+    width: 5px;
+}
+.ddb-checks-container::-webkit-scrollbar-thumb {
+    background: #2a3241;
+    border-radius: 4px;
+}
+
+/* ── Top Header ─────────────────────────────────────────── */
+.ddb-checks-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2px 4px 8px 4px;
+    border-bottom: 1px solid #1f2735;
+    flex-wrap: wrap;
+    gap: 6px;
+    box-sizing: border-box;
+}
+
+.ddb-checks-char-identity {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    min-width: 0;
+}
+
+.ddb-checks-char-name {
+    font-size: 0.92rem;
+    font-weight: 800;
+    color: #f3f4f6;
+    letter-spacing: 0.02em;
+}
+
+.ddb-checks-classes-tag {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #94a3b8;
+    background: #161e2e;
+    border: 1px solid #283548;
+    padding: 1px 5px;
+    border-radius: 4px;
+}
+
+.ddb-checks-prof-badge {
+    font-size: 0.64rem;
+    font-weight: 800;
+    padding: 1px 6px;
+    background: #231215;
+    border: 1px solid #c82d38;
+    color: #fca5a5;
+    border-radius: 4px;
+    letter-spacing: 0.04em;
+}
+
+.ddb-checks-link-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: #241416;
+    border: 1px solid #c82d38;
+    color: #fca5a5;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 130ms ease;
+}
+
+.ddb-checks-link-btn:hover {
+    background: #3b1317;
+    color: #ffffff;
+    border-color: #ef4444;
+}
+
+/* ── Quick Ability Scores Strip ─────────────────────────── */
+.ddb-abilities-strip {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 4px;
+    background: #121722;
+    padding: 5px;
+    border-radius: 7px;
+    border: 1px solid #1e2638;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.ddb-ability-strip-pill {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 1px;
+    background: #182030;
+    border: 1px solid #26334d;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 130ms ease;
+    color: inherit;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.ddb-ability-strip-pill:hover {
+    background: #243048;
+    border-color: #d97706;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+}
+
+.ddb-ability-strip-pill:hover .pill-mod {
+    color: #fbbf24;
+}
+
+.ddb-ability-strip-pill .pill-label {
+    font-size: 0.58rem;
+    font-weight: 800;
+    color: #94a3b8;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.ddb-ability-strip-pill .pill-mod {
+    font-size: 0.9rem;
+    font-weight: 900;
+    color: #f8fafc;
+    line-height: 1.1;
+    margin: 1px 0;
+}
+
+.ddb-ability-strip-pill .pill-score {
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: #64748b;
+}
+
+/* ── Subtabs Navigation Bar ──────────────────────────────── */
+.ddb-checks-nav-tabs {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: #111622;
+    padding: 3px;
+    border-radius: 7px;
+    border: 1px solid #1e2738;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.ddb-checks-nav-btn {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 6px 4px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    color: #94a3b8;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    transition: all 130ms ease;
+    box-sizing: border-box;
+}
+
+.ddb-checks-nav-btn:hover {
+    color: #f1f5f9;
+    background: #182030;
+}
+
+.ddb-checks-nav-btn.active {
+    color: #f8fafc;
+    background: linear-gradient(180deg, #2b3548 0%, #1c2434 100%);
+    border-color: #4b5563;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.ddb-checks-nav-btn .tab-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ddb-checks-nav-btn .nav-badge {
+    background: #0f172a;
+    border: 1px solid #334155;
+    color: #cbd5e1;
+    font-size: 0.6rem;
+    font-weight: 800;
+    padding: 0 5px;
+    border-radius: 8px;
+    min-width: 14px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.ddb-checks-nav-btn.active .nav-badge {
+    background: #7f1d1d;
+    border-color: #c82d38;
+    color: #fca5a5;
+}
+
+/* ── Tab Content Panels ─────────────────────────────────── */
+.ddb-checks-tab-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    box-sizing: border-box;
+    padding-bottom: 20px;
+}
+
+/* ========================================================= */
+/* TAB 1: SAVING THROWS & ABILITY CHECKS                     */
+/* ========================================================= */
+.ddb-section-block {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: #121722;
+    border: 1px solid #1e2638;
+    border-radius: 7px;
+    padding: 8px 10px;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.ddb-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #1f283a;
+    padding-bottom: 5px;
+    box-sizing: border-box;
+}
+
+.ddb-section-title {
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    color: #cbd5e1;
+    text-transform: uppercase;
+}
+
+.ddb-section-hint {
+    font-size: 0.6rem;
+    color: #64748b;
+    font-style: italic;
+}
+
+/* Saving Throws (1-column full width list to prevent horizontal blowout) */
+.ddb-saves-list-full {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.ddb-save-row-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 9px;
+    background: #161d2b;
+    border: 1px solid #233045;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 130ms ease;
+    box-sizing: border-box;
+    width: 100%;
+    gap: 8px;
+}
+
+.ddb-save-row-item:hover {
+    background: #1f293d;
+    border-color: #3b82f6;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.ddb-save-row-item.proficient {
+    background: linear-gradient(90deg, #241317 0%, #161d2b 100%);
+    border-color: #7f1d1d;
+}
+
+.ddb-save-row-item.proficient:hover {
+    background: linear-gradient(90deg, #35171d 0%, #1f293d 100%);
+    border-color: #ef4444;
+}
+
+.ddb-save-row-left {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+    flex: 1;
+}
+
+.ddb-save-full-name {
+    font-size: 0.74rem;
+    font-weight: 800;
+    color: #f1f5f9;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.ddb-save-short-tag {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #94a3b8;
+}
+
+.ddb-save-prof-badge {
+    font-size: 0.54rem;
+    font-weight: 800;
+    padding: 1px 4px;
+    background: #7f1d1d;
+    border: 1px solid #c82d38;
+    color: #fca5a5;
+    border-radius: 3px;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+.ddb-save-row-right {
+    flex-shrink: 0;
+}
+
+.ddb-save-action-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    background: #111722;
+    border: 1px solid #2b3952;
+    border-radius: 5px;
+    color: #f8fafc;
+    font-size: 0.72rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 130ms ease;
+    white-space: nowrap;
+}
+
+.ddb-save-row-item.proficient .ddb-save-action-pill {
+    background: #2a1317;
+    border-color: #991b1b;
+    color: #fecaca;
+}
+
+.ddb-save-action-pill:hover {
+    background: #3b181e;
+    border-color: #ef4444;
+    color: #ffffff;
+    transform: scale(1.04);
+}
+
+/* ========================================================= */
+/* TAB 2: SKILLS                                             */
+/* ========================================================= */
+.ddb-skills-filter-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.ddb-skills-chip-bar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+.ddb-filter-chip {
+    background: #141b27;
+    border: 1px solid #232d3f;
+    color: #94a3b8;
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 120ms ease;
+    white-space: nowrap;
+}
+
+.ddb-filter-chip:hover {
+    background: #1f293d;
+    color: #e2e8f0;
+}
+
+.ddb-filter-chip.active {
+    background: #c82d38;
+    border-color: #ef4444;
+    color: #ffffff;
+    font-weight: 800;
+}
+
+.ddb-skill-search-wrap {
+    display: flex;
+    align-items: center;
+    background: #141b27;
+    border: 1px solid #232d3f;
+    border-radius: 6px;
+    padding: 4px 8px;
+    gap: 6px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.ddb-skill-search-wrap:focus-within {
+    border-color: #d97706;
+}
+
+.ddb-skill-search-icon {
+    color: #64748b;
+    flex-shrink: 0;
+}
+
+.ddb-skill-search-input {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #f1f5f9;
+    font-size: 0.74rem;
+    width: 100%;
+}
+
+.ddb-skill-search-clear {
+    background: transparent;
+    border: none;
+    color: #64748b;
+    cursor: pointer;
+    font-size: 0.7rem;
+    padding: 0 2px;
+}
+
+.ddb-skill-search-clear:hover {
+    color: #f8fafc;
+}
+
+/* Skills Table (table-layout: fixed to prevent overflow) */
+.ddb-skills-table-wrap.full-width {
+    background: #131822;
+    border: 1px solid #1e2638;
+    border-radius: 7px;
+    overflow: hidden;
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 24px;
+}
+
+.ddb-skills-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.74rem;
+    table-layout: fixed;
+}
+
+.ddb-skills-table thead th {
+    background: #0d121c;
+    color: #94a3b8;
+    font-size: 0.6rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    padding: 6px 8px;
+    text-align: left;
+    border-bottom: 1px solid #212c40;
+}
+
+.ddb-skills-table thead th.th-prof {
+    width: 26px;
+    text-align: center;
+    padding: 6px 2px;
+}
+.ddb-skills-table thead th.th-mod {
+    width: 40px;
+    text-align: center;
+    padding: 6px 2px;
+}
+.ddb-skills-table thead th.th-bonus {
+    width: 65px;
+    text-align: right;
+    padding-right: 8px;
+}
+
+.ddb-skill-row {
+    border-bottom: 1px solid #1a2232;
+    cursor: pointer;
+    transition: background 120ms ease;
+}
+
+.ddb-skill-row:hover {
+    background: #1a2335;
+}
+
+.ddb-skill-row.proficient {
+    background: rgba(200, 45, 56, 0.06);
+}
+
+.ddb-skill-row.proficient:hover {
+    background: rgba(200, 45, 56, 0.14);
+}
+
+.ddb-skill-row td {
+    padding: 6px 8px;
+    vertical-align: middle;
+}
+
+.td-prof {
+    text-align: center;
+    padding: 6px 2px !important;
+}
+
+.ddb-prof-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 1.5px solid #4b5563;
+    display: inline-block;
+    transition: all 120ms ease;
+}
+
+.ddb-prof-dot.filled {
+    background: #c82d38;
+    border-color: #ef4444;
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
+}
+
+.ddb-prof-dot.expertise {
+    background: #f59e0b;
+    border-color: #fde047;
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.7);
+}
+
+.td-mod {
+    text-align: center;
+    padding: 6px 2px !important;
+}
+
+.ddb-skill-ability {
+    font-size: 0.62rem;
+    font-weight: 800;
+    padding: 1px 4px;
+    border-radius: 3px;
+    background: #1a2232;
+    color: #94a3b8;
+    border: 1px solid #28354c;
+}
+
+.ddb-skill-ability.str { color: #fca5a5; }
+.ddb-skill-ability.dex { color: #86efac; }
+.ddb-skill-ability.con { color: #fde047; }
+.ddb-skill-ability.int { color: #93c5fd; }
+.ddb-skill-ability.wis { color: #c4b5fd; }
+.ddb-skill-ability.cha { color: #f0abfc; }
+
+.td-name {
+    font-weight: 700;
+    color: #f1f5f9;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ddb-skill-row.proficient .ddb-skill-name {
+    color: #ffffff;
+    font-weight: 800;
+}
+
+.td-bonus {
+    text-align: right;
+    padding-right: 8px !important;
+}
+
+.ddb-skill-bonus-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 7px;
+    background: #1a2232;
+    border: 1px solid #2b3952;
+    border-radius: 5px;
+    color: #f8fafc;
+    font-size: 0.72rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 130ms ease;
+    white-space: nowrap;
+}
+
+.ddb-skill-bonus-pill:hover {
+    background: #2a3750;
+    border-color: #d97706;
+    color: #fbbf24;
+    transform: scale(1.04);
+}
+
+.ddb-skill-row.proficient .ddb-skill-bonus-pill {
+    background: #291216;
+    border-color: #8c1d25;
+    color: #fca5a5;
+}
+
+.ddb-skill-row.proficient .ddb-skill-bonus-pill:hover {
+    background: #3d151c;
+    border-color: #ef4444;
+    color: #ffffff;
+}
+
+.ddb-skills-empty-row {
+    text-align: center;
+    padding: 20px 10px;
+    color: #64748b;
+    font-style: italic;
+}
+
+/* ========================================================= */
+/* TAB 3: PROFICIENCIES & SENSES                            */
+/* ========================================================= */
+.ddb-passives-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.ddb-passive-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #171e2c;
+    border: 1px solid #26334a;
+    border-radius: 6px;
+    padding: 6px 2px;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.ddb-passive-tile .passive-value {
+    font-size: 1.15rem;
+    font-weight: 900;
+    color: #f8fafc;
+    line-height: 1;
+    margin-bottom: 2px;
+}
+
+.ddb-passive-tile .passive-name {
+    font-size: 0.52rem;
+    font-weight: 800;
+    color: #94a3b8;
+    text-align: center;
+    letter-spacing: 0.02em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 100%;
+    padding: 0 2px;
+    box-sizing: border-box;
+}
+
+.ddb-special-senses-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 2px;
+    width: 100%;
+}
+
+.ddb-special-sense-chip {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #a5b4fc;
+    background: #181d30;
+    border: 1px solid #374268;
+    padding: 2px 7px;
+    border-radius: 4px;
+}
+
+/* Proficiencies & Training Blocks */
+.ddb-prof-cards-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.ddb-prof-block {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background: #171e2c;
+    border: 1px solid #26334a;
+    border-radius: 6px;
+    padding: 7px 9px;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.prof-block-title {
+    font-size: 0.6rem;
+    font-weight: 800;
+    color: #94a3b8;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.prof-chips-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    width: 100%;
+}
+
+.prof-chip {
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+}
+
+.prof-chip.armor {
+    background: #1b263b;
+    border-color: #2e4166;
+    color: #93c5fd;
+}
+
+.prof-chip.weapon {
+    background: #2b1e22;
+    border-color: #5c353d;
+    color: #fca5a5;
+}
+
+.prof-chip.tool {
+    background: #242217;
+    border-color: #524823;
+    color: #fde047;
+}
+
+.prof-chip.language {
+    background: #1c2621;
+    border-color: #2d4f3b;
+    color: #86efac;
+}
+
+.prof-empty {
+    font-size: 0.65rem;
+    color: #64748b;
+    font-style: italic;
+}

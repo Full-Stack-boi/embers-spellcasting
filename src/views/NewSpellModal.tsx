@@ -13,7 +13,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { actions } from "../effects/actions";
 import { blueprintFunctions } from "../effects/blueprintFunctions";
 import { getSpell } from "../effects/spells";
-import { useOBR } from "../react-obr/providers";
+import { useOBR } from "../platform/obr/react/providers";
 import { useParams } from "react-router";
 import { constants } from "../constants";
 

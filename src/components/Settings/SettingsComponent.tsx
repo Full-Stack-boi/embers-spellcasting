@@ -2,7 +2,7 @@ import { Box, Button, Checkbox, Dialog, DialogContent, DialogTitle, Fade, Typogr
 import OBR, { GridScale, Theme, isImage } from "@owlbear-rodeo/sdk";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getGlobalSettingsValue, getSettingsValue, GLOBAL_STORAGE_KEYS, GRID_UNIT_FACTORS, LOCAL_STORAGE_KEYS, setGlobalSettingsValue, setSettingsValue, SETTINGS_CHANNEL } from "./settings";
-import { useOBR } from "../../react-obr/providers";
+import { useOBR } from "../../platform/obr/react/providers";
 import { SimplifiedItem } from "../../types/misc";
 
 type ModalType = "choose-caster-type";
@@ -51,6 +51,7 @@ export default function Settings() {
     const [defaultCaster, setDefaultCaster] = useState<SimplifiedItem[] | null>(null);
     const [animationRate, _setAnimationRate] = useState<number | null>(null);
     const [modalOpened, setModalOpened] = useState<ModalType | null>(null);
+    const [smartActionOnTarget, setSmartActionOnTarget] = useState<boolean | null>(null);
     const [theme, setTheme] = useState<Theme>();
     const mainDiv = useRef<HTMLDivElement>(null);
 
@@ -106,6 +107,7 @@ export default function Settings() {
         _setAnimationRate(getSettingsValue(LOCAL_STORAGE_KEYS.ANIMATION_UPDATE_RATE));
         setKeepTargets(getSettingsValue(LOCAL_STORAGE_KEYS.KEEP_SELECTED_TARGETS));
         setDefaultCaster(getSettingsValue(LOCAL_STORAGE_KEYS.DEFAULT_CASTER));
+        setSmartActionOnTarget(getSettingsValue(LOCAL_STORAGE_KEYS.SMART_ACTION_ON_TARGET) ?? true);
     }, []);
 
     const closeModal = () => {
@@ -257,6 +259,18 @@ export default function Settings() {
                         className="settings-input"
                         value={gridScalingFactor ?? ""}
                         onChange={event => setGridScalingFactor(event.target.value)}
+                    />
+                </div>
+                <div className="settings-item" title="Clicking a character token while aiming will immediately cast and roll the attack/spell (Shift+click for Advantage, Ctrl+click for Disadvantage).">
+                    <label htmlFor="smart-action-on-target">
+                        <p>Smart Action-on-Target</p>
+                    </label>
+                    <Checkbox
+                        checked={smartActionOnTarget ?? true}
+                        onChange={(event) => {
+                            setSmartActionOnTarget(event.currentTarget.checked);
+                            setSettingsValue(LOCAL_STORAGE_KEYS.SMART_ACTION_ON_TARGET, event.currentTarget.checked);
+                        }}
                     />
                 </div>
                 <div className="settings-item" title="Whether to keep the selected targets the same after a spell is cast/the tool is de-selected.">

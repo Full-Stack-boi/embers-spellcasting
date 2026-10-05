@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { APP_KEY } from "../config";
 import { getProjectilePose } from "../effects/projectile";
 import { log_error } from "../logging";
-import { useOBR } from "../react-obr/providers";
+import { useOBR } from "../platform/obr/react/providers";
 
 export const trackedMovementMetadataKey = `${APP_KEY}/tracked-movement`;
 

@@ -19,7 +19,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { APP_KEY } from "../config";
 import { Modal } from "@owlbear-rodeo/sdk/lib/types/Modal";
 import { log_info } from "../logging";
-import { useOBR } from "../react-obr/providers";
+import { useOBR } from "../platform/obr/react/providers";
 import { constants } from "../constants";
 
 type ModalType = "choose-spell" | "remove-all-spells";

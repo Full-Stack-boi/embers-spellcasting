@@ -15,7 +15,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { MessageType } from "../types/messageListener";
 import { Spell } from "../types/spells";
-import { useOBR } from "../react-obr/providers";
+import { useOBR } from "../platform/obr/react/providers";
 import { Typography } from "@mui/material";
 
 function SpellDisplay({

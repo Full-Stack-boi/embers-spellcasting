@@ -1,0 +1,377 @@
+/* ========================================================= */
+/* D&D Beyond Character Sync Modal Styling                  */
+/* ========================================================= */
+
+.ddb-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(8, 10, 14, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    box-sizing: border-box;
+    backdrop-filter: blur(6px);
+    z-index: 1000;
+}
+
+.ddb-modal-card {
+    width: 100%;
+    max-width: 450px;
+    background: #11141a;
+    border: 1px solid #7f1d1d;
+    border-radius: 10px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.9), 0 0 24px rgba(185, 28, 28, 0.25);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    color: #f3f4f6;
+    font-family: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    box-sizing: border-box;
+}
+
+/* Header */
+.ddb-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: #171b22;
+    border-bottom: 1px solid #232a35;
+    flex-shrink: 0;
+}
+
+.ddb-modal-title-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ddb-modal-icon {
+    font-size: 1.25rem;
+    line-height: 1;
+}
+
+.ddb-modal-title {
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: #f9fafb;
+    margin: 0;
+    letter-spacing: 0.02em;
+}
+
+.ddb-modal-close-btn {
+    background: transparent;
+    border: none;
+    color: #9ca3af;
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    line-height: 1;
+    transition: all 120ms ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.ddb-modal-close-btn:hover {
+    color: #ffffff;
+    background: #2a3342;
+}
+
+/* Body */
+.ddb-modal-body {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+    max-height: calc(100vh - 80px);
+    box-sizing: border-box;
+}
+
+.ddb-modal-desc {
+    font-size: 0.8rem;
+    color: #9ca3af;
+    margin: 0;
+    line-height: 1.45;
+}
+
+/* Input Row */
+.ddb-input-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.ddb-url-input {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 12px;
+    font-size: 0.82rem;
+    background: #0b0d12;
+    border: 1px solid #374151;
+    border-radius: 6px;
+    color: #f3f4f6;
+    outline: none;
+    transition: all 140ms ease;
+    box-sizing: border-box;
+}
+.ddb-url-input:focus {
+    border-color: #ef4444;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.35);
+    background: #11141c;
+}
+.ddb-url-input:disabled {
+    opacity: 0.6;
+}
+
+.ddb-sync-btn {
+    padding: 8px 16px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    background: linear-gradient(180deg, #b91c1c 0%, #991b1b 100%);
+    border: 1px solid #ef4444;
+    border-radius: 6px;
+    color: #ffffff;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 140ms ease;
+    flex-shrink: 0;
+}
+.ddb-sync-btn:hover:not(:disabled) {
+    background: linear-gradient(180deg, #dc2626 0%, #b91c1c 100%);
+    border-color: #f87171;
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
+}
+.ddb-sync-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* JSON Input Mode */
+.ddb-json-textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    font-size: 0.74rem;
+    font-family: monospace;
+    background: #0b0d12;
+    border: 1px solid #374151;
+    border-radius: 6px;
+    color: #e2e8f0;
+    outline: none;
+    resize: vertical;
+}
+.ddb-json-textarea:focus {
+    border-color: #ef4444;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.3);
+}
+
+.ddb-toggle-json-btn {
+    align-self: flex-start;
+    background: transparent;
+    border: none;
+    color: #f87171;
+    font-size: 0.74rem;
+    cursor: pointer;
+    padding: 2px 0;
+    text-decoration: underline;
+    transition: color 120ms ease;
+}
+.ddb-toggle-json-btn:hover {
+    color: #fca5a5;
+}
+
+.ddb-api-link {
+    color: #60a5fa;
+    font-weight: 600;
+    text-decoration: none;
+}
+.ddb-api-link:hover {
+    text-decoration: underline;
+}
+
+/* Error Banner */
+.ddb-error-banner {
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: rgba(127, 29, 29, 0.4);
+    border: 1px solid #ef4444;
+    color: #fca5a5;
+    font-size: 0.78rem;
+    line-height: 1.4;
+}
+
+/* ========================================================= */
+/* Character Summary Card (Post-Sync)                        */
+/* ========================================================= */
+.ddb-char-summary-card {
+    background: #171b23;
+    border: 1px solid #2d3748;
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    animation: ddbCardFadeIn 180ms ease;
+}
+
+@keyframes ddbCardFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.ddb-char-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* CRITICAL: Constrain avatar size so it never renders 1000px wide! */
+.ddb-char-avatar {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    max-width: 48px;
+    border-radius: 50%;
+    border: 2px solid #ef4444;
+    object-fit: cover;
+    display: block;
+    flex-shrink: 0;
+    background: #0b0d12;
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
+}
+
+.ddb-char-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+}
+
+.ddb-char-name {
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: #f9fafb;
+    margin: 0 0 2px 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ddb-char-classes {
+    font-size: 0.75rem;
+    color: #f59e0b;
+    font-weight: 600;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Stats 4-Column Grid */
+.ddb-char-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+}
+
+.ddb-stat-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 4px;
+    background: #0f1319;
+    border: 1px solid #283141;
+    border-radius: 6px;
+    text-align: center;
+}
+
+.ddb-stat-label {
+    font-size: 0.56rem;
+    font-weight: 700;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+.ddb-stat-value {
+    font-size: 0.88rem;
+    font-weight: 800;
+    color: #f3f4f6;
+    margin-top: 2px;
+    white-space: nowrap;
+}
+
+/* Senses Row */
+.ddb-senses-row {
+    font-size: 0.74rem;
+    color: #a78bfa;
+    padding: 6px 8px;
+    background: #1c192c;
+    border-radius: 5px;
+    border: 1px solid #3b2d54;
+    display: flex;
+    align-items: center;
+}
+
+/* Action Buttons (Unlink / Re-sync) */
+.ddb-char-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.ddb-unlink-btn {
+    flex: 1;
+    padding: 7px 10px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    background: #261619;
+    border: 1px solid #7f1d1d;
+    border-radius: 5px;
+    color: #fca5a5;
+    cursor: pointer;
+    transition: all 120ms ease;
+    text-align: center;
+}
+.ddb-unlink-btn:hover {
+    background: #3b181e;
+    border-color: #ef4444;
+    color: #ffffff;
+}
+
+.ddb-resync-btn {
+    flex: 1;
+    padding: 7px 10px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    background: #16243b;
+    border: 1px solid #1e3a8a;
+    border-radius: 5px;
+    color: #93c5fd;
+    cursor: pointer;
+    transition: all 120ms ease;
+    text-align: center;
+}
+.ddb-resync-btn:hover:not(:disabled) {
+    background: #1e3355;
+    border-color: #3b82f6;
+    color: #ffffff;
+}
+.ddb-resync-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}

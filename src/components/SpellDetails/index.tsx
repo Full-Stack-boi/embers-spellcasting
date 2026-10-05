@@ -18,7 +18,7 @@ import { FaCopy } from "react-icons/fa6";
 import { SimplifiedItem } from "../../types/misc";
 import { getSpell } from "../../effects/spells";
 import { toolMetadataSelectedSpell } from "../../effectsTool";
-import { useOBR } from "../../react-obr/providers";
+import { useOBR } from "../../platform/obr/react/providers";
 
 function replicationValue(replicationValue: ReplicationType) {
     if (replicationValue === "no") {

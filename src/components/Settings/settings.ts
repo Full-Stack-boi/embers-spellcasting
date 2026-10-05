@@ -7,6 +7,7 @@ export const LOCAL_STORAGE_KEYS = {
     KEEP_SELECTED_TARGETS: "keep-selected-targets",
     DEFAULT_CASTER: "default-caster",
     ANIMATION_UPDATE_RATE: "animation-update-rate",
+    SMART_ACTION_ON_TARGET: "smart-action-on-target",
 };
 
 export const GLOBAL_STORAGE_KEYS = {
@@ -19,11 +20,31 @@ export const SETTINGS_CHANNEL = `${APP_KEY}/settings`;
 export const DEFAULT_VALUES = {
     [LOCAL_STORAGE_KEYS.MOST_RECENT_SPELLS_LIST_SIZE]: 10,
     [LOCAL_STORAGE_KEYS.GRID_SCALING_FACTOR]: null,
-    [LOCAL_STORAGE_KEYS.KEEP_SELECTED_TARGETS]: true,
+    [LOCAL_STORAGE_KEYS.KEEP_SELECTED_TARGETS]: false,
     [LOCAL_STORAGE_KEYS.DEFAULT_CASTER]: [],
     [LOCAL_STORAGE_KEYS.ANIMATION_UPDATE_RATE]: 50,
+    [LOCAL_STORAGE_KEYS.SMART_ACTION_ON_TARGET]: true,
     [GLOBAL_STORAGE_KEYS.PLAYERS_CAN_CAST_SPELLS]: true,
     [GLOBAL_STORAGE_KEYS.SUMMONED_ENTITIES_RULE]: "caster",
+}
+
+// Migrate legacy default: keep-selected-targets used to default to true.
+// Ensure it defaults to false so target markers are cleaned up after casting.
+try {
+    const MIGRATION_KEY = `${APP_KEY}/migrated-keep-targets-default-v2`;
+    if (typeof localStorage !== "undefined" && !localStorage.getItem(MIGRATION_KEY)) {
+        const settingsObjectString = localStorage.getItem(`${APP_KEY}/settings`);
+        if (settingsObjectString) {
+            const settingsObject = JSON.parse(settingsObjectString);
+            if (settingsObject[LOCAL_STORAGE_KEYS.KEEP_SELECTED_TARGETS] === true) {
+                settingsObject[LOCAL_STORAGE_KEYS.KEEP_SELECTED_TARGETS] = false;
+                localStorage.setItem(`${APP_KEY}/settings`, JSON.stringify(settingsObject));
+            }
+        }
+        localStorage.setItem(MIGRATION_KEY, "true");
+    }
+} catch {
+    // Ignore in non-browser or test environments
 }
 
 export const GRID_UNIT_FACTORS: Record<string, number> = {
