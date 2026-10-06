@@ -262,6 +262,7 @@ export type DetailDrawerItem =
               damage?: string;
               damageType?: string;
               notes?: string;
+              isPrepared?: boolean;
               rawDdbSpell?: DDBParsedSpell;
           };
       }
@@ -389,6 +390,7 @@ type ActionGridTileProps = {
     accent: string;
     shortcut: number;
     selected?: boolean;
+    disabled?: boolean;
     onActivate: () => void;
     onContextMenu?: (event: React.MouseEvent<HTMLButtonElement>) => void;
 };
@@ -500,6 +502,7 @@ const ActionGridTile: React.FC<ActionGridTileProps> = ({
     accent,
     shortcut,
     selected = false,
+    disabled = false,
     onActivate,
     onContextMenu,
 }) => {
@@ -509,17 +512,19 @@ const ActionGridTile: React.FC<ActionGridTileProps> = ({
     return (
         <button
                 type="button"
-                className={`ddb-bg3-icon-tile ${selected ? "selected" : ""}`}
+                className={`ddb-bg3-icon-tile ${selected ? "selected" : ""} ${disabled ? "disabled" : ""}`}
                 style={{ "--tile-accent": accent } as React.CSSProperties}
                 aria-label={`${name}, ${category}`}
                 aria-describedby={tooltip?.activeId === tooltipId ? tooltipId : undefined}
                 aria-pressed={selected}
+                aria-disabled={disabled}
+                disabled={disabled}
                 onMouseEnter={event => tooltip?.showTooltip(tooltipId, event, { name, category, subtitle, description, details, icon, accent })}
                 onMouseLeave={() => tooltip?.scheduleTooltipClose()}
                 onFocus={event => tooltip?.showTooltip(tooltipId, event, { name, category, subtitle, description, details, icon, accent })}
                 onBlur={() => tooltip?.scheduleTooltipClose()}
-                onClick={onActivate}
-                onContextMenu={onContextMenu}
+                onClick={disabled ? undefined : onActivate}
+                onContextMenu={disabled ? undefined : onContextMenu}
             >
                 <span className="ddb-bg3-icon-tile-shortcut" aria-hidden="true">{shortcut}</span>
                 <span className="ddb-bg3-icon-tile-art" aria-hidden="true">{icon}</span>
@@ -1459,6 +1464,10 @@ const DND_CONDITIONS = [
         const id = obr.player?.id || "";
         const meta = getSpellMetadata(targetId);
         const matchedDdbSpell = syncedDdbChar?.spells.find(s => s.id === targetId || s.name.toLowerCase() === targetId.toLowerCase());
+        if (matchedDdbSpell && !matchedDdbSpell.isPrepared && matchedDdbSpell.level > 0) {
+            OBR.notification.show(`${matchedDdbSpell.name} is not prepared!`, "WARNING");
+            return;
+        }
         const baseSpellLevel = matchedDdbSpell ? matchedDdbSpell.level : (meta?.level ?? 0);
         const targetLevel = levelToUse !== undefined ? levelToUse : (castLevel !== undefined ? castLevel : baseSpellLevel);
         await OBR.player.setMetadata({ [selectedSpellSlotLevelMetadataKey]: { spellId: targetId, slotLevel: targetLevel } });
@@ -2153,7 +2162,15 @@ const DND_CONDITIONS = [
         rangeText?: string;
         notes?: string;
         rawDdbSpell?: DDBParsedSpell;
+        isPrepared?: boolean;
     }) => {
+        const ddbSpell = syncedDdbChar?.spells?.find(s => s.id === spell.id || s.name.toLowerCase() === spell.name.toLowerCase());
+        const isSpellPrepared = spell.isPrepared ?? ddbSpell?.isPrepared ?? true;
+        if (!isSpellPrepared && (spell.level ?? 0) > 0) {
+            OBR.notification.show(`${spell.name} is not prepared!`, "WARNING");
+            return;
+        }
+
         handleSelectSpell(spell.id);
 
         if (spell.id.toLowerCase() === "hex" || spell.name.toLowerCase() === "hex") {
@@ -2391,6 +2408,7 @@ const DND_CONDITIONS = [
 
     // Direct Attack Spells (has attack roll: e.g. "+6")
     const attackSpells = dockSpells.filter(s => {
+        if (!s.isPrepared && s.level > 0) return false;
         const hasAttack = Boolean(s.hitOrDc && s.hitOrDc.startsWith("+"));
         if (!hasAttack) return false;
         return matchesActionSearch(s.name) || matchesActionSearch(s.damageType) || matchesActionSearch(s.notes);
@@ -2398,6 +2416,7 @@ const DND_CONDITIONS = [
 
     // 1-Action Spells
     const actionSpells = dockSpells.filter(s => {
+        if (!s.isPrepared && s.level > 0) return false;
         const ct = s.castingTime.toLowerCase().trim();
         const isAction = (ct.includes("action") || ct === "1a" || ct === "a") && !ct.includes("bonus") && !ct.includes("reaction");
         if (!isAction) return false;
@@ -2406,6 +2425,7 @@ const DND_CONDITIONS = [
 
     // Bonus Action Spells
     const bonusActionSpells = dockSpells.filter(s => {
+        if (!s.isPrepared && s.level > 0) return false;
         const ct = s.castingTime.toLowerCase().trim();
         const isBA = ct.includes("bonus") || ct === "1ba" || ct === "ba";
         if (!isBA) return false;
@@ -2414,6 +2434,7 @@ const DND_CONDITIONS = [
 
     // Reaction Spells
     const reactionSpells = dockSpells.filter(s => {
+        if (!s.isPrepared && s.level > 0) return false;
         const ct = s.castingTime.toLowerCase().trim();
         const isReaction = ct.includes("reaction") || ct === "1r" || ct === "r";
         if (!isReaction) return false;
@@ -5699,12 +5720,19 @@ const DND_CONDITIONS = [
                                             </div>
                                         </div>
                                     )}
+                                     {drawerItem.spell.level > 0 && !drawerItem.spell.isPrepared && (
+                                         <div className="ddb-drawer-unprepared-notice">
+                                             Spell is not prepared on D&D Beyond. Prepare it on your character sheet to cast or roll.
+                                         </div>
+                                     )}
                                      <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
                                         {drawerItem.spell.hitOrDc && drawerItem.spell.hitOrDc.startsWith("+") && (
                                             <button
                                                 type="button"
-                                                className="ddb-drawer-action-btn"
+                                                className={`ddb-drawer-action-btn ${drawerItem.spell.level > 0 && !drawerItem.spell.isPrepared ? "disabled" : ""}`}
+                                                disabled={drawerItem.spell.level > 0 && !drawerItem.spell.isPrepared}
                                                 onClick={() => handleSpellAttackRoll(drawerItem.spell)}
+                                                title={drawerItem.spell.level > 0 && !drawerItem.spell.isPrepared ? "Spell is not prepared" : undefined}
                                             >
                                                 <IconDiceD20 size={12} />
                                                 <span>Attack ({drawerItem.spell.hitOrDc})</span>
@@ -5713,8 +5741,10 @@ const DND_CONDITIONS = [
                                         {drawerItem.spell.damage && (
                                             <button
                                                 type="button"
-                                                className="ddb-drawer-action-btn"
+                                                className={`ddb-drawer-action-btn ${drawerItem.spell.level > 0 && !drawerItem.spell.isPrepared ? "disabled" : ""}`}
+                                                disabled={drawerItem.spell.level > 0 && !drawerItem.spell.isPrepared}
                                                 onClick={() => handleSpellDamageRoll(drawerItem.spell)}
+                                                title={drawerItem.spell.level > 0 && !drawerItem.spell.isPrepared ? "Spell is not prepared" : undefined}
                                             >
                                                 <IconFire size={12} />
                                                 <span>Damage ({drawerItem.spell.damage})</span>
@@ -5722,21 +5752,26 @@ const DND_CONDITIONS = [
                                         )}
                                         <button
                                             type="button"
-                                            className="ddb-drawer-action-btn primary"
-                                            disabled={drawerItem.spell.level > 0 && getRemainingSlots(castLevel) === 0}
+                                            className={`ddb-drawer-action-btn primary ${drawerItem.spell.level > 0 && !drawerItem.spell.isPrepared ? "disabled" : ""}`}
+                                            disabled={drawerItem.spell.level > 0 && (!drawerItem.spell.isPrepared || getRemainingSlots(castLevel) === 0)}
                                             onClick={() => handleCastClick(drawerItem.spell.id, castLevel)}
+                                            title={drawerItem.spell.level > 0 && !drawerItem.spell.isPrepared ? "Spell is not prepared" : undefined}
                                         >
                                             <IconCastLightning size={12} />
                                             <span>
-                                                {drawerItem.spell.level > 0 && castLevel > drawerItem.spell.level
-                                                    ? `Cast at Level ${castLevel}`
-                                                    : "Cast Spell"}
+                                                {drawerItem.spell.level > 0 && !drawerItem.spell.isPrepared
+                                                    ? "Unprepared"
+                                                    : drawerItem.spell.level > 0 && castLevel > drawerItem.spell.level
+                                                        ? `Cast at Level ${castLevel}`
+                                                        : "Cast Spell"}
                                             </span>
                                         </button>
                                         <button
                                             type="button"
-                                            className="ddb-drawer-action-btn"
+                                            className={`ddb-drawer-action-btn ${drawerItem.spell.level > 0 && !drawerItem.spell.isPrepared ? "disabled" : ""}`}
+                                            disabled={drawerItem.spell.level > 0 && !drawerItem.spell.isPrepared}
                                             onClick={() => handleSelectSpell(drawerItem.spell.id)}
+                                            title={drawerItem.spell.level > 0 && !drawerItem.spell.isPrepared ? "Spell is not prepared" : undefined}
                                         >
                                             <span>Aim Target</span>
                                         </button>

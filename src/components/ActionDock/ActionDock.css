@@ -4635,6 +4635,20 @@ button.ddb-cstat-item:hover {
     background: #221d15;
 }
 
+.ddb-bg3-icon-tile.disabled,
+.ddb-bg3-icon-tile:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    filter: grayscale(0.8);
+}
+
+.ddb-bg3-icon-tile.disabled:hover,
+.ddb-bg3-icon-tile:disabled:hover {
+    border-color: #3f444e;
+    background: #14161b;
+}
+
+
 .ddb-bg3-icon-tile:focus-visible {
     outline: 2px solid #e0c27c;
     outline-offset: 2px;
