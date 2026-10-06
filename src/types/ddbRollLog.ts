@@ -4,6 +4,7 @@ export interface DDBSubRollToHit {
   formula?: string; // e.g. "1d20+7"
   isCrit?: boolean;
   isMiss?: boolean;
+  mode?: "normal" | "advantage" | "disadvantage";
 }
 
 export interface DDBSubRollDamage {
@@ -63,6 +64,11 @@ export interface DDBRollCardData {
   // Highlight flag for conditional trigger effects (e.g. Vengeful Blade, Booming Blade)
   isConditionTrigger?: boolean;
   triggerConditionDesc?: string;
+
+  // Advantage / Disadvantage roll mode
+  rollMode?: "normal" | "advantage" | "disadvantage";
+  isAdvantage?: boolean;
+  isDisadvantage?: boolean;
 }
 
 export interface DDBRollLogPayload {

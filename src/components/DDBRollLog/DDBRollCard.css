@@ -51,6 +51,17 @@
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6), 0 0 14px rgba(239, 68, 68, 0.25);
 }
 
+/* Disadvantage / Advantage Highlight */
+.ddb-roll-card.is-disadvantage:not(.is-crit):not(.is-miss) {
+    border-color: #d97706;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55), 0 0 10px rgba(217, 119, 6, 0.2);
+}
+
+.ddb-roll-card.is-advantage:not(.is-crit):not(.is-miss) {
+    border-color: #10b981;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55), 0 0 10px rgba(16, 185, 129, 0.2);
+}
+
 /* Conditional Trigger Highlight */
 .ddb-roll-card.is-condition-trigger {
     border-color: #a855f7;
@@ -112,6 +123,14 @@
 
 .tag-spell {
     color: #e879f9; /* Vibrant Magenta / Curse */
+}
+
+.tag-dis {
+    color: #f59e0b; /* Amber */
+}
+
+.tag-adv {
+    color: #10b981; /* Emerald Green */
 }
 
 .ddb-roll-card-target-row {
@@ -189,6 +208,23 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.formula-mode-dis {
+    color: #f59e0b;
+    font-weight: 700;
+}
+
+.formula-mode-adv {
+    color: #10b981;
+    font-weight: 700;
+}
+
+.ddb-subroll-mode-tag {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
 }
 
 /* Divider & equals */

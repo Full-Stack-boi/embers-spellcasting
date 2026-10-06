@@ -13,6 +13,7 @@ import {
   openDDBRollLogPopover,
 } from "./services/rollLogService";
 import { checkAndFireMovementTriggers } from "./services/conditionalTriggerService";
+import { setupDarknessVisionHandler } from "./features/targeting/infrastructure/obr/darknessVisionHandler";
 
 function loadSpellListFromLocalStorage() {
   // Update scene metadata
@@ -55,6 +56,7 @@ async function isDesignatedTriggerArbitrator(): Promise<boolean> {
 function setupScene() {
   setupDefaultCasterMenuOption();
   setupDDBTokenContextMenuOption();
+  const unsubscribeDarkness = setupDarknessVisionHandler();
   loadSpellListFromLocalStorage();
 
   let interval: number | null = null;
@@ -143,6 +145,7 @@ function setupScene() {
     if (interval !== null) clearInterval(interval);
     unsubscribePlayer();
     unsubscribeTool?.();
+    unsubscribeDarkness?.();
     unsubGrid();
     unsubItems();
   };

@@ -601,6 +601,7 @@ const DND_CONDITIONS = [
     });
     const [isDraggingHeight, setIsDraggingHeight] = useState<boolean>(false);
     const dragRef = useRef<{ startY: number; startH: number } | null>(null);
+    const loadedCharIdRef = useRef<number | null>(null);
 
     const [upcastPickerSpellId, setUpcastPickerSpellId] = useState<string | null>(null);
     const [upcastPickerLevel, setUpcastPickerLevel] = useState<number>(1);
@@ -843,9 +844,18 @@ const DND_CONDITIONS = [
 
     // Load persisted combat state whenever a character is linked/synced
     useEffect(() => {
-        if (!syncedDdbChar?.id) return;
+        if (!syncedDdbChar?.id) {
+            loadedCharIdRef.current = null;
+            setConcentrationSpell(null);
+            return;
+        }
+        setConcentrationSpell(null);
         loadCombatState(syncedDdbChar.id).then(persisted => {
-            if (!persisted) return;
+            loadedCharIdRef.current = syncedDdbChar.id;
+            if (!persisted) {
+                setConcentrationSpell(null);
+                return;
+            }
             // Restore spell slots used count
             if (persisted.createdSpellSlots) {
                 setSpellSlots(prev => {
@@ -897,6 +907,8 @@ const DND_CONDITIONS = [
                     id: persisted.concentrationSpellId,
                     name: persisted.concentrationSpellName
                 });
+            } else {
+                setConcentrationSpell(null);
             }
             if (persisted.deathSaves) {
                 setDeathSaves(persisted.deathSaves);
@@ -915,7 +927,7 @@ const DND_CONDITIONS = [
 
     // Debounced auto-save of combat state whenever combat resources change
     useEffect(() => {
-        if (!syncedDdbChar?.id) return;
+        if (!syncedDdbChar?.id || loadedCharIdRef.current !== syncedDdbChar.id) return;
         const timer = setTimeout(() => {
             const slotsUsed: Record<number, number> = {};
             for (const [lvl, config] of Object.entries(spellSlots)) {
@@ -1664,7 +1676,7 @@ const DND_CONDITIONS = [
         if (caster?.id) {
             checkAndFireActionTriggers(caster.id, "attack").catch(() => {});
         }
-        const mode = buffMods.hasAttackAdvantage ? "advantage" : "normal";
+        const mode: "normal" | "advantage" | "disadvantage" = buffMods.hasAttackAdvantage ? "advantage" : "normal";
         const roll = rollAttack(weapon.toHit, "", mode);
         const casterName = syncedDdbChar?.name || "Character";
         const isHexActive = concentrationSpell?.id?.toLowerCase() === "hex" || concentrationSpell?.name?.toLowerCase() === "hex";
@@ -1678,11 +1690,14 @@ const DND_CONDITIONS = [
                 actionType: "TO HIT",
                 dieType: 20,
                 diceBreakdown: `${roll.d20} ${roll.bonus >= 0 ? `+ ${roll.bonus}` : `- ${Math.abs(roll.bonus)}`}`,
-                formula: `1d20${roll.bonus >= 0 ? `+${roll.bonus}` : `${roll.bonus}`}${mode === "advantage" ? " (ADV)" : ""}`,
+                formula: `1d20${roll.bonus >= 0 ? `+${roll.bonus}` : `${roll.bonus}`}${roll.mode === "advantage" ? " (ADV)" : roll.mode === "disadvantage" ? " (DIS)" : ""}`,
                 total: roll.total,
                 subtitle: roll.isCrit ? "Critical Hit!" : roll.isMiss ? "Critical Miss!" : "Weapon Attack Roll",
                 isCrit: roll.isCrit,
                 isMiss: roll.isMiss,
+                rollMode: roll.mode,
+                isAdvantage: roll.mode === "advantage",
+                isDisadvantage: roll.mode === "disadvantage",
                 timestamp: Date.now()
             }
         ];

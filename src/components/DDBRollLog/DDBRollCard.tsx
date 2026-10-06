@@ -75,6 +75,31 @@ function getTagClass(actionType: DDBRollCardData["actionType"], isConditionTrigg
     }
 }
 
+function renderFormattedFormula(formula?: string) {
+    if (!formula) return null;
+    if (formula.includes("(DIS)")) {
+        const parts = formula.split("(DIS)");
+        return (
+            <>
+                {parts[0]}
+                <span className="formula-mode-dis">(DIS)</span>
+                {parts.slice(1).join("(DIS)")}
+            </>
+        );
+    }
+    if (formula.includes("(ADV)")) {
+        const parts = formula.split("(ADV)");
+        return (
+            <>
+                {parts[0]}
+                <span className="formula-mode-adv">(ADV)</span>
+                {parts.slice(1).join("(ADV)")}
+            </>
+        );
+    }
+    return formula;
+}
+
 export interface DDBRollCardProps {
     data: DDBRollCardData;
 }
@@ -84,6 +109,20 @@ export const DDBRollCard: React.FC<DDBRollCardProps> = ({ data }) => {
     const isMiss = Boolean(data.isMiss);
     const isGrouped = Boolean(data.subRolls && data.subRolls.length > 0);
     const isConditionTrigger = Boolean(data.isConditionTrigger || data.actionName?.includes("(TRIGGER)"));
+    const isDisadvantage = Boolean(
+        data.isDisadvantage ||
+        data.rollMode === "disadvantage" ||
+        data.formula?.includes("(DIS)") ||
+        data.diceBreakdown?.includes("DIS") ||
+        data.subtitle?.toLowerCase().includes("disadvantage")
+    );
+    const isAdvantage = Boolean(
+        data.isAdvantage ||
+        data.rollMode === "advantage" ||
+        data.formula?.includes("(ADV)") ||
+        data.diceBreakdown?.includes("ADV") ||
+        data.subtitle?.toLowerCase().includes("advantage")
+    );
 
     const cardClasses = [
         "ddb-roll-card",
@@ -91,6 +130,8 @@ export const DDBRollCard: React.FC<DDBRollCardProps> = ({ data }) => {
         isCrit ? "is-crit" : "",
         isMiss ? "is-miss" : "",
         isConditionTrigger ? "is-condition-trigger" : "",
+        isDisadvantage ? "is-disadvantage" : "",
+        isAdvantage ? "is-advantage" : "",
     ].filter(Boolean).join(" ");
 
     // Grouped Multi-Roll Card (Multi-Beam / Multi-Ray / Multi-Attack)
@@ -110,6 +151,8 @@ export const DDBRollCard: React.FC<DDBRollCardProps> = ({ data }) => {
                             <span className="ddb-roll-card-tag tag-spell">
                                 {data.subRolls.length} {data.subRolls.length === 1 ? "BEAM" : "BEAMS"} • SPELL
                             </span>
+                            {isDisadvantage && <span className="ddb-roll-card-tag tag-dis">DIS</span>}
+                            {isAdvantage && <span className="ddb-roll-card-tag tag-adv">ADV</span>}
                         </div>
                         <div className="ddb-roll-card-target-row">
                             TO: {data.targetName || "TARGET"}
@@ -121,6 +164,16 @@ export const DDBRollCard: React.FC<DDBRollCardProps> = ({ data }) => {
                         {data.subRolls.map((sub, idx) => {
                             const subCrit = Boolean(sub.toHit?.isCrit || sub.damage?.isCrit);
                             const subMiss = Boolean(sub.toHit?.isMiss);
+                            const subDis = Boolean(
+                                sub.toHit?.mode === "disadvantage" ||
+                                sub.toHit?.formula?.includes("(DIS)") ||
+                                sub.toHit?.diceBreakdown?.includes("DIS")
+                            );
+                            const subAdv = Boolean(
+                                sub.toHit?.mode === "advantage" ||
+                                sub.toHit?.formula?.includes("(ADV)") ||
+                                sub.toHit?.diceBreakdown?.includes("ADV")
+                            );
                             const itemClass = [
                                 "ddb-subroll-item",
                                 subCrit ? "is-crit" : "",
@@ -134,6 +187,8 @@ export const DDBRollCard: React.FC<DDBRollCardProps> = ({ data }) => {
                                         {sub.targetName && (
                                             <span className="ddb-subroll-target-badge" title={sub.targetName}>➔ {sub.targetName}</span>
                                         )}
+                                        {subDis && <span className="ddb-subroll-mode-tag tag-dis">DIS</span>}
+                                        {subAdv && <span className="ddb-subroll-mode-tag tag-adv">ADV</span>}
                                         {subCrit && <span className="ddb-subroll-crit-pill">CRIT!</span>}
                                         {subMiss && <span className="ddb-subroll-miss-pill">MISS</span>}
                                     </div>
@@ -226,6 +281,8 @@ export const DDBRollCard: React.FC<DDBRollCardProps> = ({ data }) => {
                         <span className={`ddb-roll-card-tag ${getTagClass(data.actionType, isConditionTrigger)}`}>
                             {isConditionTrigger ? "TRIGGER" : data.actionType}
                         </span>
+                        {isDisadvantage && <span className="ddb-roll-card-tag tag-dis">DIS</span>}
+                        {isAdvantage && <span className="ddb-roll-card-tag tag-adv">ADV</span>}
                     </div>
                     <div className="ddb-roll-card-target-row">
                         TO: {data.targetName || "SELF"}
@@ -244,7 +301,7 @@ export const DDBRollCard: React.FC<DDBRollCardProps> = ({ data }) => {
                             </span>
                         </div>
                         <div className="ddb-roll-card-formula">
-                            {data.formula}
+                            {renderFormattedFormula(data.formula)}
                         </div>
                     </div>
 

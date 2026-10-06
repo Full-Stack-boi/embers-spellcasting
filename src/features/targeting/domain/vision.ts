@@ -24,10 +24,12 @@ export interface DarknessZone {
     position: Vector2;
     radiusFeet: number;
     sourceCasterId?: string;
+    transparent?: boolean;
 }
 
 export interface VisionCheckResult {
     canSee: boolean;
     reason?: string;
     isBlockedByDarkness: boolean;
+    targetInDarkness?: boolean;
 }

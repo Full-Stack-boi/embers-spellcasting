@@ -86,6 +86,10 @@ async function hide(
   localOnly: boolean,
   itemID: string,
 ) {
+  const role = await OBR.player.getRole();
+  if (role !== "GM" && !interaction?.active?.() && !localOnly) {
+    return;
+  }
   await updateItems(
     [itemID],
     (items) => {
@@ -103,6 +107,10 @@ async function show(
   localOnly: boolean,
   itemID: string,
 ) {
+  const role = await OBR.player.getRole();
+  if (role !== "GM" && !interaction?.active?.() && !localOnly) {
+    return;
+  }
   await updateItems(
     [itemID],
     (items) => {

@@ -416,7 +416,7 @@ async function processInstruction(
     } else if (instruction.type === "action") {
       const localOnly =
         (instruction.for === "GM" && playerRole !== "GM") ||
-        (instruction.for === "CASTER" && spellCaster !== playerId);
+        (instruction.for === "CASTER" && spellCaster !== playerId && playerRole !== "GM");
       const actionObject = actions[instruction.id];
       const action = actionObject.action;
       if (action == undefined) {

@@ -20,6 +20,7 @@ import {
   getSpell,
   getSpellAoE,
   getSpellRange,
+  isTeleportSpell,
 } from "./effects/spells";
 import { getItemSize } from "./utils";
 import { log_error } from "./logging";
@@ -715,16 +716,68 @@ async function setupTargetToolModes(
           },
         );
 
+        const isWeapon =
+          selectedSpell === "melee_weapon_attack" ||
+          selectedSpell === "ranged_weapon_attack";
+
+        let hasAdvantage = false;
+        let hasDisadvantage = false;
+
+        if (darknessZones.length > 0) {
+          const casterInDarkness = darknessZones.some((zone) => {
+            const dx = activeCaster.position.x - zone.position.x;
+            const dy = activeCaster.position.y - zone.position.y;
+            const distFeet =
+              (Math.sqrt(dx * dx + dy * dy) / grid.dpi) * grid.scaleMultiplier;
+            return distFeet <= zone.radiusFeet;
+          });
+
+          if (!visionCheck.canSee) {
+            if (isWeapon) {
+              hasDisadvantage = true;
+            }
+          } else if (casterInDarkness) {
+            const targetToken = sceneItems.find(
+              (item) =>
+                (item.layer === "CHARACTER" || item.layer === "DRAWING") &&
+                Math.hypot(
+                  item.position.x - targetPos.x,
+                  item.position.y - targetPos.y,
+                ) <
+                  grid.dpi / 2,
+            );
+            const targetVisionRules = targetToken
+              ? readTokenVisionRules(targetToken)
+              : {};
+            const targetHasDarknessVision = Boolean(
+              targetVisionRules.devilsSight ||
+                (targetVisionRules.truesight &&
+                  targetVisionRules.truesight >= 15) ||
+                (targetVisionRules.blindFighting &&
+                  targetVisionRules.blindFighting >= 10),
+            );
+            if (!targetHasDarknessVision) {
+              hasAdvantage = true;
+            }
+          }
+        }
+
         await renderAimingOverlay({
           casterPos: activeCaster.position,
           cursorPos: targetPos,
           maxRangeFeet: maxRange,
           grid,
           visionCheck,
+          isWeapon,
+          hasAdvantage,
+          hasDisadvantage,
         });
       }
     },
     async onToolClick(_context, event) {
+      let targetIsUnseenInDarkness = false;
+      let casterHasDarknessAdvantage = false;
+
       // Check single-target range clamping & darkness vision if a spell is selected
       const metadata = await OBR.player.getMetadata();
       const selectedSpell = metadata?.[toolMetadataSelectedSpell] as
@@ -864,6 +917,7 @@ async function setupTargetToolModes(
           // Vision / Darkness Line of Sight check
           const sceneItems = await OBR.scene.items.getItems();
           const darknessZones = extractDarknessZones(sceneItems);
+
           if (darknessZones.length > 0) {
             const visionRules = activeCaster.item
               ? readTokenVisionRules(activeCaster.item)
@@ -879,12 +933,60 @@ async function setupTargetToolModes(
                 visionRules,
               },
             );
+
+            const isWeapon =
+              selectedSpell === "melee_weapon_attack" ||
+              selectedSpell === "ranged_weapon_attack";
+
             if (!visionCheck.canSee) {
-              OBR.notification.show(
-                `Cannot target: ${visionCheck.reason || "Blocked by Magical Darkness!"}`,
-                "WARNING",
-              );
-              return false;
+              // 5.5e Rule: If attacking an unseen target in Darkness:
+              // Physical weapon attacks can still be made, but suffer Disadvantage.
+              // Spells requiring sight ("that you can see") cannot target the creature.
+              if (isWeapon) {
+                targetIsUnseenInDarkness = true;
+                OBR.notification.show(
+                  "Attacking in Darkness without special vision (Disadvantage applied)",
+                  "INFO",
+                );
+              } else {
+                OBR.notification.show(
+                  `Cannot target: ${visionCheck.reason || "Blocked by Magical Darkness (requires sight)!"}`,
+                  "WARNING",
+                );
+                return false;
+              }
+            } else {
+              // Caster can see! Check if caster is inside Darkness (with Devil's Sight / Truesight)
+              // while target outside cannot see caster -> Unseen Attacker gives Advantage!
+              const targetItem = event.target;
+              if (
+                targetItem &&
+                (targetItem.layer === "CHARACTER" ||
+                  targetItem.layer === "DRAWING")
+              ) {
+                const targetVisionRules = readTokenVisionRules(
+                  targetItem as any,
+                );
+                const reverseVisionCheck = evaluateLineOfSight(
+                  targetPos,
+                  activeCaster.position,
+                  darknessZones,
+                  grid,
+                  {
+                    isDM: false,
+                    casterId: targetItem.id,
+                    visionRules: targetVisionRules,
+                  },
+                );
+                if (!reverseVisionCheck.canSee) {
+                  // Defender cannot see attacker -> Attacker has Advantage (Invisible / Unseen Attacker)
+                  casterHasDarknessAdvantage = true;
+                  OBR.notification.show(
+                    "Attacking from inside Darkness with special vision (Advantage applied)",
+                    "INFO",
+                  );
+                }
+              }
             }
           }
         }
@@ -914,6 +1016,10 @@ async function setupTargetToolModes(
           if (event.ctrlKey || event.altKey || event.metaKey) {
             rollMode = "disadvantage";
           } else if (event.shiftKey) {
+            rollMode = "advantage";
+          } else if (targetIsUnseenInDarkness) {
+            rollMode = "disadvantage";
+          } else if (casterHasDarknessAdvantage) {
             rollMode = "advantage";
           } else {
             const isWeapon =
@@ -1133,6 +1239,9 @@ async function setupTargetToolModes(
                         : "Weapon Attack Roll",
                     isCrit: roll.isCrit,
                     isMiss: roll.isMiss,
+                    rollMode: roll.mode,
+                    isAdvantage: roll.mode === "advantage",
+                    isDisadvantage: roll.mode === "disadvantage",
                     timestamp: Date.now(),
                   },
                 ];
@@ -1243,7 +1352,7 @@ async function setupTargetToolModes(
                     actionType: "TO HIT",
                     dieType: 20,
                     diceBreakdown: `${roll.d20} ${roll.bonus >= 0 ? `+ ${roll.bonus}` : `- ${Math.abs(roll.bonus)}`}`,
-                    formula: `1d20${roll.bonus >= 0 ? `+${roll.bonus}` : `${roll.bonus}`}`,
+                    formula: `1d20${roll.bonus >= 0 ? `+${roll.bonus}` : `${roll.bonus}`}${roll.mode === "advantage" ? " (ADV)" : roll.mode === "disadvantage" ? " (DIS)" : ""}`,
                     total: roll.total,
                     subtitle: roll.isCrit
                       ? "Critical Hit!"
@@ -1252,6 +1361,9 @@ async function setupTargetToolModes(
                         : "Unarmed Attack",
                     isCrit: roll.isCrit,
                     isMiss: roll.isMiss,
+                    rollMode: roll.mode,
+                    isAdvantage: roll.mode === "advantage",
+                    isDisadvantage: roll.mode === "disadvantage",
                     timestamp: Date.now(),
                   },
                 ];
@@ -1505,6 +1617,9 @@ async function setupTargetToolModes(
                       : `${weapon.name} Melee Attack Roll`,
                     isCrit: attack.isCrit,
                     isMiss: attack.isMiss,
+                    rollMode: attack.mode,
+                    isAdvantage: attack.mode === "advantage",
+                    isDisadvantage: attack.mode === "disadvantage",
                     timestamp: Date.now(),
                   },
                 ];
@@ -1898,6 +2013,9 @@ async function setupTargetToolModes(
                         : "Spell Attack Roll",
                     isCrit: roll.isCrit,
                     isMiss: roll.isMiss,
+                    rollMode: roll.mode,
+                    isAdvantage: roll.mode === "advantage",
+                    isDisadvantage: roll.mode === "disadvantage",
                     timestamp: Date.now(),
                   },
                 ];
@@ -2166,10 +2284,7 @@ async function setupTargetToolModes(
                     "INFO",
                   );
                 }
-                const normId = selectedSpell
-                  ? selectedSpell.toLowerCase().replace(/[^a-z0-9_]/g, "")
-                  : "";
-                if (normId === "misty_step" || normId.includes("misty_step")) {
+                if (isTeleportSpell(selectedSpell)) {
                   await stopAiming();
                 }
               }
@@ -2253,15 +2368,16 @@ async function setupTargetToolModes(
           ));
         const smartActionEnabled =
           getSettingsValue(LOCAL_STORAGE_KEYS.SMART_ACTION_ON_TARGET) !== false;
-        const normId = selectedSpell
-          ? selectedSpell.toLowerCase().replace(/[^a-z0-9_]/g, "")
-          : "";
+
+        const isAoESpell = aoe != undefined;
+        const isPointTargeted =
+          spell?.minTargets === 1 && spell?.maxTargets === 1;
 
         if (
           selectedSpell &&
           smartActionEnabled &&
           canCast &&
-          (normId === "misty_step" || normId.includes("misty_step"))
+          (isTeleportSpell(selectedSpell) || isAoESpell || isPointTargeted)
         ) {
           clearAimingOverlay();
           clearAoePreview();
@@ -2303,6 +2419,24 @@ async function setupTargetToolModes(
                 : (ddbSpell?.level ?? 2);
             if (castSlotLevel >= 1) {
               await deductSpellSlotIfLeveled(charId, castSlotLevel, ddbChar);
+            }
+
+            // Concentration tracking for ground/AoE spells (e.g. Darkness)
+            if (ddbSpell?.concentration) {
+              const combatState = await loadCombatState(charId);
+              if (
+                combatState?.concentrationSpellName &&
+                combatState.concentrationSpellId !== ddbSpell.id
+              ) {
+                OBR.notification.show(
+                  `Concentration broken on "${combatState.concentrationSpellName}"! Now concentrating on "${spellName}".`,
+                  "WARNING",
+                );
+              }
+              await saveCombatState(charId, {
+                concentrationSpellId: ddbSpell.id,
+                concentrationSpellName: spellName,
+              });
             }
           }
 

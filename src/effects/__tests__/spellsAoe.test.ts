@@ -20,7 +20,7 @@ const store: Record<string, string> = {};
     removeEventListener: () => {}
 };
 
-const { getSpellRange, getSpellAoE } = await import("../spells");
+const { getSpellRange, getSpellAoE, isTeleportSpell } = await import("../spells");
 const { APP_KEY } = await import("../../config");
 
 describe("Spell Range & AoE Accuracy Audit (D&D 5e Rules)", () => {
@@ -45,6 +45,27 @@ describe("Spell Range & AoE Accuracy Audit (D&D 5e Rules)", () => {
             expect(getSpellRange(undefined, "frigid_blade")).toBe(5);
             expect(getSpellRange(undefined, "detect_magic")).toBe(0);
             expect(getSpellRange(undefined, "misty_step")).toBe(30);
+            expect(getSpellRange(undefined, "thunder_step")).toBe(90);
+            expect(getSpellRange(undefined, "dimension_door")).toBe(500);
+            expect(getSpellRange(undefined, "fey_step")).toBe(30);
+            expect(getSpellRange(undefined, "far_step")).toBe(60);
+            expect(getSpellRange(undefined, "vortex_warp")).toBe(90);
+            expect(getSpellRange(undefined, "shadow_step")).toBe(60);
+            expect(getSpellRange(undefined, "relentless_hex")).toBe(30);
+        });
+
+        it("correctly identifies teleportation spells via isTeleportSpell", () => {
+            expect(isTeleportSpell("misty_step")).toBe(true);
+            expect(isTeleportSpell("Misty Step")).toBe(true);
+            expect(isTeleportSpell("thunder_step")).toBe(true);
+            expect(isTeleportSpell("dimension_door")).toBe(true);
+            expect(isTeleportSpell("fey_step")).toBe(true);
+            expect(isTeleportSpell("far_step")).toBe(true);
+            expect(isTeleportSpell("vortex_warp")).toBe(true);
+            expect(isTeleportSpell("shadow_step")).toBe(true);
+            expect(isTeleportSpell("relentless_hex")).toBe(true);
+            expect(isTeleportSpell("fireball")).toBe(false);
+            expect(isTeleportSpell(undefined)).toBe(false);
         });
     });
 

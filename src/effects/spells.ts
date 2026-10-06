@@ -221,12 +221,45 @@ export function getSpell(spellID: string, isGM: boolean = false): Spell|undefine
 }
 
 /**
+ * Detects if a spell is a teleportation / repositioning spell that targets a destination point.
+ */
+export function isTeleportSpell(spellId?: string): boolean {
+    if (!spellId) return false;
+    const norm = spellId.toLowerCase().replace(/[\s-]+/g, "_").replace(/[^a-z0-9_]/g, "");
+    return (
+        norm === "misty_step" ||
+        norm.includes("misty_step") ||
+        norm === "thunder_step" ||
+        norm.includes("thunder_step") ||
+        norm === "dimension_door" ||
+        norm.includes("dimension_door") ||
+        norm === "fey_step" ||
+        norm.includes("fey_step") ||
+        norm === "far_step" ||
+        norm.includes("far_step") ||
+        norm === "vortex_warp" ||
+        norm.includes("vortex_warp") ||
+        norm === "shadow_step" ||
+        norm.includes("shadow_step") ||
+        norm === "relentless_hex" ||
+        norm.includes("relentless_hex")
+    );
+}
+
+/**
  * Returns the effective casting range in feet for a spell.
  */
 export function getSpellRange(spell?: Spell, spellID?: string): number {
     const rawId = spellID ?? spell?.name ?? "";
     const norm = rawId.toLowerCase().replace(/[^a-z0-9_]/g, "");
     if (norm === "misty_step" || norm.includes("misty_step")) return 30;
+    if (norm === "fey_step" || norm.includes("fey_step")) return 30;
+    if (norm === "relentless_hex" || norm.includes("relentless_hex")) return 30;
+    if (norm === "thunder_step" || norm.includes("thunder_step")) return 90;
+    if (norm === "vortex_warp" || norm.includes("vortex_warp")) return 90;
+    if (norm === "dimension_door" || norm.includes("dimension_door")) return 500;
+    if (norm === "far_step" || norm.includes("far_step")) return 60;
+    if (norm === "shadow_step" || norm.includes("shadow_step")) return 60;
 
     if (rawId) {
         const manual = ALL_MANUAL_OVERRIDES[rawId] ?? ALL_MANUAL_OVERRIDES[normalizeSpellId(spell?.name ?? rawId)];

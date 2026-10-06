@@ -16,6 +16,9 @@ export interface AimingOverlayRenderOptions {
     rangeMultiplier?: number;
     colorBlindMode?: boolean;
     visionCheck?: VisionCheckResult;
+    isWeapon?: boolean;
+    hasAdvantage?: boolean;
+    hasDisadvantage?: boolean;
 }
 
 export interface AimingOverlayRenderResult {
@@ -23,6 +26,7 @@ export interface AimingOverlayRenderResult {
     currentDistanceFeet: number;
     maxRangeFeet: number;
     canSee: boolean;
+    aimState: "valid" | "advantage" | "disadvantage" | "invalid_range" | "invalid_vision";
     reason?: string;
 }
 
@@ -31,19 +35,78 @@ export interface AimingOverlayRenderResult {
  * All items are rendered on OBR.scene.local (private to this player's screen).
  */
 export async function renderAimingOverlay(state: AimingOverlayRenderOptions): Promise<AimingOverlayRenderResult> {
-    const { casterPos, cursorPos, maxRangeFeet, grid, rangeMultiplier = 1, colorBlindMode = false, visionCheck } = state;
+    const {
+        casterPos,
+        cursorPos,
+        maxRangeFeet,
+        grid,
+        rangeMultiplier = 1,
+        colorBlindMode = false,
+        visionCheck,
+        isWeapon = false,
+        hasAdvantage = false,
+        hasDisadvantage = false
+    } = state;
+
     const rangeCheck = isWithinRange(casterPos, cursorPos, maxRangeFeet, grid, rangeMultiplier);
     const canSee = visionCheck ? visionCheck.canSee : true;
-    const isValid = rangeCheck.withinRange && canSee;
 
+    type AimState = "valid" | "advantage" | "disadvantage" | "invalid_range" | "invalid_vision";
+    let aimState: AimState = "valid";
+
+    if (!rangeCheck.withinRange) {
+        aimState = "invalid_range";
+    } else if (!canSee) {
+        if (isWeapon || hasDisadvantage) {
+            aimState = "disadvantage";
+        } else {
+            aimState = "invalid_vision";
+        }
+    } else if (hasAdvantage) {
+        aimState = "advantage";
+    } else {
+        aimState = "valid";
+    }
+
+    const isValidAction = aimState === "valid" || aimState === "advantage" || aimState === "disadvantage";
     const rangePixels = feetToPixels(rangeCheck.effectiveMaxRangeFeet, grid.dpi, grid.scaleMultiplier);
 
-    // Color definitions
-    const validColor = colorBlindMode ? "#38bdf8" : "#38bdf8"; // Cyan / Light Blue
-    const invalidColor = colorBlindMode ? "#ea580c" : "#ef4444"; // Deep Orange for color blind / Red standard
+    // Color definitions (Tactical VTT theme, no emojis)
+    const cyanColor = colorBlindMode ? "#38bdf8" : "#38bdf8";
+    const emeraldColor = colorBlindMode ? "#10b981" : "#10b981";
+    const amberColor = colorBlindMode ? "#eab308" : "#f59e0b";
+    const redColor = colorBlindMode ? "#ea580c" : "#ef4444";
 
-    const strokeColor = isValid ? validColor : invalidColor;
-    const strokeDash = isValid ? [] : [14, 10]; // Solid if valid, dashed if invalid
+    let strokeColor = cyanColor;
+    let textColor = "#ffffff";
+    let bgColor = "#0f172a";
+    let textLabel = `${rangeCheck.currentDistanceFeet} ft / ${rangeCheck.effectiveMaxRangeFeet} ft`;
+
+    if (aimState === "advantage") {
+        strokeColor = emeraldColor;
+        textColor = "#a7f3d0";
+        bgColor = "#064e3b";
+        textLabel = `${rangeCheck.currentDistanceFeet} ft / ${rangeCheck.effectiveMaxRangeFeet} ft (Advantage - Unseen Attacker)`;
+    } else if (aimState === "disadvantage") {
+        strokeColor = amberColor;
+        textColor = "#fde68a";
+        bgColor = "#1c1917";
+        textLabel = `${rangeCheck.currentDistanceFeet} ft / ${rangeCheck.effectiveMaxRangeFeet} ft (Disadvantage - Unseen in Darkness)`;
+    } else if (aimState === "invalid_range") {
+        strokeColor = redColor;
+        textColor = "#fca5a5";
+        bgColor = "#450a0a";
+        textLabel = `${rangeCheck.currentDistanceFeet} ft / ${rangeCheck.effectiveMaxRangeFeet} ft (Out of range)`;
+    } else if (aimState === "invalid_vision") {
+        strokeColor = redColor;
+        textColor = "#fca5a5";
+        bgColor = "#450a0a";
+        textLabel = `${rangeCheck.currentDistanceFeet} ft / ${rangeCheck.effectiveMaxRangeFeet} ft (${visionCheck?.reason || "Requires sight - Blocked by Darkness"})`;
+    }
+
+    const strokeDash = isValidAction ? [] : [14, 10];
+    const strokeWidth = isValidAction ? 4 : 3;
+    const strokeOpacity = isValidAction ? 0.9 : 0.75;
 
     // 1. Range Circle (centered on caster)
     const rangeCircle = buildShape()
@@ -68,8 +131,8 @@ export async function renderAimingOverlay(state: AimingOverlayRenderOptions): Pr
         .startPosition(casterPos)
         .endPosition(cursorPos)
         .strokeColor(strokeColor)
-        .strokeWidth(isValid ? 4 : 3)
-        .strokeOpacity(isValid ? 0.9 : 0.75)
+        .strokeWidth(strokeWidth)
+        .strokeOpacity(strokeOpacity)
         .strokeDash(strokeDash)
         .disableHit(true)
         .locked(true)
@@ -77,14 +140,6 @@ export async function renderAimingOverlay(state: AimingOverlayRenderOptions): Pr
         .build();
 
     // 3. Distance Pill Label (near cursor)
-    let textLabel = `${rangeCheck.currentDistanceFeet} ft / ${rangeCheck.effectiveMaxRangeFeet} ft`;
-    if (!rangeCheck.withinRange) {
-        textLabel = `❌ ${rangeCheck.currentDistanceFeet} ft / ${rangeCheck.effectiveMaxRangeFeet} ft (Out of range)`;
-    } else if (!canSee) {
-        textLabel = `⚠️ ${rangeCheck.currentDistanceFeet} ft / ${rangeCheck.effectiveMaxRangeFeet} ft (${visionCheck?.reason || "Blocked"})`;
-    }
-
-    // Position label slightly above cursor
     const labelPos: Vector2 = {
         x: cursorPos.x + 20,
         y: cursorPos.y - 30
@@ -97,8 +152,8 @@ export async function renderAimingOverlay(state: AimingOverlayRenderOptions): Pr
         .fontSize(14)
         .padding(8)
         .cornerRadius(6)
-        .fillColor(isValid ? "#ffffff" : "#fca5a5")
-        .backgroundColor(isValid ? "#0f172a" : "#450a0a")
+        .fillColor(textColor)
+        .backgroundColor(bgColor)
         .backgroundOpacity(0.9)
         .disableHit(true)
         .locked(true)
@@ -163,6 +218,7 @@ export async function renderAimingOverlay(state: AimingOverlayRenderOptions): Pr
         currentDistanceFeet: rangeCheck.currentDistanceFeet,
         maxRangeFeet: rangeCheck.effectiveMaxRangeFeet,
         canSee,
+        aimState,
         reason: visionCheck?.reason
     };
 }

@@ -821,14 +821,17 @@
                 "type": "effect",
                 "id": {
                     "name": "if",
-                    "arguments": ["$transparent", "darkness.black.transparent", "darkness.black.opaque"]
+                    "arguments": ["$transparent", "darkness.black.transparent", "darkness.black.transparent"]
                 },
-                "layer": {
-                    "name": "if",
-                    "arguments": ["$transparent", null, "FOG"]
-                },
+                "layer": "ATTACHMENT",
                 "duration": -1,
                 "disableHit": true,
+                "metadata": {
+                    "eu.armindo.embers/darkness-zone": {
+                        "radiusFeet": 15,
+                        "transparent": "$transparent"
+                    }
+                },
                 "effectProperties": {
                     "source": "$targets[0].position",
                     "size": "$radius"
@@ -920,7 +923,7 @@
                 "type": "action",
                 "id": "hide",
                 "delay": 1000,
-                "for": "GM",
+                "for": "CASTER",
                 "arguments": ["$targets[0].id"]
             },
             {
@@ -936,14 +939,14 @@
                 "type": "action",
                 "id": "move",
                 "delay": 1500,
-                "for": "GM",
+                "for": "CASTER",
                 "arguments": ["$targets[0].id", "$targets[1].position"]
             },
             {
                 "type": "action",
                 "id": "show",
                 "delay": 3000,
-                "for": "GM",
+                "for": "CASTER",
                 "arguments": ["$targets[0].id"]
             }
         ]

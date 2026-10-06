@@ -12,7 +12,8 @@ export const LOCAL_STORAGE_KEYS = {
 
 export const GLOBAL_STORAGE_KEYS = {
     PLAYERS_CAN_CAST_SPELLS: "players-cast-spells",
-    SUMMONED_ENTITIES_RULE: "summoned-entities"
+    SUMMONED_ENTITIES_RULE: "summoned-entities",
+    DARKNESS_OPACITY_MODE: "darkness-opacity-mode", // "dynamic" | "always-transparent" | "always-opaque"
 };
 
 export const SETTINGS_CHANNEL = `${APP_KEY}/settings`;
@@ -26,6 +27,7 @@ export const DEFAULT_VALUES = {
     [LOCAL_STORAGE_KEYS.SMART_ACTION_ON_TARGET]: true,
     [GLOBAL_STORAGE_KEYS.PLAYERS_CAN_CAST_SPELLS]: true,
     [GLOBAL_STORAGE_KEYS.SUMMONED_ENTITIES_RULE]: "caster",
+    [GLOBAL_STORAGE_KEYS.DARKNESS_OPACITY_MODE]: "dynamic",
 }
 
 // Migrate legacy default: keep-selected-targets used to default to true.
@@ -67,6 +69,9 @@ export async function getDefaultGridScaleFactor() {
 }
 
 export function getSettingsValue(key: string) {
+    if (typeof localStorage === "undefined") {
+        return DEFAULT_VALUES[key];
+    }
     const settingsObjectString = localStorage.getItem(`${APP_KEY}/settings`);
     if (settingsObjectString == undefined) {
         return DEFAULT_VALUES[key];
@@ -79,6 +84,9 @@ export function getSettingsValue(key: string) {
 }
 
 export function setSettingsValue(key: string, value: unknown) {
+    if (typeof localStorage === "undefined") {
+        return;
+    }
     const settingsObjectString = localStorage.getItem(`${APP_KEY}/settings`);
     if (settingsObjectString == undefined) {
         localStorage.setItem(`${APP_KEY}/settings`, JSON.stringify({ [key]: value }));

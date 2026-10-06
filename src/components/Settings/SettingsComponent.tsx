@@ -47,6 +47,7 @@ export default function Settings() {
     const [keepTargets, setKeepTargets] = useState<boolean | null>(null);
     const [playersCastSpells, setPlayersCastSpells] = useState<boolean | null>(null);
     const [summonedEntities, setSummonedEntities] = useState<string | null>(null);
+    const [darknessOpacityMode, setDarknessOpacityMode] = useState<string | null>(null);
     const [gridScale, setGridScale] = useState<GridScale | null>(null);
     const [defaultCaster, setDefaultCaster] = useState<SimplifiedItem[] | null>(null);
     const [animationRate, _setAnimationRate] = useState<number | null>(null);
@@ -133,6 +134,7 @@ export default function Settings() {
         }
         getGlobalSettingsValue(GLOBAL_STORAGE_KEYS.PLAYERS_CAN_CAST_SPELLS).then(value => setPlayersCastSpells(value as boolean));
         getGlobalSettingsValue(GLOBAL_STORAGE_KEYS.SUMMONED_ENTITIES_RULE).then(value => setSummonedEntities(value as string));
+        getGlobalSettingsValue(GLOBAL_STORAGE_KEYS.DARKNESS_OPACITY_MODE).then(value => setDarknessOpacityMode((value as string) ?? "dynamic"));
     }, [obr.ready, obr.sceneReady]);
 
     useEffect(() => {
@@ -216,6 +218,13 @@ export default function Settings() {
         }
         setGlobalSettingsValue(GLOBAL_STORAGE_KEYS.SUMMONED_ENTITIES_RULE, summonedEntities);
     }, [summonedEntities]);
+
+    useEffect(() => {
+        if (darknessOpacityMode == null) {
+            return;
+        }
+        setGlobalSettingsValue(GLOBAL_STORAGE_KEYS.DARKNESS_OPACITY_MODE, darknessOpacityMode);
+    }, [darknessOpacityMode]);
 
     return <div ref={mainDiv}>
         <Typography
@@ -324,6 +333,16 @@ export default function Settings() {
                             <select className="settings-select" onChange={event => setSummonedEntities(event.target.value)} value={summonedEntities ?? ""} >
                                 <option value="gm-only">GM Only</option>
                                 <option value="caster">Caster</option>
+                            </select>
+                        </div>
+                        <div className="settings-item" title={"Darkness spell opacity mode. 'Dynamic' applies D&D rules (Devil's Sight/Truesight see through, others see opaque black fog). 'Always Transparent' makes all darkness transparent for the whole room. 'Always Opaque' forces solid fog for everyone."}>
+                            <label>
+                                <p>Darkness opacity mode</p>
+                            </label>
+                            <select className="settings-select" onChange={event => setDarknessOpacityMode(event.target.value)} value={darknessOpacityMode ?? "dynamic"}>
+                                <option value="dynamic">Dynamic (Vision-Based)</option>
+                                <option value="always-transparent">Always Transparent</option>
+                                <option value="always-opaque">Always Opaque</option>
                             </select>
                         </div>
                     </div>
