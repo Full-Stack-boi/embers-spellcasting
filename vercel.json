@@ -1,0 +1,23 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, OPTIONS, PUT, DELETE" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization, X-Requested-With" }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/ddb/:path*",
+      "destination": "https://character-service.dndbeyond.com/:path*"
+    },
+    {
+      "source": "/((?!assets/|background\\.html|manifest\\.json|.*\\.(?:js|css|html|json|png|jpg|jpeg|svg|webm|ico|wasm)).*)",
+      "destination": "/index.html"
+    }
+  ]
+}

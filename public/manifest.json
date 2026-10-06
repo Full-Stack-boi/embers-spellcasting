@@ -1,17 +1,17 @@
 {
-    "name": "Embers",
-    "version": "0.2.0",
-    "manifest_version": 1,
-    "author": "Armindo Flores",
+  "name": "Embers Spellcasting",
+  "version": "0.2.0",
+  "manifest_version": 1,
+  "author": "Full-Stack-boi & Armindo Flores",
+  "icon": "/embers.svg",
+  "homepage_url": "https://github.com/Full-Stack-boi/embers-spellcasting",
+  "background_url": "/background.html",
+  "description": "Animated spell & ability effects, BG3 Action Dock HUD, and D&D Beyond integration for Owlbear Rodeo.",
+  "action": {
+    "title": "Embers Spellcasting",
     "icon": "/embers.svg",
-    "homepage_url": "https://github.com/ArmindoFlores/embers",
-    "background_url": "/background.html",
-    "description": "Use and create animated spell & ability effects for your games.",
-    "action": {
-      "title": "Embers",
-      "icon": "/embers.svg",
-      "popover": "/",
-      "height": 600,
-      "width": 400
-    }
+    "popover": "/",
+    "height": 600,
+    "width": 400
+  }
 }
