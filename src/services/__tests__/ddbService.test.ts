@@ -854,5 +854,145 @@ describe("ddbService", () => {
             expect(hasWeaponGraze(undefined)).toBe(false);
         });
     });
+
+    describe("AC calculation and spell preparation for prepared casters", () => {
+        it("calculates AC 23 correctly for character wearing Plate, +2 and Shield, +1 with negative DEX", () => {
+            const rawCharacter = {
+                id: 171379419,
+                name: "St.Arthur Trueheart",
+                classes: [{ level: 5, definition: { name: "Paladin" } }],
+                stats: [
+                    { id: 1, value: 16 }, // STR 16 (+3)
+                    { id: 2, value: 8 },  // DEX 8 (-1)
+                    { id: 3, value: 14 }, // CON 14 (+2)
+                    { id: 4, value: 10 }, // INT 10 (+0)
+                    { id: 5, value: 12 }, // WIS 12 (+1)
+                    { id: 6, value: 16 }  // CHA 16 (+3)
+                ],
+                inventory: [
+                    {
+                        equipped: true,
+                        definition: {
+                            id: 1001,
+                            name: "Shield, +1",
+                            filterType: "Armor", // DDB gives Shields filterType: "Armor"
+                            type: null,
+                            armorTypeId: 4,
+                            armorClass: 2,
+                            magic: true
+                        }
+                    },
+                    {
+                        equipped: true,
+                        definition: {
+                            id: 1002,
+                            name: "Plate, +2",
+                            filterType: "Armor",
+                            type: null,
+                            armorTypeId: 3,
+                            armorClass: 18,
+                            magic: true
+                        }
+                    }
+                ],
+                modifiers: {
+                    race: [],
+                    class: [],
+                    background: [],
+                    item: [
+                        { type: "bonus", subType: "armor-class", value: 1, isGranted: true, friendlySubtypeName: "Armor Class" },
+                        { type: "bonus", subType: "armor-class", value: 2, isGranted: true, friendlySubtypeName: "Armor Class" }
+                    ],
+                    feat: []
+                }
+            };
+
+            const char = parseDDBCharacterData(rawCharacter);
+            // Base plate 18 + heavy armor (no DEX) + shield base 2 + shield enchant 1 + plate enchant 2 = 23
+            expect(char.armorClass).toBe(23);
+        });
+
+        it("correctly identifies prepared vs unprepared class spells for Paladin", () => {
+            const paladinData = {
+                id: 171379419,
+                name: "Paladin Caster",
+                classes: [{ id: 101, level: 5, definition: { name: "Paladin" } }],
+                stats: [{ id: 6, value: 16 }],
+                classSpells: [
+                    {
+                        characterClassId: 101,
+                        spells: [
+                            {
+                                prepared: false,
+                                alwaysPrepared: false,
+                                countsAsKnownSpell: true, // DDB sets this to true even when unprepared
+                                definition: {
+                                    id: 201,
+                                    name: "Divine Favor",
+                                    level: 1,
+                                    school: "Transmutation"
+                                }
+                            },
+                            {
+                                prepared: false,
+                                alwaysPrepared: false,
+                                countsAsKnownSpell: true,
+                                definition: {
+                                    id: 202,
+                                    name: "Aid",
+                                    level: 2,
+                                    school: "Abjuration"
+                                }
+                            }
+                        ]
+                    }
+                ],
+                spells: {
+                    class: [
+                        {
+                            prepared: false,
+                            alwaysPrepared: true, // Subclass oath spell or Divine Smite
+                            countsAsKnownSpell: false,
+                            definition: {
+                                id: 203,
+                                name: "Guiding Bolt",
+                                level: 1,
+                                school: "Evocation"
+                            }
+                        },
+                        {
+                            prepared: false,
+                            alwaysPrepared: false,
+                            countsAsKnownSpell: false,
+                            definition: {
+                                id: 204,
+                                name: "Sacred Flame",
+                                level: 0, // Cantrip is always prepared
+                                school: "Evocation"
+                            }
+                        }
+                    ]
+                }
+            };
+
+            const char = parseDDBCharacterData(paladinData);
+            const divineFavor = char.spells.find(s => s.name === "Divine Favor");
+            const aid = char.spells.find(s => s.name === "Aid");
+            const guidingBolt = char.spells.find(s => s.name === "Guiding Bolt");
+            const sacredFlame = char.spells.find(s => s.name === "Sacred Flame");
+
+            expect(divineFavor).toBeDefined();
+            expect(divineFavor?.isPrepared).toBe(false);
+
+            expect(aid).toBeDefined();
+            expect(aid?.isPrepared).toBe(false);
+
+            expect(guidingBolt).toBeDefined();
+            expect(guidingBolt?.isPrepared).toBe(true);
+
+            expect(sacredFlame).toBeDefined();
+            expect(sacredFlame?.isPrepared).toBe(true);
+        });
+    });
 });
 

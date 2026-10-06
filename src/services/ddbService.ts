@@ -20,7 +20,7 @@ import { APP_KEY } from "../config";
 export const DDB_CHARACTER_METADATA_KEY = `${APP_KEY}/ddb-character-id`;
 // Bump CACHE_VERSION whenever the parsing output format changes significantly.
 // This auto-invalidates all old cached character data (prevents stale spells, wrong AC, etc.)
-const CACHE_VERSION = "v7"; // v7: skills, saving throws, inventory, background & notes
+const CACHE_VERSION = "v8"; // v8: fix AC shield vs armor detection and prepared caster spell status
 export const DDB_CACHE_STORAGE_PREFIX = `${APP_KEY}/ddb-cache/${CACHE_VERSION}/`;
 
 /**
@@ -238,6 +238,19 @@ export function hasWeaponGraze(weapon?: DDBWeaponAttack | null): boolean {
 }
 
 /**
+ * 5e / 2024 classes that prepare spells from their class spell list or spellbook daily.
+ * For these classes, leveled class spells require explicit preparation (`prepared === true || alwaysPrepared === true`).
+ * Known casters (Sorcerer, Warlock, Bard, Ranger) learn spells permanently, so `countsAsKnownSpell === true` grants them.
+ */
+export const PREPARED_CASTER_CLASSES = ["paladin", "cleric", "druid", "wizard", "artificer"];
+
+export function isClassPreparedCaster(className?: string): boolean {
+    if (!className) return false;
+    const lower = className.toLowerCase();
+    return PREPARED_CASTER_CLASSES.some(c => lower.includes(c));
+}
+
+/**
  * Strips HTML tags and decodes common HTML entities from D&D Beyond description text.
  */
 export function stripHtml(html?: string): string {
@@ -430,11 +443,11 @@ function parseDDBSpell(
     const higherLevels = stripHtml(rawHigher);
     const canUpcast = level > 0 && Boolean(higherLevels || damage);
 
-    const isPrepared = spellObj.prepared === true
-        || spellObj.alwaysPrepared === true
-        || spellObj.countsAsKnownSpell === true
-        || level === 0
-        || source !== "class";
+    const isPrepared = level === 0 || source !== "class"
+        ? true
+        : isClassPreparedCaster(castingClass)
+            ? Boolean(spellObj.prepared === true || spellObj.alwaysPrepared === true)
+            : Boolean(spellObj.prepared === true || spellObj.alwaysPrepared === true || spellObj.countsAsKnownSpell === true);
 
     return {
         id,
@@ -807,16 +820,24 @@ export function parseDDBCharacterData(raw: any): DDBParsedCharacter {
             if (Array.isArray(spellList)) {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const source = (["race", "feat", "item", "class"].includes(key) ? key : "custom") as any;
+                const defaultClassName = classes[0]?.name;
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 (spellList as any[]).forEach((s: any) => {
                     const spellLevel = s.definition?.level ?? s.level ?? -1;
                     // Cantrips and race/feat/item spells are always granted.
-                    // Only skip leveled class spells that are explicitly unprepared.
+                    // Only skip leveled class spells that are explicitly unprepared and not known.
                     if (key === "class" && spellLevel > 0 && s.prepared === false && !s.alwaysPrepared && !s.countsAsKnownSpell) {
                         return;
                     }
 
-                    const parsed = parseDDBSpell(s, source, undefined, totalLevel);
+                    const rawCls = Array.isArray(data.classes) && s.characterClassId
+                        ? data.classes.find((rc: any) => rc.id === s.characterClassId)
+                        : undefined;
+                    const spellCastingClass = key === "class"
+                        ? (rawCls?.definition?.name || defaultClassName)
+                        : undefined;
+
+                    const parsed = parseDDBSpell(s, source, spellCastingClass, totalLevel);
                     if (parsed && !spellsMap.has(parsed.id)) {
                         spellsMap.set(parsed.id, parsed);
                     }
@@ -1419,8 +1440,35 @@ export function parseDDBCharacterData(raw: any): DDBParsedCharacter {
     const overrideAc: number | undefined =
         typeof data.overrideArmorClass === "number" ? data.overrideArmorClass : undefined;
 
-    const equippedArmor = (data.inventory || []).find((i: any) => i.equipped && i.definition?.filterType === "Armor");
-    const equippedShield = (data.inventory || []).find((i: any) => i.equipped && i.definition?.filterType === "Shield");
+    const isShieldItem = (item: any): boolean => {
+        if (!item) return false;
+        const def = item.definition || {};
+        if (def.armorTypeId === 4) return true;
+        if (def.filterType === "Shield") return true;
+        const subType = (def.subType || "").toLowerCase();
+        if (subType === "shield" || subType.includes("shield")) return true;
+        const type = (def.type || "").toLowerCase();
+        if (type === "shield" || type.includes("shield")) return true;
+        const name = (def.name || item.name || item.customName || "").toLowerCase();
+        if (name.includes("shield")) return true;
+        return false;
+    };
+
+    const isBodyArmorItem = (item: any): boolean => {
+        if (!item) return false;
+        if (isShieldItem(item)) return false;
+        const def = item.definition || {};
+        if ([1, 2, 3].includes(def.armorTypeId)) return true;
+        if (def.filterType === "Armor") return true;
+        const type = (def.type || "").toLowerCase();
+        if (["light armor", "medium armor", "heavy armor"].includes(type)) return true;
+        const subType = (def.subType || "").toLowerCase();
+        if (["light armor", "medium armor", "heavy armor"].includes(subType)) return true;
+        return false;
+    };
+
+    const equippedArmor = (data.inventory || []).find((i: any) => i.equipped && isBodyArmorItem(i));
+    const equippedShield = (data.inventory || []).find((i: any) => i.equipped && isShieldItem(i));
 
     // (allModifiers already collected above, shared between weapon and AC calculation)
 
@@ -1431,9 +1479,14 @@ export function parseDDBCharacterData(raw: any): DDBParsedCharacter {
 
     if (equippedArmor) {
         baseAc = equippedArmor.definition?.armorClass || 10;
-        const armorType = equippedArmor.definition?.type;
-        if (armorType === "Heavy Armor") addDex = false;
-        else if (armorType === "Medium Armor") maxDex = 2;
+        const armorTypeId = equippedArmor.definition?.armorTypeId;
+        const armorType = (equippedArmor.definition?.type || "").toLowerCase();
+        const armorSubType = (equippedArmor.definition?.subType || "").toLowerCase();
+        const isHeavy = armorTypeId === 3 || armorType.includes("heavy") || armorSubType.includes("heavy");
+        const isMedium = armorTypeId === 2 || armorType.includes("medium") || armorSubType.includes("medium");
+
+        if (isHeavy) addDex = false;
+        else if (isMedium) maxDex = 2;
         // Magic armor +X enchantment (e.g. +1 Breastplate)
         const armorEnchant = equippedArmor.definition?.magic ? (equippedArmor.definition?.armorClass ?? 0) - (equippedArmor.definition?.baseArmorClass ?? equippedArmor.definition?.armorClass ?? 0) : 0;
         void armorEnchant; // already included in armorClass field from DDB
@@ -1490,9 +1543,17 @@ export function parseDDBCharacterData(raw: any): DDBParsedCharacter {
                     setAcFloor = Math.max(setAcFloor, m.value);
                 } else if ((m.type === "set" || m.type === "bonus") && m.statId) {
                     const abilityKey = ABILITY_ID_MAP[m.statId as number];
+                    // Monk Unarmored Defense (Wisdom) does not apply with a shield (PHB rules)
+                    if (abilityKey === "wis" && isMonkCharacter && equippedShield) {
+                        return;
+                    }
                     if (abilityKey) {
-                        extraAbilityBonus += modifiers[abilityKey];
-                        extraAbilityBonusName = ABILITY_NAME_MAP[abilityKey] || abilityKey.toUpperCase();
+                        const candidateBonus = modifiers[abilityKey];
+                        // Unarmored Defense features do not stack (PHB Multiclass rules: choose highest)
+                        if (candidateBonus > extraAbilityBonus || extraAbilityBonus === 0) {
+                            extraAbilityBonus = candidateBonus;
+                            extraAbilityBonusName = ABILITY_NAME_MAP[abilityKey] || abilityKey.toUpperCase();
+                        }
                     }
                 }
             }
@@ -1516,10 +1577,15 @@ export function parseDDBCharacterData(raw: any): DDBParsedCharacter {
         });
     }
     allModifiers.forEach((m: any) => {
-        if (m.type === "bonus" && m.subType === "armor-class" && typeof m.value === "number") {
+        if (m.isGranted !== false && m.type === "bonus" && m.subType === "armor-class" && typeof m.value === "number") {
+            const label = m.friendlySubtypeName || m.friendlyTypeName || "Magic Bonus";
+            const isDefenseFightingStyle = label.toLowerCase().includes("defense");
+            // Defense fighting style requires wearing armor
+            if (isDefenseFightingStyle && !equippedArmor) return;
+
             bonusAc += m.value;
             additionalAcBonuses.push({
-                label: m.friendlySubtypeName || m.friendlyTypeName || "Magic Bonus",
+                label,
                 value: m.value
             });
         }
