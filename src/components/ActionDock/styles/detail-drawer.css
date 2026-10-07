@@ -1,0 +1,434 @@
+/* ========================================================= */
+/* MAIN CONTENT LAYOUT WITH DOCK LEFT PANE & DETAIL DRAWER   */
+/* ========================================================= */
+.ddb-dock-main-content {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    position: relative;
+}
+
+.ddb-dock-left-pane {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Slide-out detail drawer */
+.ddb-detail-drawer {
+    width: 320px;
+    flex-shrink: 0;
+    min-height: 0;
+    background: #0d1118;
+    border: 1px solid rgba(181, 133, 69, 0.58);
+    border-radius: 5px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    z-index: 10;
+    overflow: hidden;
+    animation: ddbDrawerSlideIn 160ms ease-out;
+}
+
+.ddb-drawer-header,
+.ddb-drawer-actions-bar {
+    flex-shrink: 0;
+}
+
+.ddb-drawer-scrollable {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    padding: 10px 12px;
+    scrollbar-width: thin;
+    scrollbar-color: #566174 transparent;
+}
+
+.ddb-drawer-scrollable:focus-visible {
+    outline: 1px solid #64748b;
+    outline-offset: -2px;
+}
+
+.ddb-drawer-scrollable::-webkit-scrollbar {
+    width: 6px;
+}
+
+.ddb-drawer-scrollable::-webkit-scrollbar-thumb {
+    background: #566174;
+    border-radius: 3px;
+}
+
+@keyframes ddbDrawerSlideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.ddb-drawer-header {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 11px 13px 10px;
+    background: #0d1118;
+    border-bottom: 1px solid #292b30;
+    position: relative;
+}
+
+.ddb-drawer-header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.ddb-drawer-category {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #c9a66b;
+}
+
+.ddb-drawer-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #f3f4f6;
+    margin: 0;
+    line-height: 1.3;
+    word-break: break-word;
+}
+
+.ddb-drawer-close-btn {
+    background: transparent;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 6px;
+    border-radius: 4px;
+    transition: all 120ms ease;
+    font-size: 0.85rem;
+}
+.ddb-drawer-close-btn:hover {
+    color: #f3f4f6;
+    background: #272a30;
+}
+
+.ddb-drawer-close-btn:focus-visible,
+.ddb-drawer-action-btn:focus-visible {
+    outline: 2px solid #d3aa68;
+    outline-offset: 2px;
+}
+
+.ddb-drawer-meta-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 4px 0 0 0;
+    background: transparent;
+    border-bottom: none;
+    overflow-x: auto;
+}
+
+.ddb-drawer-badge {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    padding: 2px 5px;
+    border: 1px solid #374151;
+    border-radius: 3px;
+    background: #202734;
+    color: #cbd5e1;
+    font-size: 0.65rem;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.ddb-drawer-tag {
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: #202734;
+    border: 1px solid #374151;
+    color: #93c5fd;
+    text-transform: uppercase;
+}
+
+.ddb-drawer-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 14px;
+    font-size: 0.78rem;
+    color: #d1d5db;
+    line-height: 1.5;
+}
+
+.ddb-drawer-body::-webkit-scrollbar {
+    width: 5px;
+}
+.ddb-drawer-body::-webkit-scrollbar-thumb {
+    background: #2a3344;
+    border-radius: 3px;
+}
+
+.ddb-drawer-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.ddb-drawer-stat-box {
+    display: flex;
+    flex-direction: column;
+    padding: 6px 8px;
+    background: #181d27;
+    border: 1px solid #283141;
+    border-radius: 4px;
+}
+
+.ddb-drawer-stat-box .lbl {
+    font-size: 0.62rem;
+    font-weight: 700;
+    color: #9ca3af;
+    text-transform: uppercase;
+}
+
+.ddb-drawer-stat-box .val {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #f3f4f6;
+    margin-top: 2px;
+}
+
+.ddb-drawer-rich-desc {
+    color: #cbd5e1;
+    font-size: 0.77rem;
+    line-height: 1.5;
+}
+
+.ddb-drawer-rich-desc p {
+    margin: 0 0 8px 0;
+}
+
+.ddb-drawer-rich-desc table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0;
+    font-size: 0.74rem;
+}
+
+.ddb-drawer-rich-desc th,
+.ddb-drawer-rich-desc td {
+    padding: 4px 6px;
+    border: 1px solid #374151;
+    text-align: left;
+}
+
+.ddb-drawer-rich-desc th {
+    background: #1f2735;
+    color: #e5e7eb;
+    font-weight: 700;
+}
+
+.ddb-drawer-rich-desc tr:nth-child(even) {
+    background: #151a23;
+}
+
+/* AC breakdown list in Drawer */
+.ddb-ac-breakdown-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 12px 0;
+}
+
+.ddb-ac-breakdown-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px solid #212836;
+    font-size: 0.78rem;
+}
+
+.ddb-ac-breakdown-list li strong {
+    color: #60a5fa;
+}
+
+.ddb-ac-explanation {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    line-height: 1.4;
+}
+
+/* HP grid in Drawer */
+.ddb-hp-drawer-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.ddb-hp-stat-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 4px;
+    background: #181d27;
+    border: 1px solid #283141;
+    border-radius: 4px;
+}
+
+.ddb-hp-label {
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: #9ca3af;
+}
+
+.ddb-hp-val {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #f87171;
+    margin-top: 2px;
+}
+
+.ddb-hp-quick-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.ddb-hp-btn {
+    flex: 1;
+    padding: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    transition: opacity 120ms ease;
+}
+
+.ddb-hp-btn.heal {
+    background: #166534;
+    color: #86efac;
+}
+.ddb-hp-btn.heal:hover {
+    background: #15803d;
+}
+
+.ddb-hp-btn.dmg {
+    background: #991b1b;
+    color: #fca5a5;
+}
+.ddb-hp-btn.dmg:hover {
+    background: #b91c1c;
+}
+
+/* Defenses in Drawer */
+.ddb-drawer-subtitle {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #c084fc;
+    margin: 10px 0 4px 0;
+    text-transform: uppercase;
+}
+
+.ddb-drawer-para {
+    font-size: 0.76rem;
+    color: #d1d5db;
+    margin: 0 0 8px 0;
+}
+
+/* Actions bar at bottom of drawer */
+.ddb-drawer-actions-bar {
+    padding: 10px 14px;
+    border-top: 1px solid #292b30;
+    background: #0d1118;
+    display: flex;
+    gap: 8px;
+}
+
+@media (max-height: 380px) {
+    .ddb-drawer-header {
+        gap: 3px;
+        padding: 6px 10px;
+    }
+
+    .ddb-drawer-title {
+        font-size: 0.92rem;
+        line-height: 1.15;
+    }
+
+    .ddb-drawer-meta-row {
+        flex-wrap: nowrap;
+        gap: 4px;
+        padding-top: 0;
+    }
+
+    .ddb-drawer-scrollable {
+        padding: 7px 10px;
+    }
+
+    .ddb-drawer-actions-bar {
+        padding: 6px 8px;
+    }
+
+    .ddb-drawer-action-btn {
+        padding: 5px 7px;
+    }
+}
+
+.ddb-drawer-action-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px 10px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    border-radius: 4px;
+    border: 1px solid #374151;
+    background: #1c222e;
+    color: #e5e7eb;
+    cursor: pointer;
+    transition: all 120ms ease;
+}
+
+.ddb-drawer-action-btn:hover {
+    background: #292a2d;
+    border-color: #9a7845;
+    color: #ffffff;
+}
+
+.ddb-drawer-action-btn.primary {
+    background: #7c2d12;
+    border-color: #b45309;
+    color: #fed7aa;
+}
+
+.ddb-drawer-action-btn.primary:hover {
+    background: #8b3e19;
+    border-color: #d18d42;
+    color: #ffffff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ddb-detail-drawer {
+        animation: none;
+    }
+}

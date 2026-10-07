@@ -11,7 +11,7 @@ import {
 import { DDBParsedCharacter, DDBSkill, DDBSavingThrow } from "../../types/ddb";
 import { rollAttack } from "../../utils/dice";
 import { broadcastDDBRoll } from "../../services/rollLogService";
-import { IconDragon, IconSearch, IconDiceD20 } from "../ActionDock/Bg3Icons";
+import { IconDragon, IconSearch, IconDiceD20 } from "../ActionDock/shared/Bg3Icons";
 import { openDDBSyncModal } from "../../views/DDBSyncModal";
 
 export type ChecksTab = "SAVES" | "SKILLS" | "PROFICIENCIES_SENSES";

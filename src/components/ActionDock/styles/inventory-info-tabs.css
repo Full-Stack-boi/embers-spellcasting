@@ -1,0 +1,388 @@
+/* ========================================================= */
+/* SPELL GROUP HEADERS IN SPELLS TABLE                       */
+/* ========================================================= */
+.ddb-spell-group-row {
+    background: #11151c;
+    border-bottom: 1px solid #252c39;
+}
+
+.ddb-spell-group-cell {
+    padding: 6px 12px;
+}
+
+.ddb-spell-group-label {
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: #f59e0b;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ddb-spell-group-label::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, #374151 0%, transparent 100%);
+}
+
+/* ========================================================= */
+/* INVENTORY TAB STYLING                                     */
+/* ========================================================= */
+.ddb-inv-summary-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    background: #11141a;
+    border-bottom: 1px solid #232a36;
+    gap: 12px;
+}
+
+.ddb-currencies-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ddb-curr-pill {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: #191f2b;
+    border: 1px solid #2d3748;
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: #f3f4f6;
+}
+
+.ddb-curr-pill strong.lbl {
+    font-size: 0.62rem;
+    letter-spacing: 0.04em;
+}
+
+.ddb-curr-pill.pp strong.lbl { color: #e2e8f0; }
+.ddb-curr-pill.gp strong.lbl { color: #eab308; }
+.ddb-curr-pill.ep strong.lbl { color: #94a3b8; }
+.ddb-curr-pill.sp strong.lbl { color: #cbd5e1; }
+.ddb-curr-pill.cp strong.lbl { color: #d97706; }
+
+.ddb-inv-meta-trackers {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.ddb-attunement-tracker {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.68rem;
+    color: #9ca3af;
+}
+
+.ddb-attune-lbl {
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    color: #c084fc;
+}
+
+.ddb-attune-val {
+    font-weight: 800;
+    color: #f3f4f6;
+}
+
+.ddb-attune-pips {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.ddb-attune-pip {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 1.5px solid #7e22ce;
+    background: transparent;
+    transition: all 130ms ease;
+}
+
+.ddb-attune-pip.filled {
+    background: #a855f7;
+    border-color: #d8b4fe;
+    box-shadow: 0 0 6px rgba(168, 85, 247, 0.8);
+}
+
+.ddb-weight-tracker {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.68rem;
+    color: #9ca3af;
+}
+
+.ddb-weight-lbl {
+    font-weight: 800;
+    letter-spacing: 0.06em;
+}
+
+.ddb-weight-val {
+    font-weight: 700;
+    color: #f3f4f6;
+}
+
+.ddb-status-badges-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+}
+
+.ddb-attuned-badge {
+    font-size: 0.54rem;
+    font-weight: 800;
+    padding: 1px 5px;
+    background: #3b0764;
+    border: 1px solid #a855f7;
+    color: #e9d5ff;
+    border-radius: 3px;
+    letter-spacing: 0.03em;
+    box-shadow: 0 0 4px rgba(168, 85, 247, 0.4);
+    white-space: nowrap;
+}
+
+.ddb-can-attune-badge {
+    font-size: 0.52rem;
+    font-weight: 700;
+    padding: 1px 4px;
+    background: #1e1b4b;
+    border: 1px dashed #6366f1;
+    color: #c7d2fe;
+    border-radius: 3px;
+    white-space: nowrap;
+}
+
+.ddb-drawer-badge.attuned {
+    background: #3b0764;
+    border-color: #a855f7;
+    color: #e9d5ff;
+}
+
+.ddb-drawer-badge.can-attune {
+    background: #1e1b4b;
+    border-color: #6366f1;
+    color: #c7d2fe;
+}
+
+.ddb-inventory-table .th-equipped,
+.ddb-inventory-table .td-equipped {
+    width: 80px;
+    text-align: center;
+}
+
+.ddb-equipped-badge {
+    font-size: 0.58rem;
+    font-weight: 800;
+    padding: 1px 5px;
+    background: #14532d;
+    border: 1px solid #22c55e;
+    color: #86efac;
+    border-radius: 3px;
+    letter-spacing: 0.04em;
+}
+
+.ddb-unequipped-dot {
+    color: #4b5563;
+}
+
+.ddb-item-name {
+    font-weight: 700;
+    color: #f3f4f6;
+    margin-right: 6px;
+}
+
+.ddb-rarity-tag {
+    font-size: 0.58rem;
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 3px;
+    text-transform: capitalize;
+}
+
+.ddb-rarity-tag.uncommon { background: #064e3b; color: #6ee7b7; border: 1px solid #10b981; }
+.ddb-rarity-tag.rare { background: #1e3a8a; color: #93c5fd; border: 1px solid #3b82f6; }
+.ddb-rarity-tag.very-rare { background: #581c87; color: #d8b4fe; border: 1px solid #a855f7; }
+.ddb-rarity-tag.legendary { background: #7c2d12; color: #fed7aa; border: 1px solid #f97316; }
+
+/* ========================================================= */
+/* BACKGROUND TAB STYLING                                    */
+/* ========================================================= */
+.ddb-background-panel {
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+    gap: 12px;
+    overflow-y: auto;
+}
+
+.ddb-bg-card {
+    background: #141820;
+    border: 1px solid #262c37;
+    border-top: 2px solid #8b1d24;
+    border-radius: 6px;
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ddb-bg-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #1f2532;
+    padding-bottom: 6px;
+}
+
+.ddb-bg-title {
+    font-size: 0.92rem;
+    font-weight: 800;
+    color: #f3f4f6;
+}
+
+.ddb-bg-feature-badge {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #f59e0b;
+    background: #1e1915;
+    border: 1px solid #78350f;
+    padding: 2px 7px;
+    border-radius: 4px;
+}
+
+.ddb-bg-desc p {
+    margin: 4px 0;
+    font-size: 0.76rem;
+    line-height: 1.45;
+    color: #d1d5db;
+}
+
+.ddb-characteristics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.ddb-trait-card {
+    background: #141820;
+    border: 1px solid #262c37;
+    border-radius: 6px;
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.ddb-trait-title {
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    color: #eab308;
+    text-transform: uppercase;
+}
+
+.ddb-trait-text {
+    margin: 0;
+    font-size: 0.74rem;
+    color: #d1d5db;
+    line-height: 1.35;
+}
+
+/* ========================================================= */
+/* NOTES TAB STYLING                                         */
+/* ========================================================= */
+.ddb-notes-panel {
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+    gap: 14px;
+    overflow-y: auto;
+}
+
+.ddb-notes-section {
+    background: #141820;
+    border: 1px solid #262c37;
+    border-left: 3px solid #c82d38;
+    border-radius: 6px;
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ddb-section-header-title {
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: #eab308;
+    text-transform: uppercase;
+    border-bottom: 1px solid #1f2532;
+    padding-bottom: 4px;
+}
+
+.ddb-notes-body-text p {
+    margin: 6px 0;
+    font-size: 0.76rem;
+    line-height: 1.5;
+    color: #d1d5db;
+}
+
+.ddb-empty-notes-text {
+    color: #6b7280;
+    font-style: italic;
+    font-size: 0.74rem;
+}
+
+/* ========================================================= */
+/* EXTRAS TAB STYLING                                        */
+/* ========================================================= */
+.ddb-extras-panel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 24px;
+}
+
+.ddb-extras-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    max-width: 320px;
+    gap: 8px;
+    color: #9ca3af;
+}
+
+.ddb-extras-empty-icon {
+    color: #c82d38;
+    opacity: 0.8;
+}
+
+.ddb-extras-empty-title {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: #f3f4f6;
+}
+
+.ddb-extras-empty-desc {
+    margin: 0;
+    font-size: 0.74rem;
+    line-height: 1.4;
+    color: #9ca3af;
+}

@@ -9,7 +9,7 @@ import {
     DieIconD10,
     DieIconD12,
     DieIconD20,
-} from "../ActionDock/CustomDiceRoller";
+} from "../ActionDock/overlays/CustomDiceRoller";
 
 export const ElderFlameDieIcon: React.FC<{ size?: number }> = ({ size = 20 }) => (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none" className="ddb-roll-card-flame-icon">

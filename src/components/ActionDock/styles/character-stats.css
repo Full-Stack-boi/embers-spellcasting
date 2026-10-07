@@ -1,0 +1,291 @@
+/* ========================================================= */
+/* DDB TOP CHARACTER STATS BAR                               */
+/* ========================================================= */
+.ddb-character-stats-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: #101319;
+    border-bottom: 1px solid #1f2530;
+    overflow-x: auto;
+    flex-shrink: 0;
+}
+
+.ddb-character-stats-bar::-webkit-scrollbar {
+    height: 4px;
+}
+.ddb-character-stats-bar::-webkit-scrollbar-thumb {
+    background: #2a3242;
+    border-radius: 2px;
+}
+
+.ddb-cstat-divider {
+    width: 1px;
+    height: 30px;
+    background: #252d3a;
+    margin: 0 4px;
+    flex-shrink: 0;
+    align-self: center;
+}
+
+.ddb-cstat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 6px;
+    height: 48px;
+    min-height: 48px;
+    max-height: 48px;
+    width: 78px;
+    box-sizing: border-box;
+    background: #171b23;
+    border: 1px solid #28303e;
+    border-radius: 6px !important;
+    cursor: default;
+    position: relative;
+    user-select: none;
+    transition: all 140ms ease;
+    font-family: inherit;
+    color: inherit;
+    line-height: normal;
+    flex-shrink: 0;
+}
+
+button.ddb-cstat-item {
+    appearance: none;
+    -webkit-appearance: none;
+    background: #171b23;
+    border: 1px solid #28303e;
+    border-radius: 6px !important;
+    padding: 4px 6px;
+    height: 48px;
+    min-height: 48px;
+    max-height: 48px;
+    width: 78px;
+    box-sizing: border-box;
+    cursor: pointer;
+    line-height: normal;
+    font-family: inherit;
+    color: inherit;
+    outline: none;
+}
+
+.ddb-cstat-item:hover,
+button.ddb-cstat-item:hover {
+    background: #1e2430;
+    border-color: #3f4d63;
+}
+
+.ddb-cstat-val {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #f3f4f6;
+    line-height: 1.1;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 20px;
+}
+
+.ddb-cstat-unit {
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: #9ca3af;
+    margin-left: 2px;
+}
+
+.ddb-cstat-lbl {
+    font-size: 0.56rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #838e9e;
+    margin-top: 2px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    line-height: 1;
+    text-align: center;
+}
+
+/* Inspiration Button */
+.ddb-cstat-item.inspiration-btn {
+    cursor: pointer;
+    background: #171b23;
+    width: 78px;
+}
+.ddb-cstat-item.inspiration-btn:hover {
+    border-color: #eab308;
+    background: #22221b;
+}
+.ddb-cstat-item.inspiration-btn.active {
+    background: linear-gradient(135deg, #2b2210 0%, #1e190d 100%);
+    border-color: #f59e0b;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.25);
+}
+.ddb-inspiration-icon {
+    font-size: 1rem;
+    line-height: 1;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    filter: grayscale(100%);
+    transition: filter 140ms ease;
+}
+.ddb-cstat-item.inspiration-btn.active .ddb-inspiration-icon {
+    filter: grayscale(0%);
+}
+
+/* Hit Points Block */
+.ddb-cstat-item.hp-block {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 8px;
+    cursor: pointer;
+    width: auto;
+    min-width: 140px;
+    height: 48px;
+    min-height: 48px;
+    border-color: #451a1a;
+    background: #1a1417;
+}
+.ddb-cstat-item.hp-block:hover {
+    border-color: #ef4444;
+    background: #22171c;
+}
+.ddb-hp-quick-adjust-col {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.ddb-hp-mini-btn {
+    padding: 1px 4px;
+    font-size: 0.62rem;
+    font-weight: 700;
+    border-radius: 3px;
+    border: none;
+    cursor: pointer;
+    line-height: 1;
+    transition: opacity 120ms ease;
+}
+.ddb-hp-mini-btn.heal {
+    background: #166534;
+    color: #86efac;
+}
+.ddb-hp-mini-btn.heal:hover {
+    background: #15803d;
+}
+.ddb-hp-mini-btn.dmg {
+    background: #991b1b;
+    color: #fca5a5;
+}
+.ddb-hp-mini-btn.dmg:hover {
+    background: #b91c1c;
+}
+.ddb-hp-display-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.ddb-cstat-val.hp-nums {
+    font-size: 0.98rem;
+    color: #f87171;
+}
+.ddb-hp-slash {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin: 0 2px;
+}
+.ddb-hp-temp-tag {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #38bdf8;
+    background: #0c4a6e;
+    padding: 2px 4px;
+    border-radius: 3px;
+}
+
+/* Initiative Button */
+.ddb-cstat-item.initiative-btn {
+    cursor: pointer;
+    width: 78px;
+}
+.ddb-cstat-item.initiative-btn:hover {
+    border-color: #3b82f6;
+    background: #162030;
+}
+.ddb-init-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    height: 20px;
+}
+.ddb-advantage-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.62rem;
+    font-weight: 800;
+    padding: 0 3px;
+    height: 15px;
+    border-radius: 3px;
+    background: #065f46;
+    color: #6ee7b7;
+    border: 1px solid #059669;
+    line-height: 1;
+}
+
+/* Armor Class Badge */
+.ddb-cstat-item.ac-badge {
+    cursor: pointer;
+    width: 78px;
+    border-color: #2b394e;
+}
+.ddb-cstat-item.ac-badge:hover {
+    border-color: #60a5fa;
+    background: #182232;
+}
+
+/* Speed Badge */
+.ddb-cstat-item.speed {
+    width: 78px;
+}
+
+/* Proficiency Badge */
+.ddb-cstat-item.prof {
+    width: 78px;
+}
+
+/* Defenses Block */
+.ddb-cstat-item.defenses-block {
+    cursor: pointer;
+    width: auto;
+    min-width: 86px;
+    max-width: 160px;
+    padding: 4px 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.ddb-cstat-item.defenses-block:hover {
+    border-color: #a855f7;
+    background: #20172c;
+}
+.ddb-defense-val {
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: #c084fc;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 140px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}

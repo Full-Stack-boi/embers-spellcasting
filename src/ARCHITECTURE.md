@@ -52,7 +52,7 @@ src/
 
 ### B. Baldur's Gate 3 Action Dock HUD
 - **Action Dock** (`src/components/ActionDock/ActionDock.tsx`): Bottom-docked interface rendering active spells, cantrips, weapon actions, class features, and custom dice.
-- **BG3 Flyout Bar** (`src/components/ActionDock/BG3FlyoutBar.tsx`): Multi-step spell casting flow handling slot upcasting, variant configurations (e.g., Hex ability curse selection), and target confirmation.
+- **BG3 Flyout Bar** (`src/components/ActionDock/overlays/BG3FlyoutBar.tsx`): Multi-step spell casting flow handling slot upcasting, variant configurations (e.g., Hex ability curse selection), and target confirmation.
 - **Resource-Agnostic Casting**: Decouples spell slot checks from non-slot spells, allowing features to deduct custom class resources (Focus Points, Sorcery Points, Superiority Dice) instead of spell slots.
 - **Feature Drawers & Action Cards**: Exposes direct action buttons (`Cast [Spell]`, `Strike x2`, `Bonus Strike`) within feature tooltips and drawers.
 - **Combat State** (`src/services/combatStateService.ts`): Maintains client-side combat context such as active concentration spells and target curses (+1d6 Necrotic Hex damage on subsequent attack hits).

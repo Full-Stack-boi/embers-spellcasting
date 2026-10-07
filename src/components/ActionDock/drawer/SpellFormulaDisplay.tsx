@@ -5,7 +5,7 @@
  * V1: Display only. V2 will add inline roll buttons.
  */
 
-import type { SpellFormula, SpellMechanic, CantripScaleTier, DamageType } from "../../types/spellFormula";
+import type { SpellFormula, SpellMechanic, CantripScaleTier, DamageType } from "../../../types/spellFormula";
 
 // ─── School Badge Colors ───────────────────────────────────────────────────────
 

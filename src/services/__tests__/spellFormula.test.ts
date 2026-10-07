@@ -5,7 +5,7 @@ import type { DDBParsedSpell } from "../../types/ddb";
 import { rollExplodingDice, rollFormulaWithExplosion } from "../../utils/dice";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createElement } from "react";
-import { SpellFormulaDisplay } from "../../components/ActionDock/SpellFormulaDisplay";
+import { SpellFormulaDisplay } from "../../components/ActionDock/drawer/SpellFormulaDisplay";
 
 describe("SpellFormula System", () => {
     it("resolves VSSPP2 cantrip scaling and leveled-spell upcasting from manual data", async () => {

@@ -4,7 +4,7 @@ import { getSpellMetadata, isSpellUpcastable, getScaledSpellStats, getOrdinal } 
 import { setSelectedSpell } from "../../effectsTool";
 import OBR from "@owlbear-rodeo/sdk";
 import { toolID } from "../../effectsTool";
-import { IconCastLightning } from "../ActionDock/Bg3Icons";
+import { IconCastLightning } from "../ActionDock/shared/Bg3Icons";
 
 export interface SpellDetailViewerProps {
     spellID: string;

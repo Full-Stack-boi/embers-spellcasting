@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import "./DDBCharacterSyncModal.css";
+import "./DDBCharacterSyncModal";
 import OBR from "@owlbear-rodeo/sdk";
 import {
     extractDDBCharacterId,
@@ -9,9 +9,9 @@ import {
     parseDDBCharacterData,
     linkCharacterToToken,
     getLinkedDDBCharacterId
-} from "../../services/ddbService";
-import { DDBParsedCharacter } from "../../types/ddb";
-import { TOKEN_VISION_METADATA_KEY } from "../../features/targeting/application/lineOfSightService";
+} from "../../../services/ddbService";
+import { DDBParsedCharacter } from "../../../types/ddb";
+import { TOKEN_VISION_METADATA_KEY } from "../../../features/targeting/application/lineOfSightService";
 
 interface DDBCharacterSyncModalProps {
     isOpen: boolean;

@@ -1,0 +1,729 @@
+/* ========================================================= */
+/* D&D Beyond Game Log Drawer Embed                          */
+/* ========================================================= */
+.ddb-drawer-log-embed {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow-y: auto;
+}
+
+/* ========================================================= */
+/* 2-COLUMN DOCK LAYOUT (Left Vitals Pillar + Right Deck)   */
+/* ========================================================= */
+.ddb-dock-2col-layout {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    height: calc(100% - 10px);
+    min-height: 0;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Hide duplicate filter/search rows in table panels since top strip handles it */
+.ddb-dock-2col-layout .ddb-actions-filter-search-row,
+.ddb-dock-2col-layout .ddb-spells-filter-search-row {
+    display: none;
+}
+
+/* --------------------------------------------------------- */
+/* LEFT COLUMN: Vitals Pillar                                */
+/* --------------------------------------------------------- */
+.ddb-vitals-pillar {
+    width: 232px;
+    min-width: 232px;
+    max-width: 232px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 6px 8px;
+    background: #0f1216;
+    border-right: 1px solid var(--ddb-border-subtle);
+    box-sizing: border-box;
+    overflow-y: auto;
+    overflow-x: hidden;
+    position: relative;
+    z-index: 5;
+}
+
+/* Character Identity in Pillar */
+.ddb-vitals-pillar .ddb-caster-identity {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    transition: background 0.15s ease;
+}
+.ddb-vitals-pillar .ddb-caster-identity:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+.ddb-vitals-pillar .ddb-caster-avatar-ring {
+    position: relative;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1.5px solid var(--ddb-border-accent);
+    overflow: visible;
+    flex-shrink: 0;
+}
+.ddb-vitals-pillar .ddb-caster-avatar-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+.ddb-vitals-pillar .ddb-synced-star {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    color: #fbbf24;
+    font-size: 10px;
+    text-shadow: 0 0 4px rgba(251, 191, 36, 0.8);
+}
+.ddb-vitals-pillar .ddb-caster-text-block {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+}
+.ddb-vitals-pillar .ddb-caster-name-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.ddb-vitals-pillar .ddb-caster-name {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--ddb-text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.ddb-vitals-pillar .ddb-sync-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 8px;
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 3px;
+    text-transform: uppercase;
+}
+.ddb-vitals-pillar .ddb-sync-badge.synced {
+    background: rgba(34, 197, 94, 0.15);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+.ddb-vitals-pillar .ddb-sync-badge.unsynced {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+.ddb-vitals-pillar .ddb-caster-subline {
+    font-size: 0.67rem;
+    color: var(--ddb-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Death saves compact */
+.ddb-death-saves-bar.compact {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 3px 6px;
+    background: #1c1417;
+    border: 1px solid #7f1d1d;
+    border-radius: 4px;
+}
+.ddb-death-saves-bar.compact .ddb-death-saves-pips-group {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+.ddb-death-saves-bar.compact .ddb-death-save-label {
+    font-size: 0.58rem;
+    font-weight: 800;
+    color: #94a3b8;
+    margin-right: 2px;
+}
+
+/* Pillar HP Box */
+.ddb-pillar-hp-box {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 6px;
+    background: #14171d;
+    border: 1px solid #232936;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+.ddb-pillar-hp-box:hover {
+    border-color: #3b82f6;
+    background: #171c24;
+}
+.ddb-pillar-hp-center {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    gap: 3px;
+}
+.ddb-pillar-hp-row {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+}
+.ddb-pillar-hp-label {
+    font-size: 0.62rem;
+    font-weight: 800;
+    color: #94a3b8;
+    letter-spacing: 0.05em;
+}
+.ddb-pillar-hp-box .hp-nums {
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #f8fafc;
+}
+.ddb-pillar-hp-box .ddb-hp-slash {
+    color: #64748b;
+    font-weight: 400;
+    font-size: 0.72rem;
+}
+.ddb-pillar-hp-box .ddb-hp-temp-tag {
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.15);
+    padding: 0 4px;
+    border-radius: 3px;
+    margin-left: auto;
+}
+.ddb-pillar-hp-bar {
+    width: 100%;
+    height: 4px;
+    background: #1e2430;
+    border-radius: 2px;
+    overflow: hidden;
+}
+.ddb-pillar-hp-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.25s ease;
+}
+.ddb-pillar-hp-bar-fill.healthy {
+    background: linear-gradient(90deg, #22c55e, #4ade80);
+}
+.ddb-pillar-hp-bar-fill.wounded {
+    background: linear-gradient(90deg, #eab308, #facc15);
+}
+.ddb-pillar-hp-bar-fill.critical {
+    background: linear-gradient(90deg, #dc2626, #f87171);
+}
+
+/* Pillar Vitals Grid (AC, Init, Speed, Prof) */
+.ddb-pillar-vitals-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+}
+.ddb-pillar-vital-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 2px;
+    background: #14171d;
+    border: 1px solid #232936;
+    border-radius: 4px;
+    cursor: default;
+    transition: all 0.15s ease;
+}
+.ddb-pillar-vital-cell.ac {
+    cursor: pointer;
+}
+.ddb-pillar-vital-cell.ac:hover {
+    border-color: #38bdf8;
+    background: #182230;
+}
+.ddb-pillar-vital-cell.init-btn {
+    cursor: pointer;
+    background: #14171d;
+    border: 1px solid #232936;
+    color: inherit;
+    font-family: inherit;
+}
+.ddb-pillar-vital-cell.init-btn:hover {
+    border-color: #f59e0b;
+    background: #231c14;
+}
+.ddb-pillar-vital-val {
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: #f1f5f9;
+    line-height: 1.1;
+}
+.ddb-pillar-vital-lbl {
+    font-size: 0.58rem;
+    font-weight: 700;
+    color: #94a3b8;
+    letter-spacing: 0.04em;
+    margin-top: 1px;
+}
+
+/* Pillar Aux Row (Inspiration & Defenses) */
+.ddb-pillar-aux-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+}
+.ddb-pillar-inspiration-btn,
+.ddb-pillar-defenses-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 3px 4px;
+    background: #14171d;
+    border: 1px solid #232936;
+    border-radius: 4px;
+    color: #94a3b8;
+    font-size: 0.6rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.ddb-pillar-inspiration-btn:hover {
+    border-color: #f59e0b;
+    color: #fde68a;
+    background: #231c14;
+}
+.ddb-pillar-inspiration-btn.active {
+    background: #2d1d0c;
+    border-color: #f59e0b;
+    color: #f59e0b;
+    box-shadow: 0 0 6px rgba(245, 158, 11, 0.3);
+}
+.ddb-pillar-defenses-btn:hover {
+    border-color: #38bdf8;
+    color: #bae6fd;
+    background: #13212f;
+}
+.ddb-aux-btn-text {
+    letter-spacing: 0.04em;
+}
+
+/* Pillar Toolbar (Rest, Checks, Dice, Conditions, Grimoire, Clear, Log) */
+.ddb-pillar-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2px;
+    padding: 3px 4px;
+    background: #12151b;
+    border: 1px solid #1f2530;
+    border-radius: 4px;
+}
+.ddb-pillar-tool-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 3px 5px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 0.65rem;
+    font-weight: 600;
+    transition: all 0.12s ease;
+    position: relative;
+}
+.ddb-pillar-tool-btn:hover {
+    background: #1e2430;
+    color: #f1f5f9;
+    border-color: #2e384d;
+}
+.ddb-pillar-tool-btn.active {
+    background: #2563eb;
+    color: #ffffff;
+    border-color: #3b82f6;
+}
+.ddb-pillar-tool-btn.rest {
+    color: #f59e0b;
+}
+.ddb-pillar-tool-btn.rest:hover {
+    background: rgba(245, 158, 11, 0.15);
+    border-color: rgba(245, 158, 11, 0.3);
+}
+.ddb-pillar-tool-badge {
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    background: #ef4444;
+    color: white;
+    font-size: 8px;
+    font-weight: 800;
+    border-radius: 6px;
+    padding: 0 3px;
+    min-width: 10px;
+    height: 10px;
+    line-height: 10px;
+    text-align: center;
+}
+.ddb-unread-badge {
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    background: #2563eb;
+    color: #ffffff;
+    font-size: 8px;
+    font-weight: 800;
+    border-radius: 6px;
+    padding: 0 3px;
+    min-width: 10px;
+    height: 10px;
+    line-height: 10px;
+    text-align: center;
+    box-shadow: 0 0 4px rgba(37, 99, 235, 0.6);
+}
+
+/* Pillar Buffs & Status Chips */
+.ddb-pillar-buffs-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    max-height: 52px;
+    overflow-y: auto;
+    padding: 2px 0;
+}
+.ddb-pillar-buffs-wrap .ddb-buff-chip {
+    padding: 1px 4px;
+    font-size: 9px;
+}
+
+/* Conditions Popover floating relative to pillar */
+.ddb-conditions-popover.pillar-floating {
+    position: absolute;
+    bottom: 45px;
+    left: 8px;
+    width: 250px;
+    z-index: 50;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
+}
+
+/* --------------------------------------------------------- */
+/* RIGHT COLUMN: Action Deck Main                            */
+/* --------------------------------------------------------- */
+.ddb-action-deck-main {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--ddb-bg-dark);
+    position: relative;
+}
+
+.ddb-floating-resource-tray {
+    position: absolute;
+    left: 60px;
+    right: 0;
+    height: 40px;
+    z-index: 50;
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+    pointer-events: auto;
+}
+
+.ddb-turn-resource-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 40px;
+    min-height: 40px;
+    width: max-content;
+    max-width: 100%;
+    min-width: 0;
+    flex: 0 1 auto;
+    padding: 4px 8px;
+    box-sizing: border-box;
+    overflow-x: auto;
+    overflow-y: hidden;
+    touch-action: pan-x;
+    background: #171a20;
+    border: 1px solid #655332;
+    border-top: 0;
+    scrollbar-width: thin;
+    scrollbar-color: #3b161a transparent;
+}
+
+.ddb-turn-resource-bar .ddb-deck-slots-group {
+    min-width: 0;
+}
+
+.ddb-turn-resource-bar .ddb-slot-pill-btn,
+.ddb-turn-resource-bar .ddb-action-gem {
+    flex-shrink: 0;
+}
+
+/* Top Strip (Single 36px bar with pinned right section) */
+.ddb-deck-top-strip {
+    height: 36px;
+    min-height: 36px;
+    max-height: 36px;
+    display: flex;
+    align-items: center;
+    background: #111419;
+    border-bottom: 1px solid var(--ddb-border-subtle);
+    box-sizing: border-box;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.ddb-deck-filter-strip {
+    display: flex;
+    align-items: center;
+    min-height: 29px;
+    padding: 3px 8px;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    background: #111419;
+    border-bottom: 1px solid var(--ddb-border-subtle);
+    gap: 8px;
+}
+
+.ddb-deck-filter-strip .ddb-deck-subfilters {
+    flex: 1 1 auto;
+    flex-shrink: 1;
+    flex-wrap: wrap;
+    min-width: 0;
+    row-gap: 3px;
+}
+
+.ddb-top-strip-scrollable {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 8px;
+    flex: 1;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+}
+.ddb-top-strip-scrollable::-webkit-scrollbar {
+    display: none;
+}
+
+.ddb-top-strip-pinned-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 8px 0 12px;
+    flex-shrink: 0;
+    background: linear-gradient(90deg, rgba(17, 20, 25, 0) 0%, rgba(17, 20, 25, 0.96) 12px, #111419 100%);
+    box-shadow: -8px 0 12px rgba(17, 20, 25, 0.8);
+    z-index: 10;
+}
+.ddb-top-strip-divider {
+    width: 1px;
+    height: 18px;
+    background: #252b37;
+    flex-shrink: 0;
+}
+
+/* Deck Navigation Tabs */
+.ddb-deck-tabs-group {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
+}
+.ddb-resource-tray-toggle {
+    flex-shrink: 0;
+    margin-left: auto;
+    padding: 4px 7px;
+    border: 1px solid #3a352b;
+    border-radius: 3px;
+    background: #171a20;
+    color: #b5a170;
+    font: inherit;
+    font-size: 0.6rem;
+    font-weight: 800;
+    white-space: nowrap;
+    cursor: pointer;
+}
+.ddb-resource-tray-toggle:hover,
+.ddb-resource-tray-toggle:focus-visible {
+    border-color: #c7a85f;
+    color: #f1dfae;
+    outline: none;
+}
+.ddb-resource-tray-toggle.active {
+    background: #30291d;
+    border-color: #c7a85f;
+    color: #f1dfae;
+}
+.ddb-deck-tab-btn {
+    padding: 4px 8px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--ddb-text-muted);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.12s ease;
+    white-space: nowrap;
+}
+.ddb-deck-tab-btn:hover {
+    color: var(--ddb-text-main);
+    background: rgba(255, 255, 255, 0.04);
+}
+.ddb-deck-tab-btn.active {
+    color: #ffffff;
+    background: var(--ddb-red-primary);
+    border-color: var(--ddb-red-hover);
+    box-shadow: 0 0 6px rgba(200, 45, 56, 0.4);
+}
+
+/* Deck Spell Slots & Resources */
+.ddb-deck-slots-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.ddb-deck-slots-group::-webkit-scrollbar {
+    display: none;
+}
+
+/* Subfilters in Top Strip */
+.ddb-deck-subfilters {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
+    flex-wrap: nowrap;
+}
+.ddb-deck-subfilter-btn {
+    padding: 2px 6px;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    border-radius: 3px;
+    border: 1px solid #28303f;
+    background: #14171d;
+    color: #94a3b8;
+    cursor: pointer;
+    transition: all 0.12s ease;
+    white-space: nowrap;
+}
+.ddb-deck-subfilter-btn:hover {
+    border-color: #475569;
+    color: #f1f5f9;
+}
+.ddb-deck-subfilter-btn.active {
+    background: #2563eb;
+    border-color: #3b82f6;
+    color: #ffffff;
+}
+
+/* Search in Top Strip */
+.ddb-deck-search-wrap {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    background: #14171d;
+    border: 1px solid #28303f;
+    border-radius: 3px;
+    flex-shrink: 0;
+    width: 130px;
+    transition: border-color 0.12s ease, width 0.15s ease;
+}
+.ddb-deck-search-wrap:focus-within {
+    border-color: #3b82f6;
+    width: 160px;
+}
+.ddb-deck-search-input {
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: 0.68rem;
+    color: var(--ddb-text-main);
+    width: 100%;
+}
+.ddb-deck-search-input::placeholder {
+    color: #64748b;
+}
+
+/* Hybrid View Switcher (GRID vs LIST) */
+.ddb-view-switcher {
+    display: flex;
+    align-items: center;
+    background: #141820;
+    border: 1px solid #273042;
+    border-radius: 4px;
+    padding: 1px;
+    flex-shrink: 0;
+}
+.ddb-view-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    color: #94a3b8;
+    background: transparent;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.12s ease;
+}
+.ddb-view-btn:hover {
+    color: #f1f5f9;
+}
+.ddb-view-btn.active {
+    background: #2563eb;
+    color: #ffffff;
+    box-shadow: 0 0 6px rgba(37, 99, 235, 0.4);
+}
+
+/* Workspace Area */
+.ddb-action-content-workspace {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: row;
+    overflow: hidden;
+    position: relative;
+}
+.ddb-bg3-grid-pane {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 8px;
+    box-sizing: border-box;
+}

@@ -1,0 +1,677 @@
+/* ========================================================= */
+/* 1. TOP HEADER BAR                                         */
+/* ========================================================= */
+.ddb-sheet-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 42px;
+    min-height: 42px;
+    padding: 0 10px;
+    background: var(--ddb-bg-darkest);
+    border-bottom: 1px solid var(--ddb-border-subtle);
+    gap: 8px;
+    box-sizing: border-box;
+}
+
+/* Left: Caster Info */
+.ddb-caster-identity {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: opacity 120ms ease;
+}
+.ddb-caster-identity:hover {
+    opacity: 0.85;
+}
+
+.ddb-caster-avatar-ring {
+    position: relative;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 2px solid var(--ddb-red-primary);
+    overflow: visible;
+    flex-shrink: 0;
+}
+
+.ddb-caster-avatar-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+}
+
+.ddb-synced-star {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    font-size: 0.65rem;
+    color: #facc15;
+    background: #1e1b18;
+    border-radius: 50%;
+    width: 12px;
+    height: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #78350f;
+}
+
+.ddb-caster-text-block {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    line-height: 1.1;
+}
+
+.ddb-caster-name-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.ddb-caster-name {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--ddb-text-main);
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ddb-sync-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 3px;
+    text-transform: uppercase;
+}
+.ddb-sync-badge.synced {
+    background: #371417;
+    color: #f87171;
+    border: 1px solid #7f1d1d;
+}
+.ddb-sync-badge.unsynced {
+    background: #1e2229;
+    color: #9ca3af;
+    border: 1px solid #374151;
+}
+
+.ddb-caster-subline {
+    font-size: 0.68rem;
+    color: var(--ddb-text-muted);
+    white-space: nowrap;
+    max-width: 130px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ddb-caster-identity-container {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.ddb-caster-identity-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+/* Focus Camera Button - Authentic BG3 brass/bronze styling */
+.ddb-focus-camera-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    background: linear-gradient(180deg, #1f242d 0%, #13161c 100%);
+    border: 1px solid #3d4452;
+    border-radius: 4px;
+    color: #94a3b8;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    flex-shrink: 0;
+}
+
+.ddb-focus-camera-btn:hover {
+    background: linear-gradient(180deg, #2d3340 0%, #1a1e26 100%);
+    border-color: #d97706;
+    color: #fef08a;
+    box-shadow: 0 0 6px rgba(217, 119, 6, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    transform: translateY(-1px);
+}
+
+.ddb-focus-camera-btn:active {
+    transform: translateY(0);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+/* Owner / Claim Badges */
+.ddb-owner-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 0.58rem;
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    line-height: 1;
+}
+
+.ddb-owner-actions-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.ddb-owner-badge.owned {
+    background: linear-gradient(180deg, #142817 0%, #0d1a0f 100%);
+    color: #86efac;
+    border: 1px solid #166534;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.ddb-owner-badge.other {
+    background: #161e2a;
+    color: #93c5fd;
+    border: 1px solid #1e3a8a;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    letter-spacing: 0.03em;
+}
+
+.ddb-inspection-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.55rem;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: #231d10;
+    color: #fbbf24;
+    border: 1px solid #78350f;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1;
+}
+
+.ddb-feature-cast-spell-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 3px;
+    background: #1e293b;
+    color: #38bdf8;
+    border: 1px solid #0284c7;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    line-height: 1.2;
+}
+
+.ddb-feature-cast-spell-btn:hover {
+    background: #0284c7;
+    color: #ffffff;
+    box-shadow: 0 0 6px rgba(56, 189, 248, 0.4);
+}
+
+.ddb-release-token-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 13px;
+    height: 13px;
+    font-size: 0.55rem;
+    font-weight: 700;
+    padding: 0;
+    border-radius: 3px;
+    background: #1e1315;
+    color: #fca5a5;
+    border: 1px solid #7f1d1d;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    line-height: 1;
+}
+
+.ddb-release-token-btn:hover {
+    background: #450a0a;
+    color: #ffffff;
+    border-color: #ef4444;
+    box-shadow: 0 0 5px rgba(239, 68, 68, 0.4);
+}
+
+.ddb-claim-token-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 0.58rem;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: linear-gradient(180deg, #371417 0%, #250d0f 100%);
+    color: #fca5a5;
+    border: 1px solid #991b1b;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    line-height: 1;
+}
+
+.ddb-claim-token-btn:hover {
+    background: linear-gradient(180deg, #4c1d22 0%, #371417 100%);
+    color: #ffffff;
+    border-color: #ef4444;
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.4);
+}
+
+
+/* Center: Action Gems & Slots Tracker */
+.ddb-header-center-resources {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1 1 auto;
+    min-width: 0;
+    justify-content: center;
+}
+
+.ddb-header-vdivider {
+    width: 1px;
+    height: 18px;
+    background: #28303e;
+    margin: 0 2px;
+    flex-shrink: 0;
+}
+
+.ddb-gem-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.ddb-action-gem {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+    border: 1px solid #374151;
+    background: #1a1e24;
+    cursor: pointer;
+    padding: 0;
+    transition: all 120ms ease;
+}
+.ddb-action-gem.action {
+    color: #4ade80;
+}
+.ddb-action-gem.bonus {
+    color: #fbbf24;
+}
+.ddb-action-gem.expended {
+    opacity: 0.35;
+    background: #111317;
+    border-color: #232730;
+}
+
+.ddb-slots-tracker-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    touch-action: pan-x;
+    max-width: 100%;
+    scrollbar-width: thin;
+    scrollbar-color: #2a3242 transparent;
+    padding: 1px 0;
+}
+.ddb-slots-tracker-row::-webkit-scrollbar {
+    height: 3px;
+}
+.ddb-slots-tracker-row::-webkit-scrollbar-thumb {
+    background: #2a3242;
+    border-radius: 2px;
+}
+
+.ddb-slots-subdivider {
+    width: 1px;
+    height: 14px;
+    background: #374151;
+    margin: 0 3px;
+    flex-shrink: 0;
+}
+
+.ddb-slot-pill-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid #2e3440;
+    background: #191d24;
+    cursor: pointer;
+    transition: background 120ms;
+}
+.ddb-slot-pill-btn:hover {
+    background: #242933;
+}
+.ddb-slot-pill-btn.pact-slot {
+    border-color: #581c87;
+    background: #1f132b;
+}
+
+.ddb-slot-num {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #e5e7eb;
+    font-family: Georgia, serif;
+}
+
+.ddb-slot-pips-row {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.ddb-slot-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    box-sizing: border-box;
+}
+.ddb-slot-dot.filled {
+    background: #38bdf8;
+    border: 1px solid #7dd3fc;
+    box-shadow: 0 0 3px rgba(56, 189, 248, 0.6);
+}
+.ddb-slot-dot.pact.filled {
+    background: #c084fc;
+    border: 1px solid #e9d5ff;
+    box-shadow: 0 0 3px rgba(192, 132, 252, 0.6);
+}
+.ddb-slot-dot.expended {
+    background: #20242c;
+    border: 1px solid #374151;
+}
+
+/* Class Resource Pills (Ki, Sorcery, Rage, Divine, etc.) */
+.ddb-slot-pill-btn.resource-pill {
+    border-color: #374151;
+    background: #191d24;
+}
+.ddb-slot-pill-btn.resource-pill.ki {
+    border-color: #0d9488;
+    background: #042f2e;
+}
+.ddb-slot-pill-btn.resource-pill.ki .ddb-slot-num {
+    color: #5eead4;
+}
+.ddb-slot-dot.ki.filled {
+    background: #2dd4bf;
+    border: 1px solid #99f6e4;
+    box-shadow: 0 0 4px rgba(45, 212, 191, 0.7);
+}
+
+.ddb-slot-pill-btn.resource-pill.sorcery {
+    border-color: #7c3aed;
+    background: #2e1065;
+}
+.ddb-slot-pill-btn.resource-pill.sorcery .ddb-slot-num {
+    color: #d8b4fe;
+}
+.ddb-slot-dot.sorcery.filled {
+    background: #c084fc;
+    border: 1px solid #f3e8ff;
+    box-shadow: 0 0 4px rgba(192, 132, 252, 0.7);
+}
+
+.ddb-slot-pill-btn.resource-pill.rage {
+    border-color: #b91c1c;
+    background: #450a0a;
+}
+.ddb-slot-pill-btn.resource-pill.rage .ddb-slot-num {
+    color: #fca5a5;
+}
+.ddb-slot-dot.rage.filled {
+    background: #f87171;
+    border: 1px solid #fecaca;
+    box-shadow: 0 0 4px rgba(248, 113, 113, 0.7);
+}
+
+.ddb-slot-pill-btn.resource-pill.bard {
+    border-color: #be185d;
+    background: #500724;
+}
+.ddb-slot-pill-btn.resource-pill.bard .ddb-slot-num {
+    color: #f9a8d4;
+}
+.ddb-slot-dot.bard.filled {
+    background: #f43f5e;
+    border: 1px solid #fecdd3;
+    box-shadow: 0 0 4px rgba(244, 63, 94, 0.7);
+}
+
+.ddb-slot-pill-btn.resource-pill.divine {
+    border-color: #ca8a04;
+    background: #422006;
+}
+.ddb-slot-pill-btn.resource-pill.divine .ddb-slot-num {
+    color: #fde047;
+}
+.ddb-slot-dot.divine.filled {
+    background: #facc15;
+    border: 1px solid #fef08a;
+    box-shadow: 0 0 4px rgba(250, 204, 21, 0.7);
+}
+
+.ddb-slot-pill-btn.resource-pill.druid {
+    border-color: #059669;
+    background: #022c22;
+}
+.ddb-slot-pill-btn.resource-pill.druid .ddb-slot-num {
+    color: #6ee7b7;
+}
+.ddb-slot-dot.druid.filled {
+    background: #34d399;
+    border: 1px solid #a7f3d0;
+    box-shadow: 0 0 4px rgba(52, 211, 153, 0.7);
+}
+
+.ddb-slot-pill-btn.resource-pill.fighter {
+    border-color: #d97706;
+    background: #451a03;
+}
+.ddb-slot-pill-btn.resource-pill.fighter .ddb-slot-num {
+    color: #fcd34d;
+}
+.ddb-slot-dot.fighter.filled {
+    background: #fbbf24;
+    border: 1px solid #fef3c7;
+    box-shadow: 0 0 4px rgba(251, 191, 36, 0.7);
+}
+
+.ddb-slot-pill-btn.resource-pill.warlock {
+    border-color: #9333ea;
+    background: #2e1065;
+}
+.ddb-slot-pill-btn.resource-pill.warlock .ddb-slot-num {
+    color: #e9d5ff;
+}
+.ddb-slot-dot.warlock.filled {
+    background: #a855f7;
+    border: 1px solid #d8b4fe;
+    box-shadow: 0 0 4px rgba(168, 85, 247, 0.7);
+}
+
+.ddb-slot-pill-btn.resource-pill.generic {
+    border-color: #4b5563;
+    background: #1f2937;
+}
+.ddb-slot-pill-btn.resource-pill.generic .ddb-slot-num {
+    color: #d1d5db;
+}
+.ddb-slot-dot.generic.filled {
+    background: #9ca3af;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 0 3px rgba(156, 163, 175, 0.6);
+}
+
+.ddb-slot-pill-btn.resource-pill.luck {
+    border-color: #15803d;
+    background: #052e16;
+}
+.ddb-slot-pill-btn.resource-pill.luck .ddb-slot-num {
+    color: #86efac;
+}
+.ddb-slot-dot.luck.filled {
+    background: #4ade80;
+    border: 1px solid #bbf7d0;
+    box-shadow: 0 0 4px rgba(74, 222, 128, 0.7);
+}
+
+.ddb-slot-pill-btn.resource-pill.channeled {
+    border-color: #0e7490;
+    background: #083344;
+}
+.ddb-slot-pill-btn.resource-pill.channeled .ddb-slot-num {
+    color: #67e8f9;
+}
+.ddb-slot-dot.channeled.filled {
+    background: #22d3ee;
+    border: 1px solid #a5f3fc;
+    box-shadow: 0 0 4px rgba(34, 211, 238, 0.7);
+}
+
+.ddb-slot-pill-btn.resource-pill.feat {
+    border-color: #4f46e5;
+    background: #1e1b4b;
+}
+.ddb-slot-pill-btn.resource-pill.feat .ddb-slot-num {
+    color: #a5b4fc;
+}
+.ddb-slot-dot.feat.filled {
+    background: #818cf8;
+    border: 1px solid #c7d2fe;
+    box-shadow: 0 0 4px rgba(129, 140, 248, 0.7);
+}
+
+.ddb-resource-pool-text {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #f3f4f6;
+    font-family: monospace;
+    padding-left: 2px;
+}
+
+.ddb-rest-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 24px;
+    box-sizing: border-box;
+    padding: 0 8px;
+    border-radius: 4px;
+    border: 1px solid #7f1d1d;
+    background: #2a1215;
+    color: #fca5a5;
+    font-size: 0.68rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 120ms ease;
+}
+.ddb-rest-action-btn:hover {
+    background: #451a1e;
+    color: #ffffff;
+    border-color: var(--ddb-red-primary);
+}
+
+/* Right: Stat Chips & Controls */
+.ddb-header-right-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.ddb-stat-chip-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.ddb-header-stat-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 38px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: #191d24;
+    border: 1px solid #2e3440;
+    line-height: 1;
+}
+
+.ddb-stat-val {
+    font-size: 0.76rem;
+    font-weight: 800;
+    color: #ffffff;
+}
+
+.ddb-stat-lbl {
+    font-size: 0.54rem;
+    font-weight: 700;
+    color: #f87171;
+    letter-spacing: 0.04em;
+    margin-top: 1px;
+}
+
+.ddb-utility-btns {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.ddb-clear-btn,
+.ddb-close-dock-btn {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+    border: 1px solid #374151;
+    background: #1c2027;
+    color: #9ca3af;
+    cursor: pointer;
+    padding: 0;
+    transition: all 120ms ease;
+}
+.ddb-clear-btn:hover {
+    color: #60a5fa;
+    border-color: #3b82f6;
+    background: #1e2837;
+}
+.ddb-close-dock-btn:hover {
+    color: #f87171;
+    border-color: #ef4444;
+    background: #371417;
+}

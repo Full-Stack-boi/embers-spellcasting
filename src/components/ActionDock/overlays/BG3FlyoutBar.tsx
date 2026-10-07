@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import type { DDBParsedSpell } from "../../types/ddb";
-import { getSchoolStyle } from "../../assets/spellInfo";
+import type { DDBParsedSpell } from "../../../types/ddb";
+import { getSchoolStyle } from "../../../assets/spellInfo";
 import {
     DAMAGE_TYPE_META,
     getDamageTypeIcon,
@@ -15,7 +15,7 @@ import {
     IconDiceD6,
     IconCaretUp,
     IconSquarePip,
-} from "./Bg3Icons";
+} from "../shared/Bg3Icons";
 import {
     FaFireFlameCurved,
     FaWandMagicSparkles,
@@ -32,8 +32,8 @@ import {
     CUNNING_STRIKE_OPTIONS,
     TACTICAL_MIND_OPTIONS,
     DIVINE_SPARK_OPTIONS
-} from "../../assets/manual-formulas";
-import type { FeatureFlyoutKind } from "../../assets/manual-formulas";
+} from "../../../assets/manual-formulas/index";
+import type { FeatureFlyoutKind } from "../../../assets/manual-formulas/index";
 
 export type { FeatureFlyoutKind };
 

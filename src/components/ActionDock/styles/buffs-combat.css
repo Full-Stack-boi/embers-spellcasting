@@ -1,0 +1,462 @@
+/* ========================================================= */
+/* CHECKS IN DETAIL DRAWER                                   */
+/* ========================================================= */
+.ddb-detail-drawer.checks-mode {
+    width: 440px;
+    max-width: 90vw;
+}
+
+.ddb-drawer-checks-embed {
+    height: 100%;
+    overflow-y: auto;
+}
+
+/* ========================================================= */
+/* ACTIVE BUFFS / STATUS BAR & CHIPS                         */
+/* ========================================================= */
+.ddb-active-buffs-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 14px;
+    background: linear-gradient(90deg, rgba(20, 24, 32, 0.98), rgba(28, 34, 46, 0.95));
+    border-bottom: 1px solid rgba(245, 158, 11, 0.3);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.ddb-buffs-label {
+    font-size: 0.62rem;
+    font-weight: 800;
+    color: #eab308;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.ddb-buff-chips {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.ddb-buff-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.18), rgba(245, 158, 11, 0.18));
+    border: 1px solid rgba(245, 158, 11, 0.5);
+    border-radius: 12px;
+    padding: 2px 7px 2px 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #fef3c7;
+    box-shadow: 0 0 6px rgba(245, 158, 11, 0.2);
+    animation: ddb-buff-glow 3s infinite alternate ease-in-out;
+}
+
+@keyframes ddb-buff-glow {
+    0% { box-shadow: 0 0 4px rgba(245, 158, 11, 0.2); }
+    100% { box-shadow: 0 0 9px rgba(239, 68, 68, 0.4); }
+}
+
+.ddb-buff-icon {
+    font-size: 0.78rem;
+    line-height: 1;
+}
+
+.ddb-buff-name {
+    letter-spacing: 0.02em;
+}
+
+.ddb-buff-tag {
+    background: rgba(245, 158, 11, 0.3);
+    border-radius: 3px;
+    padding: 1px 4px;
+    font-size: 0.6rem;
+    font-weight: 800;
+    color: #fbbf24;
+}
+
+.ddb-buff-remove-btn {
+    background: transparent;
+    border: none;
+    color: #9ca3af;
+    font-size: 0.7rem;
+    cursor: pointer;
+    padding: 0 2px;
+    margin-left: 2px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s ease;
+}
+
+.ddb-buff-remove-btn:hover {
+    color: #ef4444;
+}
+
+.ddb-buff-badge-tag {
+    font-size: 0.58rem;
+    font-weight: 800;
+    background: #ef4444;
+    color: #ffffff;
+    border-radius: 3px;
+    padding: 1px 4px;
+    margin-left: 4px;
+    vertical-align: middle;
+}
+
+/* Feature Activate Button */
+.ddb-feature-activate-btn {
+    flex-shrink: 0;
+    font: inherit;
+    font-size: 0.62rem;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 2px;
+    cursor: pointer;
+    background: #211e19;
+    border: 1px solid #514632;
+    color: #cbb77f;
+    transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+    white-space: nowrap;
+}
+
+.ddb-feature-activate-btn:hover {
+    background: #2b281f;
+    border-color: #86734a;
+    color: #e0cf9b;
+}
+
+.ddb-feature-activate-btn.active {
+    background: #202923;
+    border-color: #58715f;
+    color: #bdd1c0;
+}
+
+.buff-active-card {
+    border-color: rgba(245, 158, 11, 0.45) !important;
+    background: linear-gradient(135deg, #141820 0%, rgba(245, 158, 11, 0.05) 100%) !important;
+}
+
+.active-buff-btn {
+    background: linear-gradient(135deg, #991b1b, #c2410c) !important;
+    border-color: #f87171 !important;
+    color: #ffffff !important;
+}
+
+/* ========================================================= */
+/* INNATE SORCERY / FEATURE CALLOUT & OPTION DROPDOWN        */
+/* ========================================================= */
+.ddb-innate-sorcery-callout {
+    margin-bottom: 14px;
+}
+
+.ddb-callout-card {
+    background: #11151c;
+    border-left: 3px solid #c82d38;
+    border-radius: 0 6px 6px 0;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+}
+
+.ddb-callout-title {
+    margin: 0 0 6px 0;
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: #f3f4f6;
+    letter-spacing: 0.02em;
+}
+
+.ddb-callout-para {
+    margin: 0 0 6px 0;
+    font-size: 0.74rem;
+    color: #d1d5db;
+    line-height: 1.4;
+}
+
+.ddb-callout-list {
+    margin: 4px 0 8px 16px;
+    padding: 0;
+    font-size: 0.73rem;
+    color: #d1d5db;
+    line-height: 1.45;
+}
+
+.ddb-callout-action-info {
+    font-size: 0.72rem;
+    color: #f3f4f6;
+    margin-bottom: 6px;
+    font-weight: 600;
+}
+
+.ddb-callout-uses-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.72rem;
+    color: #9ca3af;
+}
+
+.ddb-drawer-option-block {
+    margin-top: 14px;
+    border-top: 1px solid #1f2532;
+    padding-top: 10px;
+}
+
+.ddb-drawer-option-heading {
+    margin: 0 0 8px 0;
+    font-size: 0.74rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: #f3f4f6;
+    text-transform: uppercase;
+}
+
+.ddb-option-select-box {
+    background: #141820;
+    border: 1px solid #262c37;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.ddb-option-trigger {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: #f3f4f6;
+    background: #171d27;
+    border-bottom: 1px solid #262c37;
+}
+
+.ddb-option-arrow {
+    font-size: 0.65rem;
+    color: #9ca3af;
+}
+
+.ddb-option-dropdown-panel {
+    background: #0f131a;
+    padding: 4px 0;
+}
+
+.ddb-option-dropdown-header {
+    font-size: 0.66rem;
+    color: #9ca3af;
+    padding: 6px 12px 3px 12px;
+    text-align: center;
+}
+
+.ddb-option-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    background: #1c3d5a;
+    border: none;
+    color: #ffffff;
+    padding: 8px 12px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.ddb-option-dropdown-item:hover {
+    background: #2563eb;
+}
+
+.ddb-option-dropdown-item.active {
+    background: linear-gradient(90deg, #991b1b, #b91c1c);
+}
+
+.ddb-option-checkmark {
+    font-size: 0.8rem;
+    color: #60a5fa;
+}
+
+.ddb-option-dropdown-item.active .ddb-option-checkmark {
+    color: #fef08a;
+}
+
+/* ========================================================= */
+/* COMBAT TRACKERS (CONCENTRATION, CONDITIONS, EXHAUSTION, DEATH SAVES) */
+/* ========================================================= */
+.ddb-buff-chip-concentration {
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.25), rgba(56, 189, 248, 0.15)) !important;
+    border: 1px solid rgba(56, 189, 248, 0.7) !important;
+    color: #e0f2fe !important;
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.3) !important;
+}
+
+.ddb-condition-chip {
+    background: linear-gradient(135deg, rgba(234, 88, 12, 0.28), rgba(249, 115, 22, 0.18)) !important;
+    border: 1px solid rgba(249, 115, 22, 0.7) !important;
+    color: #ffedd5 !important;
+    box-shadow: 0 0 7px rgba(249, 115, 22, 0.25) !important;
+}
+
+.ddb-exhaustion-chip {
+    background: linear-gradient(135deg, rgba(126, 34, 206, 0.35), rgba(168, 85, 247, 0.2)) !important;
+    border: 1px solid rgba(168, 85, 247, 0.75) !important;
+    color: #f3e8ff !important;
+    box-shadow: 0 0 7px rgba(168, 85, 247, 0.3) !important;
+}
+
+/* Death Saves Bar */
+.ddb-death-saves-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 6px 14px;
+    background: linear-gradient(90deg, rgba(80, 10, 10, 0.98), rgba(120, 20, 20, 0.95));
+    border-bottom: 2px solid #ef4444;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.6);
+    animation: ddb-death-glow 2s infinite alternate ease-in-out;
+}
+
+@keyframes ddb-death-glow {
+    0% { box-shadow: inset 0 0 6px rgba(239, 68, 68, 0.3); }
+    100% { box-shadow: inset 0 0 14px rgba(239, 68, 68, 0.6); }
+}
+
+.ddb-death-saves-title {
+    font-size: 0.72rem;
+    font-weight: 900;
+    color: #fca5a5;
+    letter-spacing: 0.08em;
+}
+
+.ddb-death-saves-pips-group {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.ddb-death-save-label {
+    font-size: 0.62rem;
+    font-weight: 800;
+    color: #cbd5e1;
+    letter-spacing: 0.05em;
+}
+
+.ddb-death-save-pip {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 1.5px solid #64748b;
+    background: rgba(15, 23, 42, 0.8);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.ddb-death-save-pip.success.checked {
+    background: #22c55e;
+    border-color: #86efac;
+    box-shadow: 0 0 6px rgba(34, 197, 94, 0.8);
+}
+
+.ddb-death-save-pip.failure.checked {
+    background: #ef4444;
+    border-color: #fca5a5;
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.8);
+}
+
+.ddb-death-save-roll-btn {
+    background: #b91c1c;
+    border: 1px solid #f87171;
+    border-radius: 4px;
+    color: #ffffff;
+    font-size: 0.66rem;
+    font-weight: 800;
+    padding: 3px 8px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.ddb-death-save-roll-btn:hover {
+    background: #dc2626;
+}
+
+/* Conditions Popover Menu */
+.ddb-conditions-popover {
+    position: absolute;
+    top: 42px;
+    right: 120px;
+    z-index: 1000;
+    background: #0f172a;
+    border: 1px solid rgba(245, 158, 11, 0.5);
+    border-radius: 8px;
+    padding: 8px;
+    width: 280px;
+    max-height: 360px;
+    overflow-y: auto;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.8);
+}
+
+.ddb-conditions-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4px;
+}
+
+.ddb-condition-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(30, 41, 59, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    padding: 4px 6px;
+    color: #cbd5e1;
+    font-size: 0.68rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s ease;
+}
+
+.ddb-condition-toggle-btn:hover {
+    background: rgba(51, 65, 85, 0.9);
+}
+
+.ddb-condition-toggle-btn.active {
+    background: rgba(234, 88, 12, 0.35);
+    border-color: #f97316;
+    color: #ffedd5;
+}
+
+/* Hit Dice Rest Block */
+.ddb-hit-dice-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+}
+
+.ddb-hit-dice-roll-btn {
+    background: #0284c7;
+    border: 1px solid #38bdf8;
+    border-radius: 4px;
+    color: white;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.ddb-hit-dice-roll-btn:hover {
+    background: #0369a1;
+}
+
+.ddb-hit-dice-roll-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}

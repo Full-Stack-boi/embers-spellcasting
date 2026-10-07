@@ -1,0 +1,379 @@
+/* ========================================================= */
+/* 2. PRIMARY NAVIGATION TABS (ACTIONS | SPELLS | FEATURES)   */
+/* ========================================================= */
+.ddb-primary-tabs-bar {
+    display: flex;
+    align-items: center;
+    height: 32px;
+    min-height: 32px;
+    background: #15181c;
+    border-bottom: 1px solid var(--ddb-border-subtle);
+    padding: 0 10px;
+    gap: 16px;
+    box-sizing: border-box;
+}
+
+.ddb-tab-btn {
+    position: relative;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-family: var(--ddb-font);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--ddb-text-muted);
+    cursor: pointer;
+    padding: 6px 4px;
+    transition: color 120ms ease;
+}
+.ddb-tab-btn:hover {
+    color: #e5e7eb;
+}
+.ddb-tab-btn.active {
+    color: #ffffff;
+}
+.ddb-tab-btn.active::after {
+    content: "";
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--ddb-red-primary);
+    border-radius: 2px 2px 0 0;
+}
+
+/* ========================================================= */
+/* 3. TAB CONTENT PANELS                                     */
+/* ========================================================= */
+.ddb-tab-panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--ddb-bg-dark);
+}
+
+/* Sub-filter Bar */
+.ddb-subfilter-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 5px 10px;
+    background: #13161a;
+    border-bottom: 1px solid #1f232b;
+    flex-shrink: 0;
+}
+
+.ddb-subfilter-btn {
+    border: 1px solid #282d38;
+    background: #1a1e25;
+    color: #9ca3af;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 2px 8px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 120ms ease;
+}
+.ddb-subfilter-btn:hover {
+    background: #252a35;
+    color: #e5e7eb;
+}
+.ddb-subfilter-btn.active {
+    background: var(--ddb-red-primary);
+    color: #ffffff;
+    border-color: #e11d48;
+}
+
+/* Table Scroll Container */
+.ddb-table-scroll-container {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    position: relative;
+}
+
+.ddb-table-scroll-container::-webkit-scrollbar {
+    width: 6px;
+}
+.ddb-table-scroll-container::-webkit-scrollbar-track {
+    background: #0f1114;
+}
+.ddb-table-scroll-container::-webkit-scrollbar-thumb {
+    background: #3b161a;
+    border-radius: 3px;
+}
+.ddb-table-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: var(--ddb-red-primary);
+}
+
+/* ========================================================= */
+/* 4. TABLES (ACTIONS & SPELLS)                              */
+/* ========================================================= */
+.ddb-action-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.74rem;
+    text-align: left;
+}
+
+.ddb-action-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #171b21;
+    box-shadow: 0 1px 0 #282d38;
+}
+
+.ddb-action-table th {
+    padding: 5px 8px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #9ca3af;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid #282d38;
+}
+
+.ddb-action-table th.th-attack,
+.ddb-action-table th.th-name { width: 26%; }
+.ddb-action-table th.th-range,
+.ddb-action-table th.th-time { width: 12%; }
+.ddb-action-table th.th-hit { width: 14%; }
+.ddb-action-table th.th-damage,
+.ddb-action-table th.th-effect { width: 20%; }
+.ddb-action-table th.th-notes { width: 28%; }
+.ddb-action-table th.th-cast { width: 10%; text-align: right; }
+
+.ddb-table-row {
+    border-bottom: 1px solid #1e2229;
+    transition: background 100ms ease;
+    cursor: pointer;
+}
+.ddb-table-row:nth-child(even) {
+    background: #111418;
+}
+.ddb-table-row:nth-child(odd) {
+    background: #14171d;
+}
+.ddb-table-row:hover {
+    background: #20252e !important;
+}
+.ddb-table-row.selected {
+    background: #2d181c !important;
+    border-left: 3px solid var(--ddb-red-primary);
+}
+
+.ddb-action-table td {
+    padding: 4px 8px;
+    vertical-align: middle;
+}
+
+/* Attack / Weapon cell */
+.ddb-weapon-name {
+    color: var(--ddb-weapon-green);
+    font-style: italic;
+    font-weight: 700;
+    font-size: 0.78rem;
+    letter-spacing: 0.02em;
+}
+
+.ddb-weapon-tag {
+    font-size: 0.62rem;
+    color: #9ca3af;
+    margin-left: 6px;
+    text-transform: capitalize;
+}
+
+/* Spell Cell */
+.ddb-spell-cell {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ddb-mini-school-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 17px;
+    height: 17px;
+    border-radius: 3px;
+    border: 1px solid;
+    font-size: 0.6rem;
+    font-weight: 800;
+    flex-shrink: 0;
+    background: #14181f;
+}
+
+.ddb-spell-title {
+    font-weight: 600;
+    color: #ffffff;
+    font-size: 0.77rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ddb-upcast-tag {
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: #60a5fa;
+    margin-left: 2px;
+}
+
+.ddb-prep-pip {
+    color: #facc15;
+    font-size: 0.72rem;
+    margin-left: 2px;
+}
+
+/* Roll Pills (Hit & Damage) */
+.ddb-roll-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    border-radius: 12px;
+    background: var(--ddb-red-pill-bg);
+    border: 1px solid var(--ddb-red-primary);
+    color: #fca5a5;
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+    outline: none;
+    transition: all 120ms ease;
+    white-space: nowrap;
+}
+.ddb-roll-pill:hover {
+    background: var(--ddb-red-primary);
+    color: #ffffff;
+    box-shadow: 0 0 6px rgba(200, 45, 56, 0.6);
+}
+
+.ddb-type-text {
+    font-size: 0.64rem;
+    color: #f87171;
+    font-weight: 400;
+}
+.ddb-roll-pill:hover .ddb-type-text {
+    color: #ffffff;
+}
+
+.ddb-na-dash {
+    color: #4b5563;
+    font-weight: 700;
+}
+
+/* Notes & Cantrip Riders */
+.ddb-prop-list {
+    font-size: 0.68rem;
+    color: #9ca3af;
+    display: block;
+    margin-bottom: 2px;
+}
+
+.ddb-rider-chips-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    margin-top: 2px;
+}
+
+.ddb-rider-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 1px 6px;
+    border-radius: 10px;
+    background: #182234;
+    border: 1px solid #2563eb;
+    color: #93c5fd;
+    font-size: 0.65rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 120ms ease;
+}
+.ddb-rider-pill:hover {
+    background: #1d4ed8;
+    color: #ffffff;
+    border-color: #60a5fa;
+}
+.ddb-rider-pill.selected {
+    background: #2563eb;
+    color: #ffffff;
+    border-color: #93c5fd;
+    box-shadow: 0 0 5px rgba(59, 130, 246, 0.6);
+}
+
+.rider-icon {
+    font-size: 0.65rem;
+}
+.rider-trigger {
+    font-size: 0.6rem;
+    color: #bfdbfe;
+    opacity: 0.85;
+}
+
+.ddb-notes-cell {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.ddb-notes-text {
+    font-size: 0.68rem;
+    color: #9ca3af;
+}
+
+.ddb-cast-action-btn,
+.ddb-quick-cast-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid var(--ddb-red-primary);
+    background: #2d1417;
+    color: #fca5a5;
+    font-size: 0.66rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 120ms ease;
+}
+.ddb-cast-action-btn:hover,
+.ddb-quick-cast-btn:hover {
+    background: var(--ddb-red-primary);
+    color: #ffffff;
+}
+
+.ddb-info-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 3px;
+    border: 1px solid #374151;
+    background: #1b1e25;
+    color: #9ca3af;
+    cursor: pointer;
+    transition: all 120ms;
+}
+.ddb-info-btn:hover {
+    color: #60a5fa;
+    border-color: #3b82f6;
+}
+
+.ddb-cast-cell-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+}

@@ -1,0 +1,126 @@
+:root {
+    --ddb-bg-darkest: #0e1013;
+    --ddb-bg-dark: #121417;
+    --ddb-bg-surface: #181b20;
+    --ddb-bg-surface-hover: #22262d;
+    --ddb-border-subtle: #262a32;
+    --ddb-border-accent: #8b1d24;
+    --ddb-red-primary: #c82d38;
+    --ddb-red-hover: #e11d48;
+    --ddb-red-pill-bg: #221416;
+    --ddb-text-main: #f3f4f6;
+    --ddb-text-muted: #9ca3af;
+    --ddb-weapon-green: #4ade80;
+    --ddb-spell-blue: #60a5fa;
+    --ddb-pact-purple: #c084fc;
+    --ddb-font: Roboto, "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+html,
+body,
+#root {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden !important;
+    background: transparent !important;
+    font-family: var(--ddb-font);
+}
+
+/* ========================================================= */
+/* OUTER WRAPPER & MAIN CONTAINER                            */
+/* ========================================================= */
+.ddb-dock-outer-wrapper {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    box-sizing: border-box;
+    overflow: visible;
+}
+
+.ddb-dock-outer-wrapper > * {
+    pointer-events: auto;
+}
+
+.ddb-action-sheet-container {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 60px;
+    width: calc(100% - 60px);
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    overflow: hidden;
+    background: var(--ddb-bg-dark);
+    border: 1px solid var(--ddb-border-accent);
+    border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    color: var(--ddb-text-main);
+    user-select: none;
+}
+
+/* ========================================================= */
+/* GLOBAL CUSTOM SCROLLBAR (Dark Theme - BG3 / DDB aesthetic)*/
+/* ========================================================= */
+.ddb-action-sheet-container * {
+    scrollbar-width: thin;
+    scrollbar-color: #3b161a transparent;
+}
+.ddb-action-sheet-container *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.ddb-action-sheet-container *::-webkit-scrollbar-track {
+    background: transparent;
+}
+.ddb-action-sheet-container *::-webkit-scrollbar-thumb {
+    background: #3b161a;
+    border-radius: 3px;
+}
+.ddb-action-sheet-container *::-webkit-scrollbar-thumb:hover {
+    background: var(--ddb-red-primary);
+}
+.ddb-action-sheet-container *::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
+/* ========================================================= */
+/* TOP RESIZE HANDLE                                         */
+/* ========================================================= */
+.ddb-resize-handle {
+    height: 10px;
+    min-height: 10px;
+    background: #0e1013;
+    cursor: ns-resize;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--ddb-border-subtle);
+    transition: background 0.15s ease, border-color 0.15s ease;
+    user-select: none;
+    z-index: 10;
+}
+.ddb-resize-handle:hover,
+.ddb-resize-handle.active {
+    background: #1a1e25;
+    border-bottom-color: var(--ddb-red-primary);
+}
+.ddb-resize-grip {
+    color: #4b5563;
+    font-size: 0.65rem;
+    letter-spacing: 5px;
+    line-height: 1;
+    pointer-events: none;
+    display: inline-flex;
+    align-items: center;
+    transition: color 0.15s ease;
+}
+.ddb-resize-handle:hover .ddb-resize-grip,
+.ddb-resize-handle.active .ddb-resize-grip {
+    color: var(--ddb-red-primary);
+}

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router";
 import OBR from "@owlbear-rodeo/sdk";
-import { DDBCharacterSyncModal } from "../components/ActionDock/DDBCharacterSyncModal";
+import { DDBCharacterSyncModal } from "../components/ActionDock/overlays/DDBCharacterSyncModal";
 import { APP_KEY } from "../config";
 import { Box } from "@mui/material";
 

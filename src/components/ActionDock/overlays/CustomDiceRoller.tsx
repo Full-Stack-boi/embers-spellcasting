@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import OBR from "@owlbear-rodeo/sdk";
-import "./CustomDiceRoller.css";
+import "./CustomDiceRoller";
 import {
     rollCustomDicePool,
     rollFormula,
     CustomDicePoolResult,
-} from "../../utils/dice";
-import { broadcastDDBRoll } from "../../services/rollLogService";
-import { IconClose, IconDiceD20 } from "./Bg3Icons";
+} from "../../../utils/dice";
+import { broadcastDDBRoll } from "../../../services/rollLogService";
+import { IconClose, IconDiceD20 } from "../shared/Bg3Icons";
 
 // Polyhedral Dice Icons as precise, clean SVGs
 export const DieIconD4: React.FC<{ size?: number; className?: string }> = ({ size = 28, className }) => (
