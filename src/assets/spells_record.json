@@ -819,13 +819,11 @@
         "blueprints": [
             {
                 "type": "effect",
-                "id": {
-                    "name": "if",
-                    "arguments": ["$transparent", "darkness.black.transparent", "darkness.black.transparent"]
-                },
-                "layer": "ATTACHMENT",
+                "id": "darkness.black.transparent",
+                "layer": "CHARACTER",
+                "zIndex": -1,
                 "duration": -1,
-                "disableHit": true,
+                "disableHit": false,
                 "metadata": {
                     "eu.armindo.embers/darkness-zone": {
                         "radiusFeet": 15,
@@ -2314,12 +2312,10 @@
                     "name": "if",
                     "arguments": ["$transparent", "darkness.green.transparent", "darkness.green.opaque"]
                 },
-                "layer": {
-                    "name": "if",
-                    "arguments": ["$transparent", null, "FOG"]
-                },
+                "layer": "CHARACTER",
+                "zIndex": -1,
                 "duration": -1,
-                "disableHit": true,
+                "disableHit": false,
                 "effectProperties": {
                     "source": "$targets[0].position",
                     "size": "$radius"

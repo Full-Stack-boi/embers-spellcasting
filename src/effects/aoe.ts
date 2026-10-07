@@ -20,6 +20,8 @@ export async function aoe(
   forcedVariant?: number,
   spellName?: string,
   spellCaster?: string,
+  spellCasterTokenId?: string,
+  spellCharacterId?: string | number,
 ) {
   const effect = getEffect(aoeEffectProperties.name);
   if (effect == undefined) {
@@ -54,6 +56,8 @@ export async function aoe(
     zIndex,
     spellName,
     spellCaster,
+    spellCasterTokenId,
+    spellCharacterId,
   );
   if (result == undefined) {
     return;

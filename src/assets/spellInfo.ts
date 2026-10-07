@@ -883,7 +883,7 @@ export function getSchoolStyle(school?: string): { emoji: string; gradient: stri
         return { emoji: "⚡", gradient: "linear-gradient(135deg, #78350f 0%, #1c1917 100%)", color: "#fbbf24", schoolKey: "transmutation", iconUrl: "https://media.dndbeyond.com/media/spell-school-icons/transmutation.svg" };
     }
     if (s.includes("enchant")) {
-        return { emoji: "✨", gradient: "linear-gradient(135deg, #831843 0%, #2e1065 100%)", color: "#f472b6", schoolKey: "enchantment", iconUrl: "https://media.dndbeyond.com/media/spell-school-icons/enchantment.svg" };
+        return { emoji: "🔮", gradient: "linear-gradient(135deg, #831843 0%, #2e1065 100%)", color: "#f472b6", schoolKey: "enchantment", iconUrl: "https://media.dndbeyond.com/media/spell-school-icons/enchantment.svg" };
     }
     if (s.includes("illus")) {
         return { emoji: "🎭", gradient: "linear-gradient(135deg, #0e7490 0%, #1e1b4b 100%)", color: "#22d3ee", schoolKey: "illusion", iconUrl: "https://media.dndbeyond.com/media/spell-school-icons/illusion.svg" };
@@ -891,7 +891,7 @@ export function getSchoolStyle(school?: string): { emoji: string; gradient: stri
     if (s.includes("divin")) {
         return { emoji: "👁️", gradient: "linear-gradient(135deg, #4338ca 0%, #1e1b4b 100%)", color: "#a5b4fc", schoolKey: "divination", iconUrl: "https://media.dndbeyond.com/media/spell-school-icons/divination.svg" };
     }
-    return { emoji: "✨", gradient: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)", color: "#fef08a", schoolKey: "evocation", iconUrl: "https://media.dndbeyond.com/media/spell-school-icons/evocation.svg" };
+    return { emoji: "✦", gradient: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)", color: "#fef08a", schoolKey: "evocation", iconUrl: "https://media.dndbeyond.com/media/spell-school-icons/evocation.svg" };
 }
 
 /**

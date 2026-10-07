@@ -17,6 +17,7 @@ import { MESSAGE_CHANNEL } from "./messageListener";
 import effectsJSON from "../assets/effect_record.json";
 import { getItemSize, waitMs } from "../utils";
 import { log_error } from "../logging";
+import { DARKNESS_ZONE_METADATA_KEY } from "../features/targeting/application/lineOfSightService";
 
 export const effects = effectsJSON as unknown as Effects;
 export const effectNames = gatherEffectNames();
@@ -182,6 +183,8 @@ export function buildEffectImage(
   zIndex?: number,
   spellName?: string,
   spellCaster?: string,
+  spellCasterTokenId?: string,
+  spellCharacterId?: string | number,
 ) {
   const effectVariantName = getVariantName(effectName, size * effect.dpi);
   if (effectVariantName == undefined) {
@@ -227,7 +230,19 @@ export function buildEffectImage(
     gatheredMetadata[spellMetadataKey] = {
       name: spellName,
       caster: spellCaster,
+      casterTokenId: spellCasterTokenId,
+      characterId: spellCharacterId,
     };
+    if (spellName.toLowerCase() === "darkness") {
+      const existingZoneMeta = (gatheredMetadata[DARKNESS_ZONE_METADATA_KEY] as Record<string, unknown>) || {};
+      gatheredMetadata[DARKNESS_ZONE_METADATA_KEY] = {
+        ...existingZoneMeta,
+        radiusFeet: (existingZoneMeta.radiusFeet as number) ?? 15,
+        sourceCasterId: spellCasterTokenId || spellCaster,
+        sourcePlayerId: spellCaster,
+        sourceCharacterId: spellCharacterId ? String(spellCharacterId) : undefined,
+      };
+    }
   }
 
   const isCompanion =
@@ -235,6 +250,12 @@ export function buildEffectImage(
 
   const finalUrl = urlVariant(url, variant);
   console.log(`[Embers] Spawning effect "${effectName}" with URL:`, finalUrl);
+
+  const isDarknessSpell = spellName?.toLowerCase() === "darkness";
+  const resolvedDisableHit = isDarknessSpell ? false : (disableHit != undefined ? disableHit : effectDuration >= 0);
+  const resolvedLocked = isDarknessSpell ? false : (effectDuration >= 0);
+  const resolvedLayer = isDarknessSpell ? (layer ?? "CHARACTER") : (layer ?? (isCompanion ? "CHARACTER" : "ATTACHMENT"));
+  const resolvedZIndex = isDarknessSpell ? (zIndex ?? -1) : zIndex;
 
   const image = buildImage(
     {
@@ -254,17 +275,17 @@ export function buildEffectImage(
     .scale(scaleVector)
     .position(position)
     .rotation(rotation)
-    .disableHit(disableHit != undefined ? disableHit : effectDuration >= 0)
-    .locked(effectDuration >= 0)
+    .disableHit(resolvedDisableHit)
+    .locked(resolvedLocked)
     .metadata(gatheredMetadata)
-    .layer(layer ?? (isCompanion ? "CHARACTER" : "ATTACHMENT"));
+    .layer(resolvedLayer);
   if (attachedTo != undefined) {
     // Maybe change the item this attaches to's metadata
     // to enable a context menu?
     image.attachedTo(attachedTo);
   }
-  if (zIndex != undefined) {
-    image.zIndex(zIndex);
+  if (resolvedZIndex != undefined) {
+    image.zIndex(resolvedZIndex);
   }
   return { image, effectDuration };
 }

@@ -461,3 +461,82 @@ export function isTokenInAffectedCells(tokenPos: Vector2, cells: GridCell[]): bo
     }
     return false;
 }
+
+export interface Point3D {
+    x: number;
+    y: number;
+    z: number; // elevation in feet
+}
+
+/**
+ * Calculates Euclidean distance in feet between two 3D points.
+ * x and y are in scene pixels, z is in feet.
+ */
+export function distance3DFeet(a: Point3D, b: Point3D, grid: GridInfo): number {
+    const dxPx = b.x - a.x;
+    const dyPx = b.y - a.y;
+    const dxFt = (dxPx / grid.dpi) * grid.scaleMultiplier;
+    const dyFt = (dyPx / grid.dpi) * grid.scaleMultiplier;
+    const dzFt = b.z - a.z;
+    return Math.sqrt(dxFt * dxFt + dyFt * dyFt + dzFt * dzFt);
+}
+
+/**
+ * Calculates the shortest distance in feet from a 3D point C to a 3D line segment AB.
+ * a.x, a.y, b.x, b.y, c.x, c.y are in pixels; a.z, b.z, c.z are in feet.
+ */
+export function distancePoint3DToSegment3DFeet(
+    c: Point3D,
+    a: Point3D,
+    b: Point3D,
+    grid: GridInfo
+): number {
+    const ax = (a.x / grid.dpi) * grid.scaleMultiplier;
+    const ay = (a.y / grid.dpi) * grid.scaleMultiplier;
+    const az = a.z;
+
+    const bx = (b.x / grid.dpi) * grid.scaleMultiplier;
+    const by = (b.y / grid.dpi) * grid.scaleMultiplier;
+    const bz = b.z;
+
+    const cx = (c.x / grid.dpi) * grid.scaleMultiplier;
+    const cy = (c.y / grid.dpi) * grid.scaleMultiplier;
+    const cz = c.z;
+
+    const vx = bx - ax;
+    const vy = by - ay;
+    const vz = bz - az;
+    const lenSq = vx * vx + vy * vy + vz * vz;
+
+    if (lenSq === 0) {
+        const dx = cx - ax;
+        const dy = cy - ay;
+        const dz = cz - az;
+        return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
+    const t = Math.max(0, Math.min(1, ((cx - ax) * vx + (cy - ay) * vy + (cz - az) * vz) / lenSq));
+    const projX = ax + t * vx;
+    const projY = ay + t * vy;
+    const projZ = az + t * vz;
+
+    const dx = cx - projX;
+    const dy = cy - projY;
+    const dz = cz - projZ;
+    return Math.sqrt(dx * dx + dy * dy + dz * dz);
+}
+
+/**
+ * Checks whether a 3D line of sight segment between caster and target intersects a 3D sphere.
+ */
+export function doesSegmentIntersectSphere3D(
+    caster: Point3D,
+    target: Point3D,
+    sphereCenter: Point3D,
+    radiusFeet: number,
+    grid: GridInfo
+): boolean {
+    const distFeet = distancePoint3DToSegment3DFeet(sphereCenter, caster, target, grid);
+    return distFeet <= radiusFeet;
+}
+

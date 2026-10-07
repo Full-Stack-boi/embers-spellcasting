@@ -24,6 +24,8 @@ export interface DarknessZone {
     position: Vector2;
     radiusFeet: number;
     sourceCasterId?: string;
+    sourcePlayerId?: string;
+    sourceCharacterId?: string | number;
     transparent?: boolean;
 }
 
@@ -32,4 +34,5 @@ export interface VisionCheckResult {
     reason?: string;
     isBlockedByDarkness: boolean;
     targetInDarkness?: boolean;
+    casterInDarkness?: boolean;
 }

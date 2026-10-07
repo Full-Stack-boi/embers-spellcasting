@@ -14,6 +14,7 @@ const store: Record<string, string> = {};
 // Mock OBR and items
 const mockSceneItems: any[] = [];
 let mockSelection: string[] = [];
+let mockPlayerMetadata: Record<string, any> = {};
 
 vi.mock("@owlbear-rodeo/sdk", () => {
     return {
@@ -21,7 +22,9 @@ vi.mock("@owlbear-rodeo/sdk", () => {
             player: {
                 getSelection: vi.fn(async () => mockSelection),
                 getId: vi.fn(async () => "player-1"),
-                getRole: vi.fn(async () => "PLAYER")
+                getRole: vi.fn(async () => "PLAYER"),
+                getMetadata: vi.fn(async () => mockPlayerMetadata),
+                setMetadata: vi.fn(async (data: any) => { Object.assign(mockPlayerMetadata, data); })
             },
             scene: {
                 items: {
@@ -57,11 +60,13 @@ vi.mock("../../../../services/ddbService", () => {
 });
 
 import { resolveActiveCaster, setActiveCaster } from "../activeCasterResolver";
+import { toolMetadataSelectedCaster } from "../../../../../effectsTool";
 
 describe("activeCasterResolver", () => {
     beforeEach(() => {
         mockSceneItems.length = 0;
         mockSelection = [];
+        mockPlayerMetadata = {};
         setActiveCaster(null);
         vi.clearAllMocks();
     });
@@ -139,5 +144,119 @@ describe("activeCasterResolver", () => {
         const resolved = await resolveActiveCaster("PLAYER", "player-1");
         expect(resolved).not.toBeNull();
         expect(resolved?.id).toBe("solo-1");
+    });
+
+    it("resolves selected character token for perspective viewing when player selects another character token", async () => {
+        const playerToken = {
+            id: "player-wizard",
+            layer: "CHARACTER",
+            position: { x: 100, y: 100 },
+            name: "Gandalf",
+            metadata: {
+                "eu.armindo.embers/bound-player": { playerId: "player-1", playerName: "Gandalf" }
+            }
+        };
+        const allyToken = {
+            id: "ally-warlock",
+            layer: "CHARACTER",
+            position: { x: 500, y: 500 },
+            name: "Wyll",
+            createdUserId: "gm-user",
+            metadata: {}
+        };
+        mockSceneItems.push(playerToken, allyToken);
+
+        // Player clicks ally to preview their perspective / vision:
+        mockSelection = ["ally-warlock"];
+
+        const resolved = await resolveActiveCaster("PLAYER", "player-1");
+        expect(resolved).not.toBeNull();
+        expect(resolved?.id).toBe("ally-warlock");
+        expect(resolved?.name).toBe("Wyll");
+
+        // When player deselects (clears selection), reverts to their primary bound character:
+        mockSelection = [];
+        const reverted = await resolveActiveCaster("PLAYER", "player-1");
+        expect(reverted).not.toBeNull();
+        expect(reverted?.id).toBe("player-wizard");
+        expect(reverted?.name).toBe("Gandalf");
+    });
+
+    it("rejects darkness zone and keeps player bound character", async () => {
+        const playerToken = {
+            id: "player-wizard",
+            layer: "CHARACTER",
+            position: { x: 100, y: 100 },
+            name: "Gandalf",
+            metadata: {
+                "eu.armindo.embers/bound-player": { playerId: "player-1", playerName: "Gandalf" }
+            }
+        };
+        const darknessItem = {
+            id: "darkness-effect",
+            layer: "ATTACHMENT",
+            position: { x: 200, y: 200 },
+            name: "Darkness",
+            metadata: {
+                "eu.armindo.embers/darkness-zone": { radiusFeet: 15 }
+            }
+        };
+        mockSceneItems.push(playerToken, darknessItem);
+
+        // Player clicks darkness zone:
+        mockSelection = ["darkness-effect"];
+
+        const resolved = await resolveActiveCaster("PLAYER", "player-1");
+        // Must NOT be the darkness zone! Gandalf must remain the active caster!
+        expect(resolved).not.toBeNull();
+        expect(resolved?.id).toBe("player-wizard");
+        expect(resolved?.name).toBe("Gandalf");
+    });
+
+    it("allows GM to select and control any token including enemy", async () => {
+        const enemyToken = {
+            id: "enemy-goblin",
+            layer: "CHARACTER",
+            position: { x: 500, y: 500 },
+            name: "Goblin Archer",
+            createdUserId: "gm-user",
+            metadata: {}
+        };
+        mockSceneItems.push(enemyToken);
+        mockSelection = ["enemy-goblin"];
+
+        const resolved = await resolveActiveCaster("GM", "gm-user");
+        expect(resolved).not.toBeNull();
+        expect(resolved?.id).toBe("enemy-goblin");
+        expect(resolved?.name).toBe("Goblin Archer");
+    });
+
+    it("preserves explicit caster bound via toolMetadataSelectedCaster regardless of map selection", async () => {
+        const wizardToken = {
+            id: "player-wizard",
+            layer: "CHARACTER",
+            position: { x: 100, y: 100 },
+            name: "Gandalf",
+            metadata: {
+                "eu.armindo.embers/bound-player": { playerId: "player-1", playerName: "Player 1" }
+            }
+        };
+        const enemyToken = {
+            id: "enemy-target",
+            layer: "CHARACTER",
+            position: { x: 200, y: 200 },
+            name: "Orc Brute",
+            metadata: {}
+        };
+        mockSceneItems.push(wizardToken, enemyToken);
+
+        // Player selected the enemy token on the map to target it, but explicitly aiming as wizard
+        mockSelection = ["enemy-target"];
+        mockPlayerMetadata[toolMetadataSelectedCaster] = "player-wizard";
+
+        const resolved = await resolveActiveCaster("PLAYER", "player-1");
+        expect(resolved).not.toBeNull();
+        expect(resolved?.id).toBe("player-wizard");
+        expect(resolved?.name).toBe("Gandalf");
     });
 });

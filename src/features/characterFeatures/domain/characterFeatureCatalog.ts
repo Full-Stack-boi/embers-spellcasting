@@ -526,6 +526,18 @@ const featureFallbacks: FeatureFallback[] = [
             rangeText: "Self"
         })
     },
+    {
+        matches: character => hasSubclassOrAction(character, "shadow") && (character.classes?.some(c => c.name.toLowerCase().includes("monk")) ?? false),
+        findExisting: features => features.find(f => f.name.toLowerCase().includes("shadow arts")),
+        create: () => ({
+            id: "embers:monk:warrior-of-shadow:shadow-arts",
+            name: "Shadow Arts",
+            source: "class",
+            activationType: "action",
+            description: "You have learned to draw on the power of the Shadowfell. You know the Minor Illusion cantrip. You can expend 1 Focus Point to cast Darkness without spell slots. You can see through darkness created by this feature.",
+            rangeText: "60 ft."
+        })
+    },
     // Grim Hollow Subclasses
     {
         matches: character => hasSubclassOrAction(character, "misfortune bringer"),

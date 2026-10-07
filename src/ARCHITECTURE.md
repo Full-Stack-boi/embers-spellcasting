@@ -45,20 +45,55 @@ src/
 
 ### A. D&D Beyond Character Integration
 - **Sync & Parse** (`src/services/ddbService.ts`): Fetches character payloads via local proxy or direct DDB endpoints, extracting abilities, skills, spell slots, prepared spells, and class actions into a normalized `DDBParsedCharacter` model.
+- **Universal Feature Discovery**: Dynamically scans all `classFeatures` and `subclassDefinition.classFeatures` up to the current level (filtering out `hideInSheet`). Extracts actions, resource costs, and descriptions generically across all D&D 5e classes without hardcoding class or subclass names.
+- **Non-Slot & Innate Spells (`usesSpellSlot: false`)**: Captures subclass, racial, and pact spells that do not consume standard spell slots (e.g. Monk Shadow Arts *Darkness*, Tiefling *Hellish Rebuke*), preserving them even when flagged as unprepared by DDB.
 - **Feature Action Catalog** (`src/features/characterFeatures/domain/characterFeatureCatalog.ts`): Enriches parsed character data with verified manual formulas for active feats and subclass abilities.
 - **Roll Log Streaming** (`src/services/rollLogService.ts`): Polls or listens for game log dice rolls from D&D Beyond and surfaces them in the Action Dock roll history.
 
 ### B. Baldur's Gate 3 Action Dock HUD
-- **Action Dock** (`src/components/ActionDock/ActionDock.tsx`): Bottom-docked interface rendering active spells, cantrips, weapon actions, and custom dice.
+- **Action Dock** (`src/components/ActionDock/ActionDock.tsx`): Bottom-docked interface rendering active spells, cantrips, weapon actions, class features, and custom dice.
 - **BG3 Flyout Bar** (`src/components/ActionDock/BG3FlyoutBar.tsx`): Multi-step spell casting flow handling slot upcasting, variant configurations (e.g., Hex ability curse selection), and target confirmation.
+- **Resource-Agnostic Casting**: Decouples spell slot checks from non-slot spells, allowing features to deduct custom class resources (Focus Points, Sorcery Points, Superiority Dice) instead of spell slots.
+- **Feature Drawers & Action Cards**: Exposes direct action buttons (`Cast [Spell]`, `Strike x2`, `Bonus Strike`) within feature tooltips and drawers.
 - **Combat State** (`src/services/combatStateService.ts`): Maintains client-side combat context such as active concentration spells and target curses (+1d6 Necrotic Hex damage on subsequent attack hits).
 
 ### C. Tactical Targeting & Vision
 - **Targeting Domain** (`src/features/targeting/domain/`): Pure geometric calculations for circles, cones, lines, and token distances on square/hex grids.
 - **Line of Sight & Darkvision** (`src/features/targeting/application/`): Computes line-of-sight raycasting and dynamic vision lighting against scene obstacles.
+- **Magical Darkness & Self-Cast Attribution**:
+  - Per D&D 2024 PHB rules, Monk: Warrior of Shadow can see within the Darkness sphere *only when created by their own spell* (`shadowMonkSight: { enabled: true, sourceOnly: true, range: 60 }`). Unlike Warlock's Devil's Sight, it does not pierce enemy magical darkness.
+  - Caster attribution is preserved strictly across Token ID (`sourceCasterId`) and D&D Beyond Character ID (`sourceCharacterId`) and evaluated via `isDarknessZoneFromCaster`.
+  - Token vision metadata on scene items is kept continuously synchronized via `ActionDock` using `TOKEN_VISION_METADATA_KEY`.
+- **Darkness Vision & Combat Enforcement**:
+  - When a creature lacks vision to pierce a Darkness zone (e.g., enemy Darkness for a Shadow Monk, or any Darkness for standard creatures without Devil's Sight or Truesight), the client renders an opaque black smoke overlay (`darkness.black.opaque`).
+  - True mechanical blindness is enforced via the combat targeting engine (`evaluateLineOfSight`): weapon attacks through or inside enemy darkness suffer **Disadvantage** (`[DIS]` in game log, Amber tether), while attacks from within own darkness gain **Advantage** (`[ADV]`, Green tether) against blinded defenders. Spells requiring sight to cast are blocked.
+- **Draggable Darkness & Multi-Tier Scene Layer Hierarchy**:
+  - The Darkness system uses a robust multi-tier visual hierarchy across Owlbear Rodeo scene layers:
+    1. `layer: "CHARACTER"`, `zIndex: -1` **Base Darkness**: Draggable spell anchor (`disableHit: false`, `locked: false`) selectable and draggable by players via empty canvas space.
+    2. `layer: "CHARACTER"`, `zIndex: 0` **Ground Tokens**: Ground creatures (`elevation <= 15 ft`).
+    3. `layer: "ATTACHMENT"`, `zIndex: 1` **Darkness Shroud Overlay (Blinded Viewers Only)**: Local animated pitch-black fog veil on `OBR.scene.local` with `disableHit: true`. For viewers lacking vision in darkness (`canSee === false`), renders `darkness.black.opaque` on `ATTACHMENT`, reliably submerging and hiding all ground tokens in 100% opaque darkness. For viewers with vision (Devil's Sight, Shadow Monk in own darkness, or GM), this local shroud is completely omitted, leaving only the single base darkness on `layer: "CHARACTER"`, `zIndex: -1`. This prevents duplicate smoke stacking (avoiding 94% pitch-black opacity) and keeps tokens and grid clearly visible to creatures who can see in darkness.
+    4. `layer: "ATTACHMENT"`, `zIndex: 10` **Flying Tokens**: Elevated creatures (`elevation > 15 ft`) are placed on the `ATTACHMENT` layer at `zIndex: 10`. Since $10 > 1$, flying tokens render sharply and clearly on top of the smoke veil.
+  - Auto-migration and synchronization in `darknessVisionHandler.ts` manages token layer (`CHARACTER` vs `ATTACHMENT`) and `zIndex` (0 vs 10) dynamically based on elevation, while converting legacy scene darkness items to the draggable schema.
+  - **Combat Target & Character Token Validation** (`isValidCombatTargetToken`, `isCharacterToken`): Standalone image tokens elevated to `ATTACHMENT` are fully recognized as valid playable character targets and combat recipients (`attachedTo === undefined && item.type === "IMAGE"`), while attached spell effects, darkness zones, and templates remain excluded. Context menu filters support both `CHARACTER` and `ATTACHMENT` layers.
+- **3D Elevation & Flight Line of Sight Engine**:
+  - Computes 3D geometry (`Point3D`, `distancePoint3DToSegment3DFeet`, `doesSegmentIntersectSphere3D`) against the 15-foot radius Darkness sphere.
+  - Reads token altitude via `readTokenElevation`: supports official `rodeo.owlbear.elevation`, `com.battle-system.elevation`, `eu.armindo.embers/elevation`, and active `Fly` buffs (default 30 ft).
+  - Flying creatures with elevation $> 15$ ft shooting over the 15-foot darkness sphere have unobstructed 3D line of sight (`doesSegmentIntersectSphere3D` returns `false`), allowing them to attack targets on the other side of darkness without Disadvantage.
+  - Includes token context menu ("Toggle Flight (Embers)") to switch between Ground (0 ft) and Flying (30 ft).
 - **Aiming Overlays** (`src/features/targeting/infrastructure/obr/`): Renders interactive tethers, AoE grid highlights, and caster indicator rings directly onto the Owlbear Rodeo canvas.
 
-### D. Spell Formula Engine & Effects Execution
+### D. Deterministic Caster & Weapon Resolution Pipeline
+- **Explicit Caster Binding** (`toolMetadataSelectedCaster`): When entering aiming mode (`setSelectedSpell`), the initiating token ID is pinned to player metadata. `activeCasterResolver.ts` checks this pin with highest priority (Step 0), preventing map selections or target hovers from hijacking the caster identity.
+- **Exact Weapon Resolution** (`toolMetadataSelectedWeapon`): Specific weapon IDs (such as `weapon_unarmed_strike` or individual equipped weapons) are bound during weapon/unarmed actions, avoiding default fallbacks to the first equipped inventory item.
+- **Multi-Strike Execution** (`toolMetadataAttackCount`): Supports multi-attack abilities (e.g., Flurry of Blows = 2 strikes) by orchestrating sequential attack rolls, damage calculations, and animation triggers within a single targeting confirmation.
+
+### E. Multi-Player Token Ownership & Claim Protection
+- **Token-Player Ownership** (`src/features/player/playerCharacterService.ts`): Tracks which player owns which token via scene item metadata (`embers/characterOwner`).
+- **Claim Protection**: Prevents players from claiming or overriding tokens already claimed by another player.
+- **Read-Only Inspection Mode**: When selecting an ally token owned by another player, the Action Dock displays a Dark Sapphire status badge showing the owner's name and renders the sheet in read-only inspection mode (hiding action buttons and claim controls).
+- **Camera Return (`C` Key)**: Pressing `C` instantly returns and re-centers the player's viewport onto their own primary character token.
+
+### F. Spell Formula Engine & Effects Execution
 - **Formula Registry** (`src/assets/manual-formulas/`): Catalogs 570+ verified cantrips, leveled spells, and sourcebook additions across all 8 schools of magic.
 - **Formula Builder** (`src/services/spellFormulaBuilder.ts`): Evaluates dice expressions, cantrip tier scaling (levels 5, 11, 17), and upcast bonuses.
 - **Animation Execution** (`src/effects/`): Spawns projectile beams, AoE blast meshes, and sound cues using Owlbear Rodeo scene attachments.
@@ -81,7 +116,18 @@ src/
 
 ---
 
-## 4. Quality Standards & Verification
+## 4. UI Style & Design Principles
+
+1. **Dark Fantasy Aesthetic**:
+   - Design matches the Baldur's Gate 3 HUD aesthetic with dark slate, obsidian, and metallic accent palettes.
+   - Ally / Other Player Badges use Dark Sapphire styling (background `#161e2a`, border `#1e3a8a`, text `#93c5fd`).
+2. **Strict Emoji Discipline**:
+   - **No AI / generic emojis**: Characters such as `✨` (sparkles) or `👤` (silhouette) are strictly forbidden in UI cards, status badges, and roll logs to preserve an authentic tabletop fantasy tone.
+   - Use clean SVG icons, unicode symbols (e.g., `⚔`, `⚡`, `✦`, `🔮`), or stylized CSS badges instead.
+
+---
+
+## 5. Quality Standards & Verification
 
 Every pull request or commit must pass all quality gates:
 

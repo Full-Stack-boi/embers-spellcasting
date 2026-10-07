@@ -1,6 +1,7 @@
 import OBR from "@owlbear-rodeo/sdk";
-import { setupDefaultCasterMenuOption, setupEffectsTool } from "./effectsTool";
+import { setupDefaultCasterMenuOption, setupEffectsTool, setupElevationMenuOption } from "./effectsTool";
 import { setupDDBTokenContextMenuOption } from "./services/ddbService";
+import { setupPlayerCharacterContextMenus } from "./features/player/playerCharacterService";
 import {
   sendSpellsUpdate,
   setupGMLocalSpells,
@@ -55,7 +56,9 @@ async function isDesignatedTriggerArbitrator(): Promise<boolean> {
 
 function setupScene() {
   setupDefaultCasterMenuOption();
+  setupElevationMenuOption();
   setupDDBTokenContextMenuOption();
+  setupPlayerCharacterContextMenus();
   const unsubscribeDarkness = setupDarknessVisionHandler();
   loadSpellListFromLocalStorage();
 

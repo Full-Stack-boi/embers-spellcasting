@@ -8,7 +8,7 @@ import { resolveBlueprint, resolveSimpleValue } from "./blueprint";
 import { APP_KEY } from "../config";
 import { ALL_MANUAL_OVERRIDES } from "../assets/manual-formulas";
 import { normalizeSpellId } from "../services/spellFormulaBuilder";
-import { EffectInstruction } from "../types/messageListener";
+import { EffectInstruction, MessageType } from "../types/messageListener";
 import { MESSAGE_CHANNEL } from "./messageListener";
 import { SimplifiedItem } from "../types/misc";
 import { getItemSize } from "../utils";
@@ -16,6 +16,7 @@ import { log_error } from "../logging";
 import spellsJSON from "../assets/spells_record.json";
 import { constants } from "../constants";
 import { resolveActiveCaster } from "../features/targeting/infrastructure/obr/activeCasterResolver";
+import { getLinkedDDBCharacterId } from "../services/ddbService";
 import { getSpellMetadata } from "../assets/spellInfo";
 
 export const spells = spellsJSON as Spells;
@@ -650,7 +651,10 @@ export async function doSpell(spellID: string, playerID: string, isGM: boolean) 
 
     copySpellInstructions(instructions, copyDelay);
 
-    const message = {
+    const activeCaster = await resolveActiveCaster(isGM ? "GM" : "PLAYER", playerID);
+    const characterId = activeCaster?.item ? getLinkedDDBCharacterId(activeCaster.item) ?? undefined : undefined;
+
+    const message: MessageType = {
         instructions,
         interactions: {
             ids: Array.from(interactionIds.values()),
@@ -658,7 +662,9 @@ export async function doSpell(spellID: string, playerID: string, isGM: boolean) 
         },
         spellData: {
             name: spellID,
-            caster: playerID
+            caster: playerID,
+            casterTokenId: activeCaster?.id,
+            characterId: characterId ? String(characterId) : undefined
         }
     };
     OBR.broadcast.sendMessage(MESSAGE_CHANNEL, message, { destination: "ALL" });

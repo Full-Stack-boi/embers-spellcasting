@@ -266,6 +266,43 @@ describe("ddbService", () => {
             expect(char.senses.devilsSight).toBe(true);
         });
 
+        it("parses Monk Warrior of Shadow senses with sourceOnly: true per 2024 PHB", () => {
+            const rawShadowMonk = {
+                id: 170182790,
+                name: "Kage Shadow",
+                classes: [
+                    {
+                        level: 4,
+                        definition: { name: "Monk" },
+                        subclassDefinition: { name: "Warrior of Shadow" }
+                    }
+                ],
+                stats: [
+                    { id: 1, value: 10 },
+                    { id: 2, value: 16 },
+                    { id: 3, value: 14 },
+                    { id: 4, value: 10 },
+                    { id: 5, value: 16 },
+                    { id: 6, value: 8 }
+                ],
+                modifiers: {
+                    race: [],
+                    class: [],
+                    background: [],
+                    item: [],
+                    feat: []
+                }
+            };
+
+            const char = parseDDBCharacterData(rawShadowMonk);
+            expect(char.senses.shadowMonkSight).toEqual({
+                enabled: true,
+                sourceOnly: true,
+                range: 60
+            });
+            expect(char.senses.darkvision).toBeGreaterThanOrEqual(60);
+        });
+
         it("dynamically parses spells from all DDB categories (class, race, feat, item, custom) without hardcoding", () => {
             const multiSourceSpellData = {
                 id: 999,

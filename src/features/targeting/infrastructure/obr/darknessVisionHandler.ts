@@ -3,17 +3,23 @@ import { APP_KEY } from "../../../../config";
 import { GLOBAL_STORAGE_KEYS, getGlobalSettingsValue } from "../../../../components/Settings/settings";
 import {
     DARKNESS_ZONE_METADATA_KEY,
+    EFFECT_METADATA_KEY,
+    SPELL_METADATA_KEY,
     extractDarknessZones,
+    isDarknessZoneFromCaster,
+    readTokenElevation,
     readTokenVisionRules
 } from "../../application/lineOfSightService";
 import { resolveActiveCaster } from "./activeCasterResolver";
+import { getLinkedDDBCharacterId } from "../../../../services/ddbService";
 import { buildEffectImage, getEffect } from "../../../../effects/effects";
 import { DarknessZone } from "../../domain/vision";
 
 export const darknessToggleMenuId = `${APP_KEY}/darkness-toggle-menu`;
 
-// Track active local fog item IDs created by this client
+// Track active local fog item IDs created by this client and their current effect variant
 const activeLocalFogIds = new Set<string>();
+const activeLocalFogEffects = new Map<string, string>();
 
 /**
  * Calculates distance in feet between two points using scene grid settings.
@@ -42,7 +48,8 @@ async function calculateDistanceFeet(posA: Vector2, posB: Vector2): Promise<numb
 async function canCreatureSeeInDarkness(
     creaturePos: Vector2,
     zone: DarknessZone,
-    creatureItem: any
+    creatureItem: any,
+    activePlayerId?: string
 ): Promise<boolean> {
     const vision = readTokenVisionRules(creatureItem);
     const distFeet = await calculateDistanceFeet(creaturePos, zone.position);
@@ -62,10 +69,16 @@ async function canCreatureSeeInDarkness(
         return true;
     }
 
-    // 4. Shadow Monk Sight
+    // 4. Shadow Monk Sight (D&D 2024: only own darkness)
     if (vision.shadowMonkSight?.enabled) {
         const range = vision.shadowMonkSight.range || 60;
-        if (distFeet <= range) {
+        const matchesSource = !vision.shadowMonkSight.sourceOnly || isDarknessZoneFromCaster(zone, {
+            id: creatureItem?.id,
+            playerId: activePlayerId,
+            characterId: creatureItem ? getLinkedDDBCharacterId(creatureItem) ?? undefined : undefined,
+            metadata: creatureItem?.metadata
+        });
+        if (matchesSource && distFeet <= range) {
             return true;
         }
     }
@@ -99,128 +112,171 @@ export async function updateDarknessVision(): Promise<void> {
     const activeMode = opacityMode ?? "dynamic";
     const darknessZones = extractDarknessZones(sceneItems);
     const isGM = playerRole === "GM";
-
-    // If GM and no token selected: GM sees transparent version and tokens inside; remove any local opaque fog
-    if (isGM && (!selection || selection.length === 0)) {
-        if (activeLocalFogIds.size > 0) {
-            await OBR.scene.local.deleteItems(Array.from(activeLocalFogIds));
-            activeLocalFogIds.clear();
-        }
-        return;
-    }
-
-    // If room is set to always transparent, remove local opaque fog for all
-    if (activeMode === "always-transparent") {
-        if (activeLocalFogIds.size > 0) {
-            await OBR.scene.local.deleteItems(Array.from(activeLocalFogIds));
-            activeLocalFogIds.clear();
-        }
-        return;
-    }
-
     const currentZoneIds = new Set(darknessZones.map(z => z.id));
+
+    // Auto-migrate any existing Darkness zone items on the scene so they are draggable
+    const zonesToUnlock = sceneItems.filter(item => {
+        const isDarkness = currentZoneIds.has(item.id);
+        return isDarkness && (item.disableHit === true || item.locked === true || item.layer === "ATTACHMENT");
+    });
+    if (zonesToUnlock.length > 0) {
+        OBR.scene.items.updateItems(zonesToUnlock.map(z => z.id), items => {
+            for (const it of items) {
+                it.disableHit = false;
+                it.locked = false;
+                it.layer = "CHARACTER";
+                it.zIndex = -1;
+            }
+        }).catch(console.error);
+    }
+
+    // Synchronize token layer and zIndex based on flight elevation:
+    // Flying tokens (elevation > 15 ft) -> layer: "ATTACHMENT", zIndex: 10 (above darkness shroud overlay)
+    // Ground tokens (elevation <= 15 ft) -> layer: "CHARACTER", zIndex: 0 (under darkness shroud overlay)
+    const tokensToUpdateElevation: { id: string; targetLayer: "CHARACTER" | "ATTACHMENT"; targetZIndex: number }[] = [];
+    for (const item of sceneItems) {
+        if (
+            (item.layer === "CHARACTER" || (item.layer === "ATTACHMENT" && (item as any).attachedTo === undefined && item.type === "IMAGE")) &&
+            !currentZoneIds.has(item.id) &&
+            item.metadata?.[EFFECT_METADATA_KEY] === undefined &&
+            item.metadata?.[SPELL_METADATA_KEY] === undefined
+        ) {
+            const elevation = readTokenElevation(item);
+            const targetLayer = elevation > 15 ? "ATTACHMENT" : "CHARACTER";
+            const targetZIndex = elevation > 15 ? 10 : 0;
+            if (item.layer !== targetLayer || item.zIndex !== targetZIndex) {
+                if (item.zIndex === undefined || item.zIndex === 0 || item.zIndex === 10) {
+                    tokensToUpdateElevation.push({ id: item.id, targetLayer, targetZIndex });
+                }
+            }
+        }
+    }
+    if (tokensToUpdateElevation.length > 0) {
+        const updateMap = new Map(tokensToUpdateElevation.map(u => [u.id, u]));
+        OBR.scene.items.updateItems(Array.from(updateMap.keys()), draft => {
+            for (const it of draft) {
+                const u = updateMap.get(it.id);
+                if (u !== undefined) {
+                    it.layer = u.targetLayer;
+                    it.zIndex = u.targetZIndex;
+                }
+            }
+        }).catch(console.error);
+    }
 
     // Remove local fog for zones that were removed from the scene or legacy disc items
     for (const localId of Array.from(activeLocalFogIds)) {
         if (localId.includes("-disc-")) {
             await OBR.scene.local.deleteItems([localId]);
             activeLocalFogIds.delete(localId);
+            activeLocalFogEffects.delete(localId);
             continue;
         }
         const zoneId = localId.replace("embers-darkness-fog-", "");
         if (!currentZoneIds.has(zoneId)) {
             await OBR.scene.local.deleteItems([localId]);
             activeLocalFogIds.delete(localId);
+            activeLocalFogEffects.delete(localId);
         }
     }
 
     if (darknessZones.length === 0) return;
 
-    // Resolve active character token: if GM, resolve selected token to preview what that token sees; if PLAYER, resolve player token
+    // Resolve active character token: if GM, resolve selected token to preview what that token sees; if PLAYER, resolve player token / active perspective
     const activeCaster = await resolveActiveCaster(playerRole, playerId);
 
     for (const zone of darknessZones) {
         const fogId = `embers-darkness-fog-${zone.id}`;
 
-        // If zone has individual transparency enabled and room isn't forcing always-opaque:
-        if (zone.transparent && activeMode !== "always-opaque") {
-            if (activeLocalFogIds.has(fogId)) {
-                await OBR.scene.local.deleteItems([fogId]);
-                activeLocalFogIds.delete(fogId);
-            }
-            continue;
-        }
-
-        // If active token is INSIDE this Darkness zone (distance <= radius):
-        // Show as transparent so player/GM can see tokens and play the game!
-        const isInsideZone = activeCaster
-            ? (await calculateDistanceFeet(activeCaster.position, zone.position)) <= zone.radiusFeet
-            : false;
-
-        if (isInsideZone && activeMode !== "always-opaque") {
-            if (activeLocalFogIds.has(fogId)) {
-                await OBR.scene.local.deleteItems([fogId]);
-                activeLocalFogIds.delete(fogId);
-            }
-            continue;
-        }
-
         let canSee = false;
         if (activeMode === "always-opaque") {
             canSee = false;
+        } else if (activeMode === "always-transparent" || zone.transparent) {
+            canSee = true;
+        } else if (isGM && (!selection || selection.length === 0)) {
+            canSee = true;
         } else if (activeCaster) {
-            canSee = await canCreatureSeeInDarkness(activeCaster.position, zone, activeCaster.item);
+            canSee = await canCreatureSeeInDarkness(activeCaster.position, zone, activeCaster.item, playerId);
+        }
+
+        // VTT usability: if the viewer's own token is physically inside this darkness zone,
+        // show transparent (75%) so they can still see where their token is.
+        // D&D rules still apply — the creature is blinded by darkness for combat purposes.
+        if (!canSee && activeMode !== "always-opaque" && activeCaster) {
+            const distToZoneFeet = await calculateDistanceFeet(activeCaster.position, zone.position);
+            if (distToZoneFeet <= zone.radiusFeet) {
+                canSee = true;
+            }
         }
 
         if (canSee) {
-            // Player / token has vision to see through darkness: remove opaque fog
+            // When the viewer CAN see in darkness (Devil's Sight, Shadow Monk in own darkness, GM, etc.):
+            // Do NOT spawn a duplicate smoke overlay on OBR.scene.local!
+            // The base Darkness item on OBR.scene.items already provides the single ambient smoke layer.
+            // Removing the local fog overlay prevents 2x smoke stacking (94% opacity) and keeps tokens inside visible.
             if (activeLocalFogIds.has(fogId)) {
-                await OBR.scene.local.deleteItems([fogId]);
+                await OBR.scene.local.deleteItems([fogId]).catch(() => {});
                 activeLocalFogIds.delete(fogId);
+                activeLocalFogEffects.delete(fogId);
+            }
+            continue;
+        }
+
+        const isGreen = sceneItems.some(it => it.id === zone.id && ((it.metadata?.[`${APP_KEY}/effect-id`] as string | undefined)?.includes("green") || (it.metadata?.[`${APP_KEY}/spell-id`] as any)?.id?.includes("green")));
+        const desiredEffect = isGreen ? "darkness.green.opaque" : "darkness.black.opaque";
+
+        const currentEffect = activeLocalFogEffects.get(fogId);
+
+        if (activeLocalFogIds.has(fogId) && currentEffect !== desiredEffect) {
+            await OBR.scene.local.deleteItems([fogId]);
+            activeLocalFogIds.delete(fogId);
+            activeLocalFogEffects.delete(fogId);
+        }
+
+        if (!activeLocalFogIds.has(fogId)) {
+            await OBR.scene.local.deleteItems([fogId]).catch(() => {});
+            const effect = getEffect(desiredEffect);
+            if (effect) {
+                const sizeCells = (zone.radiusFeet * 2) / 5;
+                const result = buildEffectImage(
+                    desiredEffect,
+                    effect,
+                    sizeCells,
+                    { x: 0.5, y: 0.5 },
+                    zone.position,
+                    0,
+                    undefined,
+                    undefined,
+                    true,
+                    undefined,
+                    -1,
+                    1,
+                    undefined,
+                    "ATTACHMENT",
+                    1
+                );
+                if (result) {
+                    const fogImage = result.image
+                        .id(fogId)
+                        .layer("ATTACHMENT")
+                        .zIndex(1)
+                        .locked(true)
+                        .disableHit(true)
+                        .build();
+                    await OBR.scene.local.addItems([fogImage]);
+                    activeLocalFogIds.add(fogId);
+                    activeLocalFogEffects.set(fogId, desiredEffect);
+                }
             }
         } else {
-            // Token is outside Darkness and cannot see through darkness: add or update opaque smoke on local scene
-            if (!activeLocalFogIds.has(fogId)) {
-                const effect = getEffect("darkness.black.opaque");
-                if (effect) {
-                    const sizeCells = (zone.radiusFeet * 2) / 5;
-                    const result = buildEffectImage(
-                        "darkness.black.opaque",
-                        effect,
-                        sizeCells,
-                        { x: 0.5, y: 0.5 },
-                        zone.position,
-                        0,
-                        undefined,
-                        undefined,
-                        true,
-                        undefined,
-                        -1,
-                        1,
-                        undefined,
-                        "ATTACHMENT",
-                        99
-                    );
-                    if (result) {
-                        const fogImage = result.image
-                            .id(fogId)
-                            .layer("ATTACHMENT")
-                            .zIndex(99)
-                            .locked(true)
-                            .disableHit(true)
-                            .build();
-                        await OBR.scene.local.addItems([fogImage]);
-                        activeLocalFogIds.add(fogId);
-                    }
-                }
-            } else {
-                // Keep local fog position synced with zone position
-                await OBR.scene.local.updateItems([fogId], draft => {
-                    for (const item of draft) {
+            // Keep local fog position synced with zone position if it moved
+            await OBR.scene.local.updateItems([fogId], draft => {
+                for (const item of draft) {
+                    if (item.position.x !== zone.position.x || item.position.y !== zone.position.y) {
                         item.position = zone.position;
                     }
-                });
-            }
+                }
+            });
         }
     }
 }

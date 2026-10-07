@@ -12,7 +12,10 @@ import {
     isPointInSphere,
     isWithinRange,
     pixelsToFeet,
-    snapToCellCenter
+    snapToCellCenter,
+    distancePoint3DToSegment3DFeet,
+    doesSegmentIntersectSphere3D,
+    Point3D
 } from "./targetingGeometry";
 
 describe("Geometry & Grid Utilities", () => {
@@ -256,6 +259,56 @@ describe("Geometry & Grid Utilities", () => {
         for (let x = 1; x <= 20; x++) {
             expect(cells.some(c => c.x === x && c.y === 0)).toBe(true);
         }
+    });
+
+    describe("3D Segment Distance and Sphere Intersection", () => {
+        const testGrid: GridInfo = {
+            dpi: 100, // 100px = 5ft => 20px per foot
+            scaleMultiplier: 5
+        };
+
+        it("calculates 3D distance from point to segment correctly on ground", () => {
+            // Segment from (-200, 0, 0) to (200, 0, 0) (x=-10ft to +10ft)
+            // Point C at (0, 0, 0) is on the segment => distance 0
+            const a: Point3D = { x: -200, y: 0, z: 0 };
+            const b: Point3D = { x: 200, y: 0, z: 0 };
+            const c: Point3D = { x: 0, y: 0, z: 0 };
+
+            expect(distancePoint3DToSegment3DFeet(c, a, b, testGrid)).toBeCloseTo(0, 5);
+        });
+
+        it("detects sphere intersection when segment passes through sphere in 3D", () => {
+            // Sphere at center (0, 0, 0) with radius 15ft
+            const sphere: Point3D = { x: 0, y: 0, z: 0 };
+            // Segment passing through center at height z = 5ft
+            const caster: Point3D = { x: -600, y: 0, z: 5 }; // -30ft
+            const target: Point3D = { x: 600, y: 0, z: 5 }; // +30ft
+
+            expect(doesSegmentIntersectSphere3D(caster, target, sphere, 15, testGrid)).toBe(true);
+        });
+
+        it("detects segment passing OVER sphere when caster flies high enough", () => {
+            // Sphere at center (0, 0, 0) with radius 15ft
+            const sphere: Point3D = { x: 0, y: 0, z: 0 };
+            // Caster flying at 35ft height at x=-600 (-30ft), target on ground at x=600 (+30ft, z=0)
+            // Midpoint at x=0 has height z = 17.5ft > 15ft radius!
+            const caster: Point3D = { x: -600, y: 0, z: 35 };
+            const target: Point3D = { x: 600, y: 0, z: 0 };
+
+            expect(doesSegmentIntersectSphere3D(caster, target, sphere, 15, testGrid)).toBe(false);
+        });
+
+        it("detects flying caster directly above darkness sphere targeting outside", () => {
+            // Sphere at center (0, 0, 0) with radius 15ft
+            const sphere: Point3D = { x: 0, y: 0, z: 0 };
+            // Caster hovering directly above sphere center at 30ft height (x=0, y=0, z=30)
+            // Target is outside at x=1000 (50ft away), z=0
+            const caster: Point3D = { x: 0, y: 0, z: 30 };
+            const target: Point3D = { x: 1000, y: 0, z: 0 };
+
+            // Segment goes from (0, 0, 30) to (50, 0, 0) ft. Shortest dist to (0,0,0) is > 15ft
+            expect(doesSegmentIntersectSphere3D(caster, target, sphere, 15, testGrid)).toBe(false);
+        });
     });
 });
 

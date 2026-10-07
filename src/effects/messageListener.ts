@@ -173,6 +173,8 @@ async function processInstruction(
   spellName?: string,
   spellCaster?: string,
   interaction?: Interaction,
+  spellCasterTokenId?: string,
+  spellCharacterId?: string | number,
 ) {
   const doMoreWork = async (instructions?: EffectInstruction[]) => {
     if (instructions == undefined) {
@@ -183,7 +185,17 @@ async function processInstruction(
       return;
     }
     await Promise.allSettled(
-      instructions.map((instruction) => processInstruction(instruction, dpi)),
+      instructions.map((instruction) =>
+        processInstruction(
+          instruction,
+          dpi,
+          spellName,
+          spellCaster,
+          interaction,
+          spellCasterTokenId,
+          spellCharacterId,
+        ),
+      ),
     );
   };
 
@@ -406,6 +418,8 @@ async function processInstruction(
           instruction.forceVariant,
           spellName,
           spellCaster,
+          spellCasterTokenId,
+          spellCharacterId,
         );
         effectRegister.set(
           instruction.id!,
@@ -443,6 +457,8 @@ export function setupMessageListener() {
     const spellCaster = messageData.spellData
       ? messageData.spellData.caster
       : undefined;
+    const spellCasterTokenId = messageData.spellData?.casterTokenId;
+    const spellCharacterId = messageData.spellData?.characterId;
     const [playerId, dpi] = await Promise.all([
       OBR.player.getId(),
       OBR.scene.grid.getDpi(),
@@ -465,6 +481,8 @@ export function setupMessageListener() {
             spellName,
             spellCaster,
             interaction,
+            spellCasterTokenId,
+            spellCharacterId,
           );
         }),
       );

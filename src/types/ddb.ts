@@ -36,6 +36,8 @@ export interface DDBParsedSpell {
   canUpcast: boolean;
   isPrepared: boolean;
   alwaysPrepared?: boolean;
+  usesSpellSlot?: boolean;
+  componentId?: number;
   source: "class" | "race" | "feat" | "item" | "custom";
   castingClass?: string;
 }
@@ -91,6 +93,7 @@ export interface DDBCharacterDefenses {
 
 export interface DDBFeatureAction {
   id: string;
+  componentId?: number;
   name: string;
   source: "class" | "race" | "feat";
   activationType?: "action" | "bonus" | "reaction" | "special" | "none";
@@ -145,6 +148,7 @@ export interface DDBParsedCharacter {
   actions?: DDBFeatureAction[];
   hasTwoWeaponFighting?: boolean;
   offhandWeapon?: DDBWeaponAttack;
+  martialArtsDie?: string;
   hp?: DDBCharacterHP;
   hitDice?: Array<{ die: string; total: number; used: number }>;
   armorClass?: number;

@@ -1,6 +1,8 @@
-import OBR, { Item, Vector2, isImage } from "@owlbear-rodeo/sdk";
+import OBR, { Item, Vector2 } from "@owlbear-rodeo/sdk";
 import { LOCAL_STORAGE_KEYS, getSettingsValue } from "../../../../components/Settings/settings";
+import { getPlayerOwnedTokens, getMyPrimaryCharacterToken, isCharacterToken } from "../../../player/playerCharacterService";
 import { getLinkedDDBCharacterId, getAllCachedDDBCharacters } from "../../../../services/ddbService";
+import { toolMetadataSelectedCaster } from "../../../../effectsTool";
 
 export interface ActiveCasterInfo {
     item: Item;
@@ -32,32 +34,42 @@ function getTokenPosition(item: Item): Vector2 {
 
 /**
  * Automatically resolves the active caster token and its true grid cell center.
- * Priority:
- * 1. Current player selection (if exactly one character token is selected)
- * 2. Last resolved active caster (if still present on scene)
- * 3. Default Caster from local settings
- * 4. Token linked to cached/synced D&D Beyond character
- * 5. Owned character token (if player owns character on the scene)
- * 6. Single character token on the scene (for player)
+ *
+ * For GM:
+ * 1. Current GM selection (any character token)
+ * 2. Last resolved active caster
+ * 3. Default caster
+ *
+ * For PLAYER:
+ * 1. If player owns character token(s):
+ *    a. If selection is one of player's OWN tokens, switch to it.
+ *    b. If selection is NOT owned by player (e.g. enemy target / ally), PRESERVE player's bound character.
+ *    c. If no selection, return primary bound character.
+ * 2. If no tokens owned yet, fallback to selection / single token.
  */
 export async function resolveActiveCaster(
     playerRole: "GM" | "PLAYER",
     playerID: string
 ): Promise<ActiveCasterInfo | null> {
     const isDM = playerRole === "GM";
-
-    // 1. Check current selection
     const selection = await OBR.player.getSelection();
-    if (selection && selection.length === 1) {
-        const selectedItems = await OBR.scene.items.getItems(selection);
-        const selected = selectedItems[0];
-        if (selected && (selected.layer === "CHARACTER" || (isImage(selected) && selected.layer !== "DRAWING"))) {
-            const tokenPosition = getTokenPosition(selected);
+
+    const sceneItems = await OBR.scene.items.getItems();
+    const characterItems = sceneItems.filter(isCharacterToken);
+
+    // =========================================================================
+    // 0. EXPLICIT CASTER BINDING (ActionDock/Tool selected caster)
+    // =========================================================================
+    const playerMeta = typeof OBR.player?.getMetadata === "function" ? await OBR.player.getMetadata() : {};
+    const explicitCasterId = playerMeta[toolMetadataSelectedCaster] as string | undefined;
+    if (explicitCasterId) {
+        const boundItem = characterItems.find(item => item.id === explicitCasterId);
+        if (boundItem) {
             const casterInfo: ActiveCasterInfo = {
-                item: selected,
-                id: selected.id,
-                position: tokenPosition,
-                name: selected.name,
+                item: boundItem,
+                id: boundItem.id,
+                position: getTokenPosition(boundItem),
+                name: boundItem.name,
                 isDM
             };
             lastResolvedCaster = casterInfo;
@@ -65,53 +77,128 @@ export async function resolveActiveCaster(
         }
     }
 
-    // 2. Check if last resolved active caster is still present on scene
-    if (lastResolvedCaster?.id) {
-        try {
-            const matched = await OBR.scene.items.getItems([lastResolvedCaster.id]);
-            if (matched && matched.length > 0 && matched[0]) {
-                const refreshed = matched[0];
+    // =========================================================================
+    // 1. GM RESOLUTION
+    // =========================================================================
+    if (isDM) {
+        if (selection && selection.length === 1) {
+            const selected = characterItems.find(item => item.id === selection[0]);
+            if (selected) {
+                const casterInfo: ActiveCasterInfo = {
+                    item: selected,
+                    id: selected.id,
+                    position: getTokenPosition(selected),
+                    name: selected.name,
+                    isDM: true
+                };
+                lastResolvedCaster = casterInfo;
+                return casterInfo;
+            }
+        }
+
+        if (lastResolvedCaster?.id) {
+            const refreshed = characterItems.find(item => item.id === lastResolvedCaster?.id);
+            if (refreshed) {
                 const refreshedCaster: ActiveCasterInfo = {
                     item: refreshed,
                     id: refreshed.id,
                     position: getTokenPosition(refreshed),
                     name: refreshed.name,
-                    isDM
+                    isDM: true
                 };
                 lastResolvedCaster = refreshedCaster;
                 return refreshedCaster;
             }
-        } catch {
-            // Ignore error and fall through
         }
-    }
 
-    // 3. Fallback: Check Default Caster in Local Settings
-    const defaultCasters = getSettingsValue(LOCAL_STORAGE_KEYS.DEFAULT_CASTER);
-    if (defaultCasters && defaultCasters.length > 0) {
-        const defaultCasterId = defaultCasters[0].id;
-        const matched = await OBR.scene.items.getItems([defaultCasterId]);
-        if (matched && matched.length > 0) {
-            const defaultItem = matched[0];
-            const tokenPosition = getTokenPosition(defaultItem);
+        const defaultCasters = getSettingsValue(LOCAL_STORAGE_KEYS.DEFAULT_CASTER);
+        if (defaultCasters && defaultCasters.length > 0) {
+            const defaultItem = characterItems.find(item => item.id === defaultCasters[0].id);
+            if (defaultItem) {
+                const casterInfo: ActiveCasterInfo = {
+                    item: defaultItem,
+                    id: defaultItem.id,
+                    position: getTokenPosition(defaultItem),
+                    name: defaultItem.name,
+                    isDM: true
+                };
+                lastResolvedCaster = casterInfo;
+                return casterInfo;
+            }
+        }
+
+        if (characterItems.length > 0) {
+            const first = characterItems[0];
             const casterInfo: ActiveCasterInfo = {
-                item: defaultItem,
-                id: defaultItem.id,
-                position: tokenPosition,
-                name: defaultItem.name,
-                isDM
+                item: first,
+                id: first.id,
+                position: getTokenPosition(first),
+                name: first.name,
+                isDM: true
             };
             lastResolvedCaster = casterInfo;
             return casterInfo;
         }
+
+        return null;
     }
 
-    // 4. Fallback: Match any scene token linked to cached D&D Beyond characters
-    const sceneItems = await OBR.scene.items.getItems();
-    const characterItems = sceneItems.filter(
-        item => item.layer === "CHARACTER" || (isImage(item) && item.layer !== "DRAWING" && item.layer !== "MAP")
-    );
+    // =========================================================================
+    // 2. PLAYER RESOLUTION (Perspective Viewing & Character Fallback)
+    // =========================================================================
+    const ownedTokens = await getPlayerOwnedTokens(playerID, characterItems);
 
+    // A. If the player selected a single valid character token (own character, ally, or token to view):
+    // Resolve that token so the player can see its vision POV and perspective!
+    if (selection && selection.length === 1) {
+        const selected = characterItems.find(item => item.id === selection[0]);
+        if (selected) {
+            const casterInfo: ActiveCasterInfo = {
+                item: selected,
+                id: selected.id,
+                position: getTokenPosition(selected),
+                name: selected.name,
+                isDM: false
+            };
+            lastResolvedCaster = casterInfo;
+            return casterInfo;
+        }
+        // If selection is NOT a valid character token (e.g. darkness zone, spell effect, prop),
+        // ignore it and fall through to player's own character token!
+    }
+
+    // B. If no character token selected, fallback to player's primary or owned character:
+    if (ownedTokens.length > 0) {
+        // Return primary bound character
+        const primary = await getMyPrimaryCharacterToken(playerID, characterItems);
+        if (primary) {
+            const casterInfo: ActiveCasterInfo = {
+                item: primary,
+                id: primary.id,
+                position: getTokenPosition(primary),
+                name: primary.name,
+                isDM: false
+            };
+            lastResolvedCaster = casterInfo;
+            return casterInfo;
+        }
+
+        const firstOwned = ownedTokens[0];
+        const casterInfo: ActiveCasterInfo = {
+            item: firstOwned,
+            id: firstOwned.id,
+            position: getTokenPosition(firstOwned),
+            name: firstOwned.name,
+            isDM: false
+        };
+        lastResolvedCaster = casterInfo;
+        return casterInfo;
+    }
+
+    // =========================================================================
+    // 3. FALLBACK (Player has no claimed/bound tokens yet)
+    // =========================================================================
+    // Match linked DDB character token
     const cachedDDBChars = getAllCachedDDBCharacters();
     if (cachedDDBChars.length > 0) {
         for (const char of cachedDDBChars) {
@@ -124,7 +211,7 @@ export async function resolveActiveCaster(
                     id: matchedToken.id,
                     position: getTokenPosition(matchedToken),
                     name: matchedToken.name || char.name,
-                    isDM
+                    isDM: false
                 };
                 lastResolvedCaster = casterInfo;
                 return casterInfo;
@@ -132,38 +219,34 @@ export async function resolveActiveCaster(
         }
     }
 
-    // 5. If player (not GM) and no selection, find token owned by this player
-    if (!isDM) {
-        const ownedCharacters = characterItems.filter(
-            item => item.createdUserId === playerID
-        );
-        if (ownedCharacters.length === 1) {
-            const owned = ownedCharacters[0];
-            const tokenPosition = getTokenPosition(owned);
+    // If selection exists
+    if (selection && selection.length === 1) {
+        const selected = characterItems.find(item => item.id === selection[0]);
+        if (selected) {
             const casterInfo: ActiveCasterInfo = {
-                item: owned,
-                id: owned.id,
-                position: tokenPosition,
-                name: owned.name,
+                item: selected,
+                id: selected.id,
+                position: getTokenPosition(selected),
+                name: selected.name,
                 isDM: false
             };
             lastResolvedCaster = casterInfo;
             return casterInfo;
         }
+    }
 
-        // 6. If player and there is exactly 1 character token on scene, default to it
-        if (characterItems.length === 1) {
-            const single = characterItems[0];
-            const casterInfo: ActiveCasterInfo = {
-                item: single,
-                id: single.id,
-                position: getTokenPosition(single),
-                name: single.name,
-                isDM: false
-            };
-            lastResolvedCaster = casterInfo;
-            return casterInfo;
-        }
+    // Single character token on the scene
+    if (characterItems.length === 1) {
+        const single = characterItems[0];
+        const casterInfo: ActiveCasterInfo = {
+            item: single,
+            id: single.id,
+            position: getTokenPosition(single),
+            name: single.name,
+            isDM: false
+        };
+        lastResolvedCaster = casterInfo;
+        return casterInfo;
     }
 
     return null;

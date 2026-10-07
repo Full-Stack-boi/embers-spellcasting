@@ -47,5 +47,7 @@ export interface MessageType {
   spellData?: {
     name: string;
     caster: string;
+    casterTokenId?: string;
+    characterId?: string | number;
   };
 }

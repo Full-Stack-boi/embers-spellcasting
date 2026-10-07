@@ -443,15 +443,38 @@ function parseDDBSpell(
     const higherLevels = stripHtml(rawHigher);
     const canUpcast = level > 0 && Boolean(higherLevels || damage);
 
-    const isPrepared = level === 0 || source !== "class"
+    const usesSpellSlot = spellObj.usesSpellSlot !== false;
+    const componentId = typeof spellObj.componentId === "number" ? spellObj.componentId : undefined;
+
+    const isPrepared = level === 0 || source !== "class" || !usesSpellSlot
         ? true
         : isClassPreparedCaster(castingClass)
             ? Boolean(spellObj.prepared === true || spellObj.alwaysPrepared === true)
             : Boolean(spellObj.prepared === true || spellObj.alwaysPrepared === true || spellObj.countsAsKnownSpell === true);
 
+    let finalComponents = components;
+    let finalNotes = notes;
+    if (!usesSpellSlot) {
+        if (
+            spellObj.additionalDescription?.toLowerCase().includes("without spell components") ||
+            def.description?.toLowerCase().includes("without spell components")
+        ) {
+            finalComponents = "None";
+        }
+        if (
+            spellObj.additionalDescription?.toLowerCase().includes("focus point") ||
+            def.description?.toLowerCase().includes("focus point")
+        ) {
+            finalNotes = finalNotes ? `${finalNotes}, 1 Focus Point` : "1 Focus Point";
+        } else if (!finalNotes.toLowerCase().includes("no slot") && level > 0) {
+            finalNotes = finalNotes ? `${finalNotes}, No Spell Slot` : "No Spell Slot";
+        }
+    }
+
     return {
         id,
         ddbId: def.id,
+        componentId,
         name,
         level,
         school,
@@ -460,13 +483,13 @@ function parseDDBSpell(
         rangeText,
         aoe,
         duration,
-        components,
+        components: finalComponents,
         concentration: Boolean(def.concentration),
         ritual: Boolean(def.ritual),
         damage,
         damageType,
         saveOrAttack,
-        notes,
+        notes: finalNotes,
         beamCount: beamCount > 1 ? beamCount : undefined,
         description: stripHtml(def.description || ""),
         higherLevels: higherLevels || undefined,
@@ -475,6 +498,7 @@ function parseDDBSpell(
         canUpcast,
         isPrepared,
         alwaysPrepared: Boolean(spellObj.alwaysPrepared),
+        usesSpellSlot,
         source,
         castingClass
     };
@@ -796,6 +820,7 @@ export function parseDDBCharacterData(raw: any): DDBParsedCharacter {
                     const spellLevel = s.definition?.level ?? s.level ?? -1;
                     const isCantrip = spellLevel === 0;
                     const isKnownOrPrepared =
+                        s.usesSpellSlot === false ||
                         s.prepared === true ||
                         s.alwaysPrepared === true ||
                         s.countsAsKnownSpell === true ||
@@ -814,7 +839,7 @@ export function parseDDBCharacterData(raw: any): DDBParsedCharacter {
 
     // 2. data.spells (race, feat, item, class, etc.)
     // Note: data.spells.class MUST be filtered for prepared/known — it contains all class spells!
-    // Race/feat/item spells are granted unconditionally.
+    // Race/feat/item spells and feature spells (usesSpellSlot === false) are granted unconditionally.
     if (data.spells && typeof data.spells === "object") {
         for (const [key, spellList] of Object.entries(data.spells)) {
             if (Array.isArray(spellList)) {
@@ -824,9 +849,9 @@ export function parseDDBCharacterData(raw: any): DDBParsedCharacter {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 (spellList as any[]).forEach((s: any) => {
                     const spellLevel = s.definition?.level ?? s.level ?? -1;
-                    // Cantrips and race/feat/item spells are always granted.
-                    // Only skip leveled class spells that are explicitly unprepared and not known.
-                    if (key === "class" && spellLevel > 0 && s.prepared === false && !s.alwaysPrepared && !s.countsAsKnownSpell) {
+                    // Cantrips, race/feat/item spells, and non-slot feature spells are always granted.
+                    // Only skip leveled class spells that are explicitly unprepared, not known, AND use regular spell slots.
+                    if (key === "class" && spellLevel > 0 && s.usesSpellSlot !== false && s.prepared === false && !s.alwaysPrepared && !s.countsAsKnownSpell) {
                         return;
                     }
 
@@ -971,6 +996,20 @@ export function parseDDBCharacterData(raw: any): DDBParsedCharacter {
     );
     if (hasDevilsSight) {
         senses.devilsSight = true;
+    }
+
+    const hasShadowArts = featureNames.some(name =>
+        name.includes("shadow arts") || name.includes("warrior of shadow") || name.includes("way of shadow")
+    ) || (Array.isArray(data.classes) && data.classes.some((c: any) => c.subclassDefinition?.name?.toLowerCase().includes("shadow")));
+
+    if (hasShadowArts) {
+        senses.shadowMonkSight = {
+            enabled: true,
+            sourceOnly: true, // Only own Darkness per 2024 PHB
+            range: 60
+        };
+        // Shadow Arts grants Darkvision 60 ft, or increases existing Darkvision by 60 ft
+        senses.darkvision = Math.max((senses.darkvision || 0) + 60, 120);
     }
 
     // All modifier sources from DDB — used by weapon, Unarmed Strike, and AC calculations
@@ -1306,6 +1345,7 @@ export function parseDDBCharacterData(raw: any): DDBParsedCharacter {
 
                 featureActions.push({
                     id: `action_${cat}_${a.id || a.name.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`,
+                    componentId: typeof a.id === "number" ? a.id : (typeof a.componentId === "number" ? a.componentId : undefined),
                     name: a.name,
                     source: cat as "class" | "race" | "feat",
                     activationType: activation,
@@ -1317,6 +1357,60 @@ export function parseDDBCharacterData(raw: any): DDBParsedCharacter {
             });
         }
     });
+
+    // Universal Class & Subclass Features Ingestion:
+    // DDB sends active and future class features in data.classes[].classFeatures
+    // and data.classes[].subclassDefinition.classFeatures.
+    // Ingest all active features (requiredLevel <= classLevel && !hideInSheet)
+    // deduplicating with actions already extracted.
+    const existingActionNames = new Set(featureActions.map(f => f.name.toLowerCase().trim()));
+
+    if (Array.isArray(data.classes)) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        data.classes.forEach((c: any) => {
+            const classLevel = c.level || 1;
+            const classFeatureList: any[] = [
+                ...(Array.isArray(c.classFeatures) ? c.classFeatures : []),
+                ...(Array.isArray(c.subclassDefinition?.classFeatures) ? c.subclassDefinition.classFeatures : [])
+            ];
+
+            classFeatureList.forEach((cf: any) => {
+                const def = cf.definition || cf;
+                if (!def || !def.name) return;
+                const reqLevel = def.requiredLevel ?? 1;
+                if (reqLevel > classLevel) return;
+                if (def.hideInSheet === true) return;
+
+                const normName = def.name.toLowerCase().trim();
+                if (existingActionNames.has(normName)) return;
+                existingActionNames.add(normName);
+
+                let activation: DDBFeatureAction["activationType"] = "special";
+                if (def.activation?.activationType === 1) activation = "action";
+                else if (def.activation?.activationType === 3) activation = "bonus";
+                else if (def.activation?.activationType === 4) activation = "reaction";
+                else if (def.activation?.activationType === 2) activation = "none";
+                else {
+                    const descAct = extractActivationType(stripHtml(def.snippet || def.description || ""));
+                    if (descAct) activation = descAct;
+                }
+
+                const descText = stripHtml(def.snippet || def.description || "");
+
+                featureActions.push({
+                    id: `class_feature_${def.id || normName.replace(/[^a-z0-9]+/g, "_")}`,
+                    componentId: typeof def.id === "number" ? def.id : undefined,
+                    name: def.name,
+                    source: "class",
+                    activationType: activation,
+                    description: descText,
+                    rawDescription: def.description || def.snippet || "",
+                    rangeText: "--",
+                    limitedUse: undefined
+                });
+            });
+        });
+    }
 
     // ── Inject class level computed values into feature actions ────────────────
     // For features that DDB sends in actions but without computed dice/pools,
@@ -2168,8 +2262,9 @@ export async function setupDDBTokenContextMenuOption(): Promise<void> {
                 filter: {
                     min: 1,
                     max: 1,
-                    every: [
-                        { key: "layer", value: "CHARACTER" }
+                    some: [
+                        { key: "layer", value: "CHARACTER" },
+                        { key: "layer", value: "ATTACHMENT" }
                     ]
                 }
             }],
