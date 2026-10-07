@@ -7,7 +7,6 @@
 .scene-spell-display-item {
     display: flex;
     flex-direction: row;
-
     justify-content: space-between;
     align-items: center;
 }
@@ -15,7 +14,6 @@
 .scene-spell-display-controls {
     display: flex;
     flex-direction: row;
-
     align-items: center;
 }
 
@@ -24,4 +22,112 @@
     cursor: pointer;
     display: flex;
     align-items: center;
+}
+
+/* My Character & Camera Controls Card */
+.scene-character-card {
+    background: #14171d;
+    border: 1px solid #282f3a;
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.scene-character-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.scene-character-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.scene-character-name {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #f1f5f9;
+}
+
+.scene-character-badge {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    background: #142817;
+    color: #86efac;
+    border: 1px solid #166534;
+    padding: 1px 6px;
+    border-radius: 3px;
+}
+
+.scene-character-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.scene-char-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.scene-char-btn.primary {
+    background: linear-gradient(180deg, #d97706 0%, #b45309 100%);
+    color: #ffffff;
+    border: 1px solid #fde047;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.scene-char-btn.primary:hover {
+    background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+    border-color: #fef08a;
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+}
+
+.scene-char-btn.secondary {
+    background: #1e242d;
+    color: #cbd5e1;
+    border: 1px solid #374151;
+}
+
+.scene-char-btn.secondary:hover {
+    background: #28303d;
+    color: #ffffff;
+    border-color: #4b5563;
+}
+
+.scene-char-btn.danger {
+    background: #1e1315;
+    color: #fca5a5;
+    border: 1px solid #7f1d1d;
+}
+
+.scene-char-btn.danger:hover {
+    background: #450a0a;
+    color: #ffffff;
+    border-color: #ef4444;
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.35);
+}
+
+.scene-character-unbound {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.scene-character-hint {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    margin: 0;
+    line-height: 1.3;
 }

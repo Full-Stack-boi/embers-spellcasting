@@ -32,7 +32,12 @@ import {
     FaDiceD6,
     FaCaretUp,
     FaSquare,
+    FaLocationCrosshairs,
+    FaUserCheck,
 } from "react-icons/fa6";
+
+export const IconFocusCamera: React.FC<IconProps> = ({ size = 14, className }) => <FaLocationCrosshairs size={size} className={className} aria-hidden="true" />;
+export const IconUserCheck: React.FC<IconProps> = ({ size = 12, className }) => <FaUserCheck size={size} className={className} aria-hidden="true" />;
 
 type IconProps = { size?: number; className?: string };
 

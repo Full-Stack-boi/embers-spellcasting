@@ -7,11 +7,20 @@ import {
     FaLink,
     FaLinkSlash,
     FaSquareMinus,
+    FaLocationCrosshairs,
 } from "react-icons/fa6";
 import OBR, { Item, Player } from "@owlbear-rodeo/sdk";
 import { destroySpell, getSpell } from "../effects/spells";
 import { effectMetadataKey, spellMetadataKey } from "../effects/effects";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+    focusCameraOnToken,
+    getMyPrimaryCharacterToken,
+    bindTokenToPlayer,
+    unbindTokenFromPlayer,
+    isCharacterToken,
+    getOtherClaimedPlayer
+} from "../features/player/playerCharacterService";
 
 import { MessageType } from "../types/messageListener";
 import { Spell } from "../types/spells";
@@ -141,6 +150,122 @@ function SpellDisplay({
     );
 }
 
+function MyCharacterCard() {
+    const obr = useOBR();
+    const [primaryToken, setPrimaryToken] = useState<Item | null>(null);
+
+    const refreshCharacter = useCallback(async () => {
+        if (!obr.ready || !obr.sceneReady || !obr.player?.id) return;
+        const token = await getMyPrimaryCharacterToken(obr.player.id);
+        setPrimaryToken(token);
+    }, [obr.ready, obr.sceneReady, obr.player?.id]);
+
+    useEffect(() => {
+        refreshCharacter();
+        return OBR.scene.items.onChange(() => {
+            refreshCharacter();
+        });
+    }, [refreshCharacter]);
+
+    const handleFocusCamera = async () => {
+        if (primaryToken) {
+            await focusCameraOnToken(primaryToken.id);
+        }
+    };
+
+    const handleSelectToken = async () => {
+        if (primaryToken) {
+            await OBR.player.select([primaryToken.id], true);
+        }
+    };
+
+    const handleUnbindCharacter = async () => {
+        if (primaryToken) {
+            await unbindTokenFromPlayer(primaryToken.id);
+            OBR.notification.show(`Removed "${primaryToken.name || "Token"}" from your characters.`, "INFO");
+            await refreshCharacter();
+        }
+    };
+
+    const handleClaimCurrentSelection = async () => {
+        if (!obr.player?.id) return;
+        const selection = await OBR.player.getSelection();
+        if (!selection || selection.length === 0) {
+            OBR.notification.show("Please select a character token on the map first.", "WARNING");
+            return;
+        }
+        const items = await OBR.scene.items.getItems([selection[0]]);
+        const item = items[0];
+        if (!item || !isCharacterToken(item)) {
+            OBR.notification.show("Selected item is not a valid character token.", "WARNING");
+            return;
+        }
+        const otherOwner = getOtherClaimedPlayer(item, obr.player.id);
+        if (otherOwner) {
+            OBR.notification.show(`This character is already claimed by ${otherOwner.playerName || "another player"}.`, "WARNING");
+            return;
+        }
+        await bindTokenToPlayer(selection[0], obr.player.id, obr.player.name);
+        OBR.notification.show("Claimed selected token as your character!", "SUCCESS");
+        await refreshCharacter();
+    };
+
+    return (
+        <div className="scene-character-card">
+            <Typography variant="h6" className="subtitle" sx={{ mb: 1 }}>
+                My Character
+            </Typography>
+            {primaryToken ? (
+                <div className="scene-character-body">
+                    <div className="scene-character-info">
+                        <span className="scene-character-name">{primaryToken.name || "Unnamed Character"}</span>
+                        <span className="scene-character-badge">Bound</span>
+                    </div>
+                    <div className="scene-character-actions">
+                        <button
+                            type="button"
+                            className="scene-char-btn primary"
+                            onClick={handleFocusCamera}
+                            title="Focus camera on character (C)"
+                        >
+                            <FaLocationCrosshairs style={{ marginRight: 6 }} /> Focus Camera
+                        </button>
+                        <button
+                            type="button"
+                            className="scene-char-btn secondary"
+                            onClick={handleSelectToken}
+                            title="Select character token"
+                        >
+                            Select Token
+                        </button>
+                        <button
+                            type="button"
+                            className="scene-char-btn danger"
+                            onClick={handleUnbindCharacter}
+                            title="Release this character"
+                        >
+                            Release
+                        </button>
+                    </div>
+                </div>
+            ) : (
+                <div className="scene-character-unbound">
+                    <p className="scene-character-hint">
+                        No character bound yet. Select your token on the map and claim it below.
+                    </p>
+                    <button
+                        type="button"
+                        className="scene-char-btn primary"
+                        onClick={handleClaimCurrentSelection}
+                    >
+                        Claim Selected Token
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+}
+
 export default function SceneControls() {
     const obr = useOBR();
     const [party, setParty] = useState<Player[]>([]);
@@ -257,6 +382,7 @@ export default function SceneControls() {
         <div>
             {player ? (
                 <>
+                    <MyCharacterCard />
                     <Typography variant="h6" className="subtitle">
                         Active Effects
                     </Typography>

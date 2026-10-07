@@ -46,8 +46,14 @@ import {
 } from "./components/ActionDock/ActionDock";
 import { openSpellDetailModal } from "./views/SpellDetailModal";
 import {
+  DARKNESS_ZONE_METADATA_KEY,
+  EFFECT_METADATA_KEY,
+  SPELL_METADATA_KEY,
+  ELEVATION_METADATA_KEY,
   evaluateLineOfSight,
   extractDarknessZones,
+  isValidCombatTargetToken,
+  readTokenElevation,
   readTokenVisionRules,
 } from "./features/targeting/application/lineOfSightService";
 import {
@@ -99,6 +105,9 @@ import type { DDBParsedCharacter } from "./types/ddb";
 
 export const toolID = `${APP_KEY}/effect-tool`;
 export const toolMetadataSelectedSpell = `${APP_KEY}/selected-spell`;
+export const toolMetadataSelectedCaster = `${APP_KEY}/selected-caster`;
+export const toolMetadataSelectedWeapon = `${APP_KEY}/selected-weapon-id`;
+export const toolMetadataAttackCount = `${APP_KEY}/attack-count`;
 export const hexChosenAbilityMetadataKey = `${APP_KEY}/hex-chosen-ability`;
 export const selectedSpellDamageTypeMetadataKey = `${APP_KEY}/selected-spell-damage-type`;
 export const selectedSpellSlotLevelMetadataKey = `${APP_KEY}/selected-spell-slot-level`;
@@ -120,6 +129,8 @@ export interface TargetHighlightMetadata {
   id: number;
   count: number;
 }
+
+export { isValidCombatTargetToken };
 
 export async function deductSpellSlotIfLeveled(
   charId: number,
@@ -178,10 +189,16 @@ export async function stopAiming(): Promise<void> {
   setSelectedSpell("");
   await OBR.player.setMetadata({
     [toolMetadataSelectedSpell]: undefined,
+    [toolMetadataSelectedCaster]: undefined,
+    [toolMetadataSelectedWeapon]: undefined,
+    [toolMetadataAttackCount]: undefined,
     [playerSelectedTargetsMetadataKey]: [],
   });
   await OBR.tool.setMetadata(toolID, {
     [toolMetadataSelectedSpell]: undefined,
+    [toolMetadataSelectedCaster]: undefined,
+    [toolMetadataSelectedWeapon]: undefined,
+    [toolMetadataAttackCount]: undefined,
   });
   try {
     const metadata = await OBR.player.getMetadata();
@@ -261,10 +278,25 @@ async function removeTarget(target: Image, targets: Image[]) {
   OBR.scene.local.deleteItems([target.id]);
 }
 
-export function setSelectedSpell(spellName: string) {
-  // Set selected spell
-  OBR.player.setMetadata({ [toolMetadataSelectedSpell]: spellName });
-  OBR.tool.setMetadata(toolID, { [toolMetadataSelectedSpell]: spellName });
+export function setSelectedSpell(
+  spellName: string,
+  casterId?: string,
+  weaponId?: string,
+  attackCount?: number
+) {
+  // Set selected spell, caster, weapon, and attackCount
+  OBR.player.setMetadata({
+    [toolMetadataSelectedSpell]: spellName || undefined,
+    [toolMetadataSelectedCaster]: casterId || undefined,
+    [toolMetadataSelectedWeapon]: weaponId || undefined,
+    [toolMetadataAttackCount]: attackCount || undefined,
+  });
+  OBR.tool.setMetadata(toolID, {
+    [toolMetadataSelectedSpell]: spellName || undefined,
+    [toolMetadataSelectedCaster]: casterId || undefined,
+    [toolMetadataSelectedWeapon]: weaponId || undefined,
+    [toolMetadataAttackCount]: attackCount || undefined,
+  });
 }
 
 export function getTargetHighlightMetadata(
@@ -663,11 +695,7 @@ async function setupTargetToolModes(
         const maxRange = getSpellRange(spell, selectedSpell);
         const isSelfCentered = aoe.shape === "Sphere" && maxRange === 0;
 
-        const isTargetToken =
-          !event.shiftKey &&
-          event.target &&
-          (event.target.layer === "CHARACTER" ||
-            event.target.layer === "DRAWING");
+        const isTargetToken = !event.shiftKey && isValidCombatTargetToken(event.target);
         const targetPos = isSelfCentered
           ? activeCaster.position
           : isTargetToken
@@ -687,11 +715,7 @@ async function setupTargetToolModes(
       } else {
         clearAoePreview();
         const maxRange = getSpellRange(spell, selectedSpell);
-        const isTargetToken =
-          !event.shiftKey &&
-          event.target &&
-          (event.target.layer === "CHARACTER" ||
-            event.target.layer === "DRAWING");
+        const isTargetToken = !event.shiftKey && isValidCombatTargetToken(event.target);
         const targetPos = isTargetToken
           ? event.target!.position
           : !event.shiftKey
@@ -704,15 +728,21 @@ async function setupTargetToolModes(
         const visionRules = activeCaster.item
           ? readTokenVisionRules(activeCaster.item)
           : {};
+        const casterElevation = readTokenElevation(activeCaster.item);
+        const targetElevation = readTokenElevation(event.target);
         const visionCheck = evaluateLineOfSight(
           activeCaster.position,
           targetPos,
           darknessZones,
           grid,
           {
-            isDM: playerRole === "GM",
+            isDM: false,
             casterId: activeCaster.id,
+            playerId: playerID,
+            characterId: activeCaster.item ? getLinkedDDBCharacterId(activeCaster.item) ?? undefined : undefined,
             visionRules,
+            casterElevation,
+            targetElevation,
           },
         );
 
@@ -739,7 +769,7 @@ async function setupTargetToolModes(
           } else if (casterInDarkness) {
             const targetToken = sceneItems.find(
               (item) =>
-                (item.layer === "CHARACTER" || item.layer === "DRAWING") &&
+                isValidCombatTargetToken(item) &&
                 Math.hypot(
                   item.position.x - targetPos.x,
                   item.position.y - targetPos.y,
@@ -864,11 +894,7 @@ async function setupTargetToolModes(
 
         if (aoe && maxRange > 0 && activeCaster) {
           const grid = await getSceneGridInfo();
-          const isTargetToken = Boolean(
-            event.target &&
-            (event.target.layer === "CHARACTER" ||
-              event.target.layer === "DRAWING"),
-          );
+          const isTargetToken = Boolean(!event.shiftKey && isValidCombatTargetToken(event.target));
           const targetPos = isTargetToken
             ? event.target!.position
             : !event.shiftKey
@@ -890,11 +916,7 @@ async function setupTargetToolModes(
         } else if (!aoe && activeCaster) {
           const grid = await getSceneGridInfo();
           const maxRangeFeet = getSpellRange(spell, selectedSpell);
-          const isTargetToken = Boolean(
-            event.target &&
-            (event.target.layer === "CHARACTER" ||
-              event.target.layer === "DRAWING"),
-          );
+          const isTargetToken = Boolean(!event.shiftKey && isValidCombatTargetToken(event.target));
           const targetPos = isTargetToken
             ? event.target!.position
             : !event.shiftKey
@@ -922,15 +944,21 @@ async function setupTargetToolModes(
             const visionRules = activeCaster.item
               ? readTokenVisionRules(activeCaster.item)
               : {};
+            const casterElevation = readTokenElevation(activeCaster.item);
+            const targetElevation = readTokenElevation(event.target);
             const visionCheck = evaluateLineOfSight(
               activeCaster.position,
               targetPos,
               darknessZones,
               grid,
               {
-                isDM: playerRole === "GM",
+                isDM: false,
                 casterId: activeCaster.id,
+                playerId: playerID,
+                characterId: activeCaster.item ? getLinkedDDBCharacterId(activeCaster.item) ?? undefined : undefined,
                 visionRules,
+                casterElevation,
+                targetElevation,
               },
             );
 
@@ -958,12 +986,8 @@ async function setupTargetToolModes(
             } else {
               // Caster can see! Check if caster is inside Darkness (with Devil's Sight / Truesight)
               // while target outside cannot see caster -> Unseen Attacker gives Advantage!
-              const targetItem = event.target;
-              if (
-                targetItem &&
-                (targetItem.layer === "CHARACTER" ||
-                  targetItem.layer === "DRAWING")
-              ) {
+              const targetItem = isValidCombatTargetToken(event.target) ? event.target : undefined;
+              if (targetItem) {
                 const targetVisionRules = readTokenVisionRules(
                   targetItem as any,
                 );
@@ -975,7 +999,11 @@ async function setupTargetToolModes(
                   {
                     isDM: false,
                     casterId: targetItem.id,
+                    playerId: (targetItem as any).metadata?.["embers/characterOwner"] as string | undefined,
+                    characterId: getLinkedDDBCharacterId(targetItem) ?? undefined,
                     visionRules: targetVisionRules,
+                    casterElevation: targetElevation,
+                    targetElevation: casterElevation,
                   },
                 );
                 if (!reverseVisionCheck.canSee) {
@@ -993,10 +1021,7 @@ async function setupTargetToolModes(
       }
 
       // User is clicking on a character token or drawing object
-      if (
-        event.target &&
-        (event.target.layer === "CHARACTER" || event.target.layer === "DRAWING")
-      ) {
+      if (isValidCombatTargetToken(event.target)) {
         const canCast =
           playerRole === "GM" ||
           (await getGlobalSettingsValue(
@@ -1087,7 +1112,7 @@ async function setupTargetToolModes(
 
             const casterName =
               ddbChar?.name || activeCaster?.item?.name || "Caster";
-            const targetName = event.target.name || "Target";
+            const targetName = event.target?.name || "Target";
 
             const combatState = charId ? await loadCombatState(charId) : null;
             const isHexActive = isHexConcentrationActive(combatState);
@@ -1179,7 +1204,7 @@ async function setupTargetToolModes(
                 await saveCombatState(charId, {
                   concentrationSpellId: "hex",
                   concentrationSpellName: `Hex (${abilityLabel})`,
-                  hexTargetId: event.target.id,
+                  hexTargetId: event.target?.id || "",
                   hexTargetName: targetName,
                   hexAbility: chosenAbility,
                 });
@@ -1210,7 +1235,8 @@ async function setupTargetToolModes(
 
             if (
               selectedSpell === "melee_weapon_attack" ||
-              selectedSpell === "ranged_weapon_attack"
+              selectedSpell === "ranged_weapon_attack" ||
+              selectedSpell === "flurry_of_blows"
             ) {
               if (activeCaster?.id) {
                 await checkAndFireActionTriggers(
@@ -1218,15 +1244,38 @@ async function setupTargetToolModes(
                   "attack",
                 ).catch(() => {});
               }
-              const weapon = ddbChar?.weapons?.[0];
+              const playerMeta = await OBR.player.getMetadata();
+              const selectedWeaponId =
+                (playerMeta[toolMetadataSelectedWeapon] as string) ||
+                (selectedSpell === "flurry_of_blows" ? "weapon_unarmed_strike" : undefined);
+              const weapon =
+                (selectedWeaponId && ddbChar?.weapons?.find((w) => w.id === selectedWeaponId)) ||
+                (selectedSpell === "flurry_of_blows"
+                  ? ddbChar?.weapons?.find((w) => w.name.toLowerCase().includes("unarmed"))
+                  : undefined) ||
+                ddbChar?.weapons?.[0];
+              const attackCount =
+                selectedSpell === "flurry_of_blows"
+                  ? 2
+                  : Math.max(1, (playerMeta[toolMetadataAttackCount] as number) || 1);
+
               if (weapon) {
-                const roll = rollAttack(weapon.toHit, "", rollMode);
-                const ddbCards: DDBRollCardData[] = [
-                  {
-                    id: `${Date.now()}-atk`,
+                const isFlurry = selectedSpell === "flurry_of_blows";
+                const ddbCards: DDBRollCardData[] = [];
+                const reports: string[] = [];
+
+                for (let i = 1; i <= attackCount; i++) {
+                  const strikeSuffix = isFlurry || attackCount > 1 ? ` (Strike ${i})` : "";
+                  const actionLabel = isFlurry
+                    ? `FLURRY OF BLOWS${strikeSuffix}`
+                    : `${weapon.name.toUpperCase()}${strikeSuffix}`;
+
+                  const roll = rollAttack(weapon.toHit, "", rollMode);
+                  ddbCards.push({
+                    id: `${Date.now()}-${i}-atk`,
                     casterName,
                     targetName,
-                    actionName: weapon.name.toUpperCase(),
+                    actionName: actionLabel,
                     actionType: "TO HIT",
                     dieType: 20,
                     diceBreakdown: `${roll.d20} ${roll.bonus >= 0 ? `+ ${roll.bonus}` : `- ${Math.abs(roll.bonus)}`}`,
@@ -1236,98 +1285,104 @@ async function setupTargetToolModes(
                       ? "Critical Hit!"
                       : roll.isMiss
                         ? "Critical Miss!"
-                        : "Weapon Attack Roll",
+                        : `${weapon.name} Attack Roll`,
                     isCrit: roll.isCrit,
                     isMiss: roll.isMiss,
                     rollMode: roll.mode,
                     isAdvantage: roll.mode === "advantage",
                     isDisadvantage: roll.mode === "disadvantage",
-                    timestamp: Date.now(),
-                  },
-                ];
-                let dmgReport = "";
-                let hexNotice = "";
-
-                if (!roll.isMiss) {
-                  const dmg = rollDamageBreakdown(
-                    weapon.damage,
-                    weapon.damageType,
-                    "",
-                    undefined,
-                    roll.isCrit,
-                  );
-                  ddbCards.push({
-                    id: `${Date.now()}-dmg`,
-                    casterName,
-                    targetName,
-                    actionName: weapon.name.toUpperCase(),
-                    actionType: "DAMAGE",
-                    dieType: 8,
-                    diceBreakdown: dmg.formatted
-                      .replace(/^Damage:\s*\d+\s*[A-Za-z]*\s*\(/, "")
-                      .replace(/\)$/, "")
-                      .replace(/\+/g, " + "),
-                    formula: `${weapon.damage} ${weapon.damageType}`,
-                    total: dmg.total,
-                    subtitle: `Damage (${weapon.damageType})`,
-                    isCrit: roll.isCrit,
-                    timestamp: Date.now(),
+                    timestamp: Date.now() + (i * 3),
                   });
-                  dmgReport = ` | ${dmg.formatted}`;
 
-                  if (isHexActive) {
-                    const hexDice = roll.isCrit ? "2d6" : "1d6";
-                    const hexDmg = rollDamageDDB(
-                      "1d6",
-                      "Necrotic",
+                  let dmgReport = "";
+                  let hexNotice = "";
+
+                  if (!roll.isMiss) {
+                    const dmg = rollDamageBreakdown(
+                      weapon.damage,
+                      weapon.damageType,
                       "",
+                      undefined,
                       roll.isCrit,
                     );
                     ddbCards.push({
-                      id: `${Date.now()}-hex-dmg`,
+                      id: `${Date.now()}-${i}-dmg`,
                       casterName,
                       targetName,
-                      actionName: hexActionName,
+                      actionName: actionLabel,
                       actionType: "DAMAGE",
-                      dieType: 6,
-                      diceBreakdown: hexDmg.breakdown.replace(/\+/g, " + "),
-                      formula: `${hexDice} Necrotic`,
-                      total: hexDmg.total,
-                      subtitle: roll.isCrit
-                        ? "Hex Critical Hit (+2d6 Necrotic)"
-                        : "Hex Curse (+1d6 Necrotic)",
+                      dieType: 8,
+                      diceBreakdown: dmg.formatted
+                        .replace(/^Damage:\s*\d+\s*[A-Za-z]*\s*\(/, "")
+                        .replace(/\)$/, "")
+                        .replace(/\+/g, " + "),
+                      formula: `${weapon.damage} ${weapon.damageType}`,
+                      total: dmg.total,
+                      subtitle: `Damage (${weapon.damageType})`,
                       isCrit: roll.isCrit,
-                      timestamp: Date.now() + 1,
+                      timestamp: Date.now() + (i * 3) + 1,
                     });
-                    hexNotice = ` | Hex: +${hexDmg.total} Necrotic`;
+                    dmgReport = ` | ${dmg.formatted}`;
+
+                    if (isHexActive) {
+                      const hexDice = roll.isCrit ? "2d6" : "1d6";
+                      const hexDmg = rollDamageDDB(
+                        "1d6",
+                        "Necrotic",
+                        "",
+                        roll.isCrit,
+                      );
+                      ddbCards.push({
+                        id: `${Date.now()}-${i}-hex-dmg`,
+                        casterName,
+                        targetName,
+                        actionName: hexActionName,
+                        actionType: "DAMAGE",
+                        dieType: 6,
+                        diceBreakdown: hexDmg.breakdown.replace(/\+/g, " + "),
+                        formula: `${hexDice} Necrotic`,
+                        total: hexDmg.total,
+                        subtitle: roll.isCrit
+                          ? "Hex Critical Hit (+2d6 Necrotic)"
+                          : "Hex Curse (+1d6 Necrotic)",
+                        isCrit: roll.isCrit,
+                        timestamp: Date.now() + (i * 3) + 2,
+                      });
+                      hexNotice = ` | Hex: +${hexDmg.total} Necrotic`;
+                    }
+                  } else if (hasWeaponGraze(weapon)) {
+                    const abilityMod = Math.max(
+                      1,
+                      weapon.toHit - (ddbChar?.proficiencyBonus ?? 2),
+                    );
+                    ddbCards.push({
+                      id: `${Date.now()}-${i}-graze-dmg`,
+                      casterName,
+                      targetName,
+                      actionName: `${actionLabel} (GRAZE)`,
+                      actionType: "DAMAGE",
+                      dieType: 0,
+                      diceBreakdown: `${abilityMod}`,
+                      formula: `${abilityMod} ${weapon.damageType}`,
+                      total: abilityMod,
+                      subtitle: "Weapon Mastery: Graze (Damage on Miss)",
+                      timestamp: Date.now() + (i * 3) + 1,
+                    });
+                    dmgReport = ` | Graze: ${abilityMod} ${weapon.damageType}`;
+                  } else {
+                    dmgReport = " | Miss (0 Damage)";
                   }
-                } else if (hasWeaponGraze(weapon)) {
-                  const abilityMod = Math.max(
-                    1,
-                    weapon.toHit - (ddbChar?.proficiencyBonus ?? 2),
-                  );
-                  ddbCards.push({
-                    id: `${Date.now()}-graze-dmg`,
-                    casterName,
-                    targetName,
-                    actionName: `${weapon.name.toUpperCase()} (GRAZE)`,
-                    actionType: "DAMAGE",
-                    dieType: 0,
-                    diceBreakdown: `${abilityMod}`,
-                    formula: `${abilityMod} ${weapon.damageType}`,
-                    total: abilityMod,
-                    subtitle: "Weapon Mastery: Graze (Damage on Miss)",
-                    timestamp: Date.now() + 1,
-                  });
-                  dmgReport = ` | Graze: ${abilityMod} ${weapon.damageType}`;
-                } else {
-                  dmgReport = " | Miss (0 Damage)";
+
+                  reports.push(`Strike ${i}: ${roll.formatted}${dmgReport}${hexNotice}`);
                 }
 
                 broadcastDDBRoll(ddbCards);
+                const summaryTitle = isFlurry
+                  ? "Flurry of Blows"
+                  : weapon.name;
                 OBR.notification.show(
-                  `${casterName} -> ${targetName} (${weapon.name}): ${roll.formatted}${dmgReport}${hexNotice}`,
-                  roll.isCrit ? "SUCCESS" : roll.isMiss ? "WARNING" : "INFO",
+                  `${casterName} -> ${targetName} (${summaryTitle}): ${reports.join(" • ")}`,
+                  "INFO",
                 );
               } else {
                 if (activeCaster?.id) {
@@ -2291,7 +2346,7 @@ async function setupTargetToolModes(
             }
             await stopAiming();
           } else {
-            const targetName = event.target.name || "Target";
+            const targetName = event.target?.name || "Target";
             OBR.notification.show(
               `${beamInfo.beamUnit} ${currentAllocatedBeams}/${beamInfo.totalBeams} allocated to ${targetName}. Click next target or same target to cast.`,
               "INFO",
@@ -2507,10 +2562,7 @@ async function setupTargetToolModes(
     shortcut: "R",
     onToolClick(_context, event) {
       // User clicked on an object with an attached target
-      if (
-        event.target &&
-        (event.target.layer == "CHARACTER" || event.target.layer == "DRAWING")
-      ) {
+      if (isValidCombatTargetToken(event.target)) {
         getSortedTargets().then((targets) => {
           const selected: Image | undefined = targets.filter(
             (image) => image.attachedTo === event.target!.id,
@@ -2561,3 +2613,57 @@ export async function setupDefaultCasterMenuOption() {
     },
   });
 }
+
+export const elevationMenuId = `${APP_KEY}/elevation-menu`;
+
+export async function setupElevationMenuOption() {
+  await OBR.contextMenu.remove(elevationMenuId);
+  await OBR.contextMenu.create({
+    id: elevationMenuId,
+    icons: [
+      {
+        icon: "/embers.svg",
+        label: "Toggle Flight (Embers)",
+        filter: {
+          some: [
+            { key: "layer", operator: "==", value: "CHARACTER" },
+            { key: "layer", operator: "==", value: "ATTACHMENT" },
+          ],
+        },
+      },
+    ],
+    onClick: async (context) => {
+      const targetItems = context.items?.filter(it =>
+        (it as any).attachedTo === undefined &&
+        it.metadata?.[DARKNESS_ZONE_METADATA_KEY] === undefined &&
+        it.metadata?.[EFFECT_METADATA_KEY] === undefined &&
+        it.metadata?.[SPELL_METADATA_KEY] === undefined
+      );
+      if (!targetItems || targetItems.length === 0) return;
+
+      const firstItem = targetItems[0];
+      const currentEle = readTokenElevation(firstItem);
+      // Toggle between 0 ft (ground) and 30 ft (flying)
+      const nextEle = currentEle > 15 ? 0 : 30;
+
+      await OBR.scene.items.updateItems(targetItems.map(it => it.id), (items) => {
+        for (const it of items) {
+          it.metadata = {
+            ...it.metadata,
+            [ELEVATION_METADATA_KEY]: nextEle,
+          };
+          it.layer = nextEle > 15 ? "ATTACHMENT" : "CHARACTER";
+          it.zIndex = nextEle > 15 ? 10 : 0;
+        }
+      });
+
+      OBR.notification.show(
+        nextEle > 15
+          ? `Flight enabled: Elevation set to ${nextEle} ft (Flying above darkness)`
+          : `Grounded: Elevation reset to 0 ft`,
+        "INFO",
+      );
+    },
+  });
+}
+

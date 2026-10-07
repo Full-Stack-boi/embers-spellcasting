@@ -242,6 +242,172 @@ body,
     text-overflow: ellipsis;
 }
 
+.ddb-caster-identity-container {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.ddb-caster-identity-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+/* Focus Camera Button - Authentic BG3 brass/bronze styling */
+.ddb-focus-camera-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    background: linear-gradient(180deg, #1f242d 0%, #13161c 100%);
+    border: 1px solid #3d4452;
+    border-radius: 4px;
+    color: #94a3b8;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    flex-shrink: 0;
+}
+
+.ddb-focus-camera-btn:hover {
+    background: linear-gradient(180deg, #2d3340 0%, #1a1e26 100%);
+    border-color: #d97706;
+    color: #fef08a;
+    box-shadow: 0 0 6px rgba(217, 119, 6, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    transform: translateY(-1px);
+}
+
+.ddb-focus-camera-btn:active {
+    transform: translateY(0);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+/* Owner / Claim Badges */
+.ddb-owner-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 0.58rem;
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    line-height: 1;
+}
+
+.ddb-owner-actions-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.ddb-owner-badge.owned {
+    background: linear-gradient(180deg, #142817 0%, #0d1a0f 100%);
+    color: #86efac;
+    border: 1px solid #166534;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.ddb-owner-badge.other {
+    background: #161e2a;
+    color: #93c5fd;
+    border: 1px solid #1e3a8a;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    letter-spacing: 0.03em;
+}
+
+.ddb-inspection-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.55rem;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: #231d10;
+    color: #fbbf24;
+    border: 1px solid #78350f;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1;
+}
+
+.ddb-feature-cast-spell-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 3px;
+    background: #1e293b;
+    color: #38bdf8;
+    border: 1px solid #0284c7;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    line-height: 1.2;
+}
+
+.ddb-feature-cast-spell-btn:hover {
+    background: #0284c7;
+    color: #ffffff;
+    box-shadow: 0 0 6px rgba(56, 189, 248, 0.4);
+}
+
+.ddb-release-token-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 13px;
+    height: 13px;
+    font-size: 0.55rem;
+    font-weight: 700;
+    padding: 0;
+    border-radius: 3px;
+    background: #1e1315;
+    color: #fca5a5;
+    border: 1px solid #7f1d1d;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    line-height: 1;
+}
+
+.ddb-release-token-btn:hover {
+    background: #450a0a;
+    color: #ffffff;
+    border-color: #ef4444;
+    box-shadow: 0 0 5px rgba(239, 68, 68, 0.4);
+}
+
+.ddb-claim-token-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 0.58rem;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: linear-gradient(180deg, #371417 0%, #250d0f 100%);
+    color: #fca5a5;
+    border: 1px solid #991b1b;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    line-height: 1;
+}
+
+.ddb-claim-token-btn:hover {
+    background: linear-gradient(180deg, #4c1d22 0%, #371417 100%);
+    color: #ffffff;
+    border-color: #ef4444;
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.4);
+}
+
+
 /* Center: Action Gems & Slots Tracker */
 .ddb-header-center-resources {
     display: flex;

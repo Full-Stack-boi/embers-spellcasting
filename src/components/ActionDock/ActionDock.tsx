@@ -15,6 +15,7 @@ import {
     registerDynamicSpells,
 } from "../../assets/spellInfo";
 import { resolveActiveCaster, ActiveCasterInfo } from "../../features/targeting/infrastructure/obr/activeCasterResolver";
+import { TOKEN_VISION_METADATA_KEY } from "../../features/targeting/application/lineOfSightService";
 import { setSelectedSpell, toolID, toolMetadataSelectedSpell, targetHighlightMetadataKey, getSortedTargets, stopAiming, hexChosenAbilityMetadataKey, selectedSpellDamageTypeMetadataKey, selectedSpellSlotLevelMetadataKey } from "../../effectsTool";
 import { APP_KEY } from "../../config";
 import { openSpellDetailModal } from "../../views/SpellDetailModal";
@@ -41,7 +42,10 @@ import {
     IconList,
     IconDashMovement,
     getWeaponIcon,
+    IconFocusCamera,
+    IconUserCheck,
 } from "./Bg3Icons";
+import { focusCameraOnToken, isTokenOwnedByPlayer, bindTokenToPlayer, unbindTokenFromPlayer, getOtherClaimedPlayer, getMyPrimaryCharacterToken } from "../../features/player/playerCharacterService";
 import { extractBuffEffects } from "../../services/descriptionParser";
 import {
     getLinkedDDBCharacterId,
@@ -243,6 +247,7 @@ export type DetailDrawerItem =
           rangeText?: string;
           description?: string;
           rawDescription?: string;
+          componentId?: number;
           limitedUse?: { max: number; used: number; resetType?: string };
       }
     | {
@@ -263,6 +268,8 @@ export type DetailDrawerItem =
               damageType?: string;
               notes?: string;
               isPrepared?: boolean;
+              usesSpellSlot?: boolean;
+              componentId?: number;
               rawDdbSpell?: DDBParsedSpell;
           };
       }
@@ -993,10 +1000,27 @@ const DND_CONDITIONS = [
                         if (cached) {
                             setSyncedDdbChar(cached);
                             applyDdbSlots(cached);
+                            if (cached.senses) {
+                                const currentVision = active.item.metadata[TOKEN_VISION_METADATA_KEY] as any;
+                                if (!currentVision || JSON.stringify(currentVision) !== JSON.stringify(cached.senses)) {
+                                    OBR.scene.items.updateItems([active.item.id], items => {
+                                        for (const it of items) {
+                                            it.metadata[TOKEN_VISION_METADATA_KEY] = cached.senses;
+                                        }
+                                    }).catch(console.error);
+                                }
+                            }
                         } else {
                             fetchDDBCharacter(charId).then(parsed => {
                                 setSyncedDdbChar(parsed);
                                 applyDdbSlots(parsed);
+                                if (parsed.senses) {
+                                    OBR.scene.items.updateItems([active.item.id], items => {
+                                        for (const it of items) {
+                                            it.metadata[TOKEN_VISION_METADATA_KEY] = parsed.senses;
+                                        }
+                                    }).catch(console.error);
+                                }
                             }).catch(console.error);
                         }
                     } else {
@@ -1017,6 +1041,37 @@ const DND_CONDITIONS = [
 
         updateCaster();
     }, [obr.ready, obr.sceneReady, obr.player]);
+
+    // Global keyboard shortcut: press 'C' to focus camera on active character token
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (
+                e.target instanceof HTMLInputElement ||
+                e.target instanceof HTMLTextAreaElement ||
+                (e.target as HTMLElement)?.isContentEditable
+            ) {
+                return;
+            }
+            if ((e.key === "c" || e.key === "C") && !e.ctrlKey && !e.altKey && !e.metaKey) {
+                e.preventDefault();
+                if (obr.player?.id) {
+                    getMyPrimaryCharacterToken(obr.player.id).then(primary => {
+                        if (primary) {
+                            focusCameraOnToken(primary.id);
+                        } else if (caster?.id) {
+                            focusCameraOnToken(caster.id);
+                        }
+                    }).catch(() => {
+                        if (caster?.id) focusCameraOnToken(caster.id);
+                    });
+                } else if (caster?.id) {
+                    focusCameraOnToken(caster.id);
+                }
+            }
+        };
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [caster?.id, obr.player?.id]);
 
     // Listen to scene items changes to reactively update linked character
     useEffect(() => {
@@ -1041,6 +1096,18 @@ const DND_CONDITIONS = [
         });
     }, [obr.ready, obr.sceneReady, caster?.id, syncedDdbChar]);
 
+    const characterFeatures = useMemo(
+        () => syncedDdbChar ? getCharacterFeatures(syncedDdbChar) : [],
+        [syncedDdbChar]
+    );
+
+    const weaponsList = useMemo(
+        () => (syncedDdbChar?.weapons && syncedDdbChar.weapons.length > 0)
+            ? syncedDdbChar.weapons
+            : DEFAULT_WEAPONS,
+        [syncedDdbChar]
+    );
+
     // Build unified spells list combining D&D Beyond synced character spells with built-in library
     const dockSpells = useMemo(() => {
         const result: Array<{
@@ -1055,6 +1122,8 @@ const DND_CONDITIONS = [
             damageType?: string;
             notes?: string;
             isPrepared: boolean;
+            usesSpellSlot?: boolean;
+            componentId?: number;
             fromChar: boolean;
             rawDdbSpell?: DDBParsedSpell;
         }> = [];
@@ -1108,7 +1177,9 @@ const DND_CONDITIONS = [
                         damage: s.damage,
                         damageType: s.damageType,
                         notes: s.components + (s.concentration ? ", C" : "") + (s.ritual ? ", R" : ""),
-                        isPrepared: Boolean(s.isPrepared),
+                        isPrepared: Boolean(s.isPrepared) || s.usesSpellSlot === false,
+                        usesSpellSlot: s.usesSpellSlot,
+                        componentId: s.componentId,
                         fromChar: true,
                         rawDdbSpell: s
                     });
@@ -1339,11 +1410,12 @@ const DND_CONDITIONS = [
         return dockSpells.find(s => s.id === upcastPickerSpellId) || null;
     }, [upcastPickerSpellId, dockSpells]);
 
-    const handleOpenUpcastPicker = (spell: { id: string; name?: string; level?: number }) => {
-        const fullSpell = dockSpells.find(s => s.id === spell.id) || spell;
+    const handleOpenUpcastPicker = (spell: { id: string; name?: string; level?: number; usesSpellSlot?: boolean }) => {
+        const fullSpell = (dockSpells.find(s => s.id === spell.id) || spell) as any;
         const choices = getSpellChoices(fullSpell);
         const lvl = typeof fullSpell.level === "number" ? fullSpell.level : 0;
-        const isLeveled = lvl > 0;
+        const usesSlot = fullSpell.usesSpellSlot !== false;
+        const isLeveled = lvl > 0 && usesSlot;
         const available = isLeveled ? getAvailableSlotLevels(lvl) : [];
         const isHex = fullSpell.name?.toLowerCase() === "hex" || fullSpell.id.toLowerCase() === "hex";
 
@@ -1462,7 +1534,7 @@ const DND_CONDITIONS = [
             return;
         }
 
-        setSelectedSpell(targetId);
+        setSelectedSpell(targetId, caster?.id);
         setSelected(targetId);
         await OBR.tool.activateTool(toolID);
 
@@ -1476,7 +1548,7 @@ const DND_CONDITIONS = [
         const id = obr.player?.id || "";
         const meta = getSpellMetadata(targetId);
         const matchedDdbSpell = syncedDdbChar?.spells.find(s => s.id === targetId || s.name.toLowerCase() === targetId.toLowerCase());
-        if (matchedDdbSpell && !matchedDdbSpell.isPrepared && matchedDdbSpell.level > 0) {
+        if (matchedDdbSpell && !matchedDdbSpell.isPrepared && matchedDdbSpell.level > 0 && matchedDdbSpell.usesSpellSlot !== false) {
             OBR.notification.show(`${matchedDdbSpell.name} is not prepared!`, "WARNING");
             return;
         }
@@ -1523,7 +1595,8 @@ const DND_CONDITIONS = [
         // Deduct 1 spell slot ONLY for leveled spells (baseSpellLevel >= 1).
         // Cantrips (level 0) are cast at-will and NEVER consume spell slots!
         // Moving an existing Hex curse does NOT consume a spell slot!
-        if (baseSpellLevel >= 1 && targetLevel >= 1 && targetLevel <= 9 && !(isHexSpell && isAlreadyHex)) {
+        // Non-slot spells (usesSpellSlot === false) expend specific feature resources if applicable.
+        if (baseSpellLevel >= 1 && targetLevel >= 1 && targetLevel <= 9 && !(isHexSpell && isAlreadyHex) && matchedDdbSpell?.usesSpellSlot !== false) {
             const currentSlot = spellSlots[targetLevel];
             if (currentSlot && currentSlot.used < currentSlot.max) {
                 setSpellSlots(prev => ({
@@ -1533,6 +1606,25 @@ const DND_CONDITIONS = [
             } else if (pactSlots.max > 0 && pactSlots.used < pactSlots.max) {
                 // Deduct pact slot
                 setPactSlots(prev => ({ ...prev, used: prev.used + 1 }));
+            }
+        } else if (matchedDdbSpell?.usesSpellSlot === false) {
+            const isDarknessOrFocus = targetId.toLowerCase() === "darkness" || (matchedDdbSpell.notes?.toLowerCase().includes("focus") ?? false);
+            if (isDarknessOrFocus && syncedDdbChar) {
+                const focusFeat = characterFeatures.find(f => {
+                    const n = f.name.toLowerCase();
+                    return (n.includes("focus") || n.includes("ki")) && f.limitedUse && f.limitedUse.max > 0;
+                });
+                if (focusFeat?.limitedUse) {
+                    const used = focusFeat.limitedUse.used ?? 0;
+                    const max = focusFeat.limitedUse.max ?? 0;
+                    if (used >= max) {
+                        OBR.notification.show(`No Focus Points remaining to cast ${spellDisplayName}!`, "WARNING");
+                        return;
+                    }
+                    focusFeat.limitedUse.used = used + 1;
+                    cacheDDBCharacter(syncedDdbChar);
+                    OBR.notification.show(`Expended 1 Focus Point to cast ${spellDisplayName}`, "INFO");
+                }
             }
         }
 
@@ -2101,14 +2193,25 @@ const DND_CONDITIONS = [
         }
     };
 
-    // Activate/toggle feature buff (Innate Sorcery, Rage, Bladesong, etc.)
+    // Activate/toggle feature buff or combat action
     const handleActivateFeature = async (feat: { id: string; name: string; limitedUse?: { max?: number; used?: number; resetType?: string }; activationType?: string }) => {
         if (!caster?.id) {
-            OBR.notification.show("No active token selected to apply buff.", "WARNING");
+            OBR.notification.show("No active token selected.", "WARNING");
             return;
         }
 
         const featLower = feat.name.toLowerCase();
+
+        // Direct Attack Features (Flurry of Blows, Bonus Unarmed Strike)
+        if (featLower.includes("flurry of blows")) {
+            await handleFlurryOfBlowsClick();
+            return;
+        }
+        if (featLower.includes("bonus unarmed strike") || (featLower.includes("martial arts") && feat.activationType === "bonus")) {
+            await handleBonusUnarmedStrikeClick();
+            return;
+        }
+
         let buffData: Omit<ActiveBuff, "activatedAt"> | undefined = undefined;
 
         if (featLower.includes("innate sorcery")) {
@@ -2124,7 +2227,7 @@ const DND_CONDITIONS = [
             buffData = {
                 id: feat.id,
                 name: feat.name,
-                icon: "✨",
+                icon: "",
                 source: feat.activationType ? feat.activationType.toUpperCase() : "Feature",
                 durationText: "1 minute",
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -2290,12 +2393,75 @@ const DND_CONDITIONS = [
     };
 
     // Weapon selection & aiming
-    const handleSelectWeapon = (weapon: DDBWeaponAttack, mode: "melee" | "thrown" = "melee") => {
+    const handleSelectWeapon = (weapon: DDBWeaponAttack, mode: "melee" | "thrown" = "melee", attackCount = 1) => {
         const spellId = mode === "thrown" ? "ranged_weapon_attack" : "melee_weapon_attack";
-        setSelectedSpell(spellId);
+        setSelectedSpell(spellId, caster?.id, weapon.id, attackCount);
         setSelected(spellId);
         OBR.tool.activateTool(toolID);
-        OBR.notification.show(`Aiming ${weapon.name} (${mode === "thrown" ? `${weapon.thrownRange || 20}/${weapon.thrownLongRange || 60} ft Thrown` : "5 ft Reach"})`, "INFO");
+        OBR.notification.show(`Aiming ${weapon.name} (${mode === "thrown" ? `${weapon.thrownRange || 20}/${weapon.thrownLongRange || 60} ft Thrown` : "5 ft Reach"}${attackCount > 1 ? ` - ${attackCount} Attacks` : ""})`, "INFO");
+    };
+
+    // Monk Flurry of Blows (2 Unarmed Strikes, 1 Focus Point, Bonus Action)
+    const handleFlurryOfBlowsClick = async () => {
+        const foundUnarmed = weaponsList.find(w => w.id === "weapon_unarmed_strike");
+        const unarmedWeapon = foundUnarmed || {
+            id: "weapon_unarmed_strike",
+            name: "Unarmed Strike",
+            type: "melee" as const,
+            rangeText: "5 ft. Reach",
+            rangeFeet: 5,
+            toHit: (syncedDdbChar?.modifiers?.dex ?? 3) + (syncedDdbChar?.proficiencyBonus ?? 2),
+            damage: `${syncedDdbChar?.martialArtsDie || "1d6"}+${syncedDdbChar?.modifiers?.dex ?? 3}`,
+            damageType: "bludgeoning" as const,
+            properties: ["Monk Weapon", "Martial Arts"],
+        };
+
+        if (syncedDdbChar) {
+            const focusFeat = characterFeatures.find(f => {
+                const n = f.name.toLowerCase();
+                return (n.includes("focus") || n.includes("ki")) && f.limitedUse && f.limitedUse.max > 0;
+            });
+            if (focusFeat?.limitedUse) {
+                const used = focusFeat.limitedUse.used ?? 0;
+                const max = focusFeat.limitedUse.max ?? 0;
+                if (used >= max) {
+                    OBR.notification.show("No Focus Points remaining for Flurry of Blows!", "WARNING");
+                    return;
+                }
+                focusFeat.limitedUse.used = used + 1;
+                cacheDDBCharacter(syncedDdbChar);
+            }
+        }
+
+        setBonusActionUsed(true);
+        const spellId = "flurry_of_blows";
+        await setSelectedSpell(spellId, caster?.id, unarmedWeapon.id, 2);
+        setSelected(spellId);
+        await OBR.tool.activateTool(toolID);
+        OBR.notification.show("Flurry of Blows: Aiming 2 Unarmed Strikes (1 Focus Point spent)", "INFO");
+    };
+
+    // Monk Bonus Unarmed Strike (1 Unarmed Strike, Bonus Action)
+    const handleBonusUnarmedStrikeClick = async () => {
+        const foundUnarmed = weaponsList.find(w => w.id === "weapon_unarmed_strike");
+        const unarmedWeapon = foundUnarmed || {
+            id: "weapon_unarmed_strike",
+            name: "Unarmed Strike",
+            type: "melee" as const,
+            rangeText: "5 ft. Reach",
+            rangeFeet: 5,
+            toHit: (syncedDdbChar?.modifiers?.dex ?? 3) + (syncedDdbChar?.proficiencyBonus ?? 2),
+            damage: `${syncedDdbChar?.martialArtsDie || "1d6"}+${syncedDdbChar?.modifiers?.dex ?? 3}`,
+            damageType: "bludgeoning" as const,
+            properties: ["Monk Weapon", "Martial Arts"],
+        };
+
+        setBonusActionUsed(true);
+        const spellId = "bonus_unarmed_strike";
+        await setSelectedSpell(spellId, caster?.id, unarmedWeapon.id, 1);
+        setSelected(spellId);
+        await OBR.tool.activateTool(toolID);
+        OBR.notification.show("Bonus Unarmed Strike: Aiming 1 strike as a Bonus Action", "INFO");
     };
 
     // Two-Weapon Fighting bonus action attack
@@ -2395,10 +2561,9 @@ const DND_CONDITIONS = [
         || (caster?.item && isImage(caster.item) ? caster.item.image.url : `${window.location.origin}/embers.svg`);
     const casterName = syncedDdbChar?.name
         || (caster?.name && caster.name !== "Caster" ? caster.name : (caster?.isDM ? "Dungeon Master" : "Caster"));
-
-    const weaponsList = (syncedDdbChar?.weapons && syncedDdbChar.weapons.length > 0)
-        ? syncedDdbChar.weapons
-        : DEFAULT_WEAPONS;
+    const isOwnedByMe = Boolean(caster?.item && obr.player?.id && isTokenOwnedByPlayer(caster.item, obr.player.id));
+    const otherOwner = Boolean(caster?.item && obr.player?.id) ? getOtherClaimedPlayer(caster!.item, obr.player!.id) : null;
+    const isReadOnlyInspection = Boolean(obr.player?.role === "PLAYER" && otherOwner);
 
     // Helper to match text against actionSearch
     const matchesActionSearch = (text?: string) => {
@@ -2455,11 +2620,6 @@ const DND_CONDITIONS = [
         if (!isReaction) return false;
         return matchesActionSearch(s.name) || matchesActionSearch(s.damageType) || matchesActionSearch(s.notes);
     });
-
-    const characterFeatures = useMemo(
-        () => syncedDdbChar ? getCharacterFeatures(syncedDdbChar) : [],
-        [syncedDdbChar]
-    );
 
     // Action Features (1 Action) - exclude any feature that duplicates a spell
     const actionFeatures = characterFeatures.filter(a => {
@@ -3036,6 +3196,16 @@ const DND_CONDITIONS = [
         const isBuffActive = activeBuffs.some(b => b.name.toLowerCase() === featLower || b.id === feat.id || (b.id === "innate_sorcery" && featLower.includes("innate sorcery")));
         const flyoutKind = getFeatureFlyoutKind(feat);
 
+        const isFlurry = featLower.includes("flurry of blows");
+        const isBonusStrike = featLower.includes("bonus unarmed strike") || (featLower.includes("martial arts") && feat.activationType === "bonus");
+        const linkedSpells = dockSpells.filter(s => {
+            if (s.rawDdbSpell?.componentId && feat.componentId && s.rawDdbSpell.componentId === feat.componentId) return true;
+            const featDesc = (feat.description || "").toLowerCase();
+            const featTitle = feat.name.toLowerCase();
+            const spellName = s.name.toLowerCase();
+            return (featDesc.includes(spellName) || (featTitle.includes("shadow arts") && spellName === "darkness")) && (s.usesSpellSlot === false || s.fromChar);
+        });
+
         return (
             <div
                 key={feat.id}
@@ -3051,6 +3221,7 @@ const DND_CONDITIONS = [
                             name: feat.name,
                             description: feat.description || "",
                             rawDescription: feat.rawDescription,
+                            componentId: feat.componentId,
                             category: feat.source === "class" ? "Class Feature" : feat.source === "feat" ? "Feat" : "Racial Trait",
                             activationType: feat.activationType,
                             limitedUse: feat.limitedUse
@@ -3065,6 +3236,7 @@ const DND_CONDITIONS = [
                         name: feat.name,
                         description: feat.description || "",
                         rawDescription: feat.rawDescription,
+                        componentId: feat.componentId,
                         category: feat.source === "class" ? "Class Feature" : feat.source === "feat" ? "Feat" : "Racial Trait",
                         activationType: feat.activationType,
                         limitedUse: feat.limitedUse
@@ -3094,6 +3266,41 @@ const DND_CONDITIONS = [
                         <span className="ddb-feature-source-badge">{feat.source.toUpperCase()}</span>
                     </div>
                 </div>
+                {(isFlurry || isBonusStrike || linkedSpells.length > 0) && (
+                    <div className="ddb-feature-linked-spells" style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "4px", marginBottom: "4px" }} onClick={e => e.stopPropagation()}>
+                        {isFlurry && (
+                            <button
+                                type="button"
+                                className="ddb-feature-cast-spell-btn"
+                                onClick={handleFlurryOfBlowsClick}
+                                title="Execute 2 Unarmed Strikes (1 Focus Point, Bonus Action)"
+                            >
+                                Strike x2 (1 Focus)
+                            </button>
+                        )}
+                        {isBonusStrike && !isFlurry && (
+                            <button
+                                type="button"
+                                className="ddb-feature-cast-spell-btn"
+                                onClick={handleBonusUnarmedStrikeClick}
+                                title="Execute 1 Unarmed Strike (Bonus Action)"
+                            >
+                                Bonus Strike
+                            </button>
+                        )}
+                        {linkedSpells.map(s => (
+                            <button
+                                key={s.id}
+                                type="button"
+                                className="ddb-feature-cast-spell-btn"
+                                onClick={() => handleOpenUpcastPicker(s)}
+                                title={`Cast ${s.name} from ${feat.name}`}
+                            >
+                                Cast {s.name}
+                            </button>
+                        ))}
+                    </div>
+                )}
                 <p className="ddb-feature-description">{feat.description}</p>
                 {maxUses > 0 && (
                     <div className="ddb-feature-use-boxes" onClick={e => e.stopPropagation()}>
@@ -3523,26 +3730,92 @@ const DND_CONDITIONS = [
                 {/* ----------------------------------------------------- */}
                 <aside className="ddb-vitals-pillar">
                     {/* 1. Character Identity */}
-                    <div
-                        className="ddb-caster-identity"
-                        onClick={() => openDDBSyncModal(caster?.id)}
-                        title={syncedDdbChar ? `${syncedDdbChar.name} (Click to re-sync)` : "Click to link D&D Beyond Character"}
-                    >
-                        <div className="ddb-caster-avatar-ring">
-                            <img className="ddb-caster-avatar-img" src={casterAvatarUrl} alt={casterName} />
-                            {syncedDdbChar && <span className="ddb-synced-star">✦</span>}
-                        </div>
-                        <div className="ddb-caster-text-block">
-                            <div className="ddb-caster-name-row">
-                                <span className="ddb-caster-name">{casterName}</span>
-                                <span className={`ddb-sync-badge ${syncedDdbChar ? "synced" : "unsynced"}`}>
-                                    <IconDragon size={10} />
-                                    {syncedDdbChar ? "DDB" : "Sync"}
-                                </span>
+                    <div className="ddb-caster-identity-container">
+                        <div className="ddb-caster-identity-row">
+                            <div
+                                className="ddb-caster-identity"
+                                onClick={() => openDDBSyncModal(caster?.id)}
+                                title={syncedDdbChar ? `${syncedDdbChar.name} (Click to re-sync)` : "Click to link D&D Beyond Character"}
+                            >
+                                <div className="ddb-caster-avatar-ring">
+                                    <img className="ddb-caster-avatar-img" src={casterAvatarUrl} alt={casterName} />
+                                    {syncedDdbChar && <span className="ddb-synced-star">✦</span>}
+                                </div>
+                                <div className="ddb-caster-text-block">
+                                    <div className="ddb-caster-name-row">
+                                        <span className="ddb-caster-name">{casterName}</span>
+                                        {isReadOnlyInspection && (
+                                            <span className="ddb-inspection-badge" title="Viewing ally in read-only inspection mode">
+                                                Inspection
+                                            </span>
+                                        )}
+                                        {obr.player?.role === "PLAYER" && (
+                                            isOwnedByMe ? (
+                                                <div className="ddb-owner-actions-wrap">
+                                                    <span className="ddb-owner-badge owned" title="Your bound character token">
+                                                        <IconUserCheck size={9} /> Mine
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        className="ddb-release-token-btn"
+                                                        onClick={async (e) => {
+                                                            e.stopPropagation();
+                                                            if (caster?.id && obr.player?.id) {
+                                                                await unbindTokenFromPlayer(caster.id);
+                                                                OBR.notification.show(`Removed "${casterName}" from your characters.`, "INFO");
+                                                            }
+                                                        }}
+                                                        title="Release token from your characters"
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                </div>
+                                            ) : otherOwner ? (
+                                                <span className="ddb-owner-badge other" title={`Claimed by ${otherOwner.playerName || "another player"}`}>
+                                                    {otherOwner.playerName || "Player"}
+                                                </span>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    className="ddb-claim-token-btn"
+                                                    onClick={async (e) => {
+                                                        e.stopPropagation();
+                                                        if (caster?.id && obr.player?.id) {
+                                                            await bindTokenToPlayer(caster.id, obr.player.id, obr.player.name);
+                                                            OBR.notification.show(`Bound ${casterName} to ${obr.player.name || "you"}!`, "SUCCESS");
+                                                        }
+                                                    }}
+                                                    title="Claim this token as your character"
+                                                >
+                                                    Claim
+                                                </button>
+                                            )
+                                        )}
+                                        <span className={`ddb-sync-badge ${syncedDdbChar ? "synced" : "unsynced"}`}>
+                                            <IconDragon size={10} />
+                                            {syncedDdbChar ? "DDB" : "Sync"}
+                                        </span>
+                                    </div>
+                                    <span className="ddb-caster-subline">
+                                        {syncedDdbChar?.classes?.map(c => `${c.name} ${c.level}`).join(" / ") || "Adventurer"}
+                                    </span>
+                                </div>
                             </div>
-                            <span className="ddb-caster-subline">
-                                {syncedDdbChar?.classes?.map(c => `${c.name} ${c.level}`).join(" / ") || "Adventurer"}
-                            </span>
+
+                            {/* Focus Camera Button */}
+                            {caster?.id && (
+                                <button
+                                    type="button"
+                                    className="ddb-focus-camera-btn"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        focusCameraOnToken(caster.id);
+                                    }}
+                                    title={`Focus camera on ${casterName} (Shortcut: C)`}
+                                >
+                                    <IconFocusCamera size={13} />
+                                </button>
+                            )}
                         </div>
                     </div>
 
@@ -5768,7 +6041,7 @@ const DND_CONDITIONS = [
                                         <button
                                             type="button"
                                             className={`ddb-drawer-action-btn primary ${drawerItem.spell.level > 0 && !drawerItem.spell.isPrepared ? "disabled" : ""}`}
-                                            disabled={drawerItem.spell.level > 0 && (!drawerItem.spell.isPrepared || getRemainingSlots(castLevel) === 0)}
+                                            disabled={drawerItem.spell.level > 0 && (!drawerItem.spell.isPrepared || (drawerItem.spell.usesSpellSlot !== false && getRemainingSlots(castLevel) === 0))}
                                             onClick={() => handleCastClick(drawerItem.spell.id, castLevel)}
                                             title={drawerItem.spell.level > 0 && !drawerItem.spell.isPrepared ? "Spell is not prepared" : undefined}
                                         >
@@ -5807,6 +6080,60 @@ const DND_CONDITIONS = [
                                     </span>
                                 </button>
                             )}
+                            {drawerItem.type === "feature" && drawerItem.name.toLowerCase().includes("flurry of blows") && (
+                                <button
+                                    type="button"
+                                    className="ddb-drawer-action-btn primary"
+                                    onClick={() => {
+                                        handleFlurryOfBlowsClick();
+                                        setDrawerItem(null);
+                                    }}
+                                >
+                                    <IconDragon size={12} />
+                                    <span>Strike x2 (1 Focus Point)</span>
+                                </button>
+                            )}
+                            {drawerItem.type === "feature" && (drawerItem.name.toLowerCase().includes("bonus unarmed strike") || (drawerItem.name.toLowerCase().includes("martial arts") && drawerItem.activationType === "bonus")) && !drawerItem.name.toLowerCase().includes("flurry") && (
+                                <button
+                                    type="button"
+                                    className="ddb-drawer-action-btn primary"
+                                    onClick={() => {
+                                        handleBonusUnarmedStrikeClick();
+                                        setDrawerItem(null);
+                                    }}
+                                >
+                                    <IconDragon size={12} />
+                                    <span>Bonus Strike (1 Strike)</span>
+                                </button>
+                            )}
+                            {drawerItem.type === "feature" && (() => {
+                                const featDesc = (drawerItem.description || "").toLowerCase();
+                                const featTitle = drawerItem.name.toLowerCase();
+                                const linkedSpells = dockSpells.filter(s => {
+                                    if (s.rawDdbSpell?.componentId && drawerItem.componentId && s.rawDdbSpell.componentId === drawerItem.componentId) return true;
+                                    const spellName = s.name.toLowerCase();
+                                    return (featDesc.includes(spellName) || (featTitle.includes("shadow arts") && spellName === "darkness")) && (s.usesSpellSlot === false || s.fromChar);
+                                });
+                                if (linkedSpells.length === 0) return null;
+                                return (
+                                    <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "6px" }}>
+                                        {linkedSpells.map(s => (
+                                            <button
+                                                key={s.id}
+                                                type="button"
+                                                className="ddb-drawer-action-btn primary"
+                                                onClick={() => {
+                                                    handleOpenUpcastPicker(s);
+                                                    setDrawerItem(null);
+                                                }}
+                                            >
+                                                <IconCastLightning size={12} />
+                                                <span>Cast {s.name}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                );
+                            })()}
                             {drawerItem.type === "item" && (drawerItem.item.canAttune || drawerItem.item.requiresAttunement || drawerItem.item.isAttuned) && (
                                 <button
                                     type="button"
