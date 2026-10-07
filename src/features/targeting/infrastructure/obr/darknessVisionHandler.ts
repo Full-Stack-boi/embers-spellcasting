@@ -20,6 +20,18 @@ export const darknessToggleMenuId = `${APP_KEY}/darkness-toggle-menu`;
 // Track active local fog item IDs created by this client and their current effect variant
 const activeLocalFogIds = new Set<string>();
 const activeLocalFogEffects = new Map<string, string>();
+const LOCAL_DARKNESS_FOG_ID_PREFIX = "embers-darkness-fog-";
+const LOCAL_DARKNESS_VEIL_ID_PREFIX = "embers-darkness-veil-";
+
+function getDarknessZoneIdFromLocalId(id: string): string | undefined {
+    if (id.startsWith(LOCAL_DARKNESS_FOG_ID_PREFIX)) {
+        return id.slice(LOCAL_DARKNESS_FOG_ID_PREFIX.length);
+    }
+    if (id.startsWith(LOCAL_DARKNESS_VEIL_ID_PREFIX)) {
+        return id.slice(LOCAL_DARKNESS_VEIL_ID_PREFIX.length);
+    }
+    return undefined;
+}
 
 /**
  * Calculates distance in feet between two points using scene grid settings.
@@ -101,8 +113,9 @@ export async function updateDarknessVision(): Promise<void> {
     const isReady = await OBR.scene.isReady();
     if (!isReady) return;
 
-    const [sceneItems, playerRole, playerId, opacityMode, selection] = await Promise.all([
+    const [sceneItems, localItems, playerRole, playerId, opacityMode, selection] = await Promise.all([
         OBR.scene.items.getItems(),
+        OBR.scene.local.getItems(),
         OBR.player.getRole(),
         OBR.player.getId(),
         getGlobalSettingsValue(GLOBAL_STORAGE_KEYS.DARKNESS_OPACITY_MODE) as Promise<"dynamic" | "always-transparent" | "always-opaque" | undefined>,
@@ -114,25 +127,32 @@ export async function updateDarknessVision(): Promise<void> {
     const isGM = playerRole === "GM";
     const currentZoneIds = new Set(darknessZones.map(z => z.id));
 
-    // Auto-migrate any existing Darkness zone items on the scene so they are draggable
+    // Keep Darkness below character tokens while leaving it selectable in empty areas.
     const zonesToUnlock = sceneItems.filter(item => {
         const isDarkness = currentZoneIds.has(item.id);
-        return isDarkness && (item.disableHit === true || item.locked === true || item.layer === "ATTACHMENT");
+        return isDarkness && (
+            item.disableHit === true ||
+            item.locked === true ||
+            item.layer !== "PROP" ||
+            item.zIndex !== -1 ||
+            (item as any).disableAutoZIndex !== true
+        );
     });
     if (zonesToUnlock.length > 0) {
         OBR.scene.items.updateItems(zonesToUnlock.map(z => z.id), items => {
             for (const it of items) {
                 it.disableHit = false;
                 it.locked = false;
-                it.layer = "CHARACTER";
+                it.layer = "PROP";
                 it.zIndex = -1;
+                (it as any).disableAutoZIndex = true;
             }
         }).catch(console.error);
     }
 
     // Synchronize token layer and zIndex based on flight elevation:
-    // Flying tokens (elevation > 15 ft) -> layer: "ATTACHMENT", zIndex: 10 (above darkness shroud overlay)
-    // Ground tokens (elevation <= 15 ft) -> layer: "CHARACTER", zIndex: 0 (under darkness shroud overlay)
+    // Flying tokens (elevation > 15 ft) -> layer: "ATTACHMENT", zIndex: 10
+    // Ground tokens (elevation <= 15 ft) -> layer: "CHARACTER", zIndex: 0
     const tokensToUpdateElevation: { id: string; targetLayer: "CHARACTER" | "ATTACHMENT"; targetZIndex: number }[] = [];
     for (const item of sceneItems) {
         if (
@@ -164,19 +184,28 @@ export async function updateDarknessVision(): Promise<void> {
         }).catch(console.error);
     }
 
-    // Remove local fog for zones that were removed from the scene or legacy disc items
-    for (const localId of Array.from(activeLocalFogIds)) {
-        if (localId.includes("-disc-")) {
-            await OBR.scene.local.deleteItems([localId]);
+    const localDarknessFogIds = new Set(
+        localItems
+            .map(item => item.id)
+            .filter(id => getDarknessZoneIdFromLocalId(id) !== undefined)
+    );
+
+    // Remove local fog for zones that were removed from the scene, legacy disc items,
+    // or stale local overlays left behind by an extension reload.
+    for (const localId of new Set([...activeLocalFogIds, ...localDarknessFogIds])) {
+        if (localId.includes("-disc-") || localId.startsWith(LOCAL_DARKNESS_VEIL_ID_PREFIX)) {
+            await OBR.scene.local.deleteItems([localId]).catch(() => {});
             activeLocalFogIds.delete(localId);
             activeLocalFogEffects.delete(localId);
+            localDarknessFogIds.delete(localId);
             continue;
         }
-        const zoneId = localId.replace("embers-darkness-fog-", "");
-        if (!currentZoneIds.has(zoneId)) {
-            await OBR.scene.local.deleteItems([localId]);
+        const zoneId = getDarknessZoneIdFromLocalId(localId);
+        if (!zoneId || !currentZoneIds.has(zoneId)) {
+            await OBR.scene.local.deleteItems([localId]).catch(() => {});
             activeLocalFogIds.delete(localId);
             activeLocalFogEffects.delete(localId);
+            localDarknessFogIds.delete(localId);
         }
     }
 
@@ -186,7 +215,7 @@ export async function updateDarknessVision(): Promise<void> {
     const activeCaster = await resolveActiveCaster(playerRole, playerId);
 
     for (const zone of darknessZones) {
-        const fogId = `embers-darkness-fog-${zone.id}`;
+        const fogId = `${LOCAL_DARKNESS_FOG_ID_PREFIX}${zone.id}`;
 
         let canSee = false;
         if (activeMode === "always-opaque") {
@@ -210,15 +239,13 @@ export async function updateDarknessVision(): Promise<void> {
         }
 
         if (canSee) {
-            // When the viewer CAN see in darkness (Devil's Sight, Shadow Monk in own darkness, GM, etc.):
-            // Do NOT spawn a duplicate smoke overlay on OBR.scene.local!
-            // The base Darkness item on OBR.scene.items already provides the single ambient smoke layer.
-            // Removing the local fog overlay prevents 2x smoke stacking (94% opacity) and keeps tokens inside visible.
-            if (activeLocalFogIds.has(fogId)) {
+            if (activeLocalFogIds.has(fogId) || localDarknessFogIds.has(fogId)) {
                 await OBR.scene.local.deleteItems([fogId]).catch(() => {});
                 activeLocalFogIds.delete(fogId);
                 activeLocalFogEffects.delete(fogId);
+                localDarknessFogIds.delete(fogId);
             }
+
             continue;
         }
 
