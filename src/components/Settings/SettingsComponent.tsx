@@ -1,7 +1,28 @@
-import { Box, Button, Checkbox, Dialog, DialogContent, DialogTitle, Fade, Typography } from "@mui/material";
-import OBR, { GridScale, Theme, isImage } from "@owlbear-rodeo/sdk";
+import "./SettingsComponent.css";
+
+import { Box, Dialog, DialogContent, DialogTitle, Fade, Typography } from "@mui/material";
+import {
+    FaArrowsToDot,
+    FaCrown,
+    FaGear,
+    FaImage,
+    FaSliders,
+    FaTrashCan,
+    FaUser,
+    FaXmark,
+} from "react-icons/fa6";
+import OBR, { GridScale, isImage } from "@owlbear-rodeo/sdk";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getGlobalSettingsValue, getSettingsValue, GLOBAL_STORAGE_KEYS, GRID_UNIT_FACTORS, LOCAL_STORAGE_KEYS, setGlobalSettingsValue, setSettingsValue, SETTINGS_CHANNEL } from "./settings";
+import {
+    getGlobalSettingsValue,
+    getSettingsValue,
+    GLOBAL_STORAGE_KEYS,
+    GRID_UNIT_FACTORS,
+    LOCAL_STORAGE_KEYS,
+    setGlobalSettingsValue,
+    setSettingsValue,
+    SETTINGS_CHANNEL,
+} from "./settings";
 import { useOBR } from "../../platform/obr/react/providers";
 import { SimplifiedItem } from "../../types/misc";
 
@@ -19,8 +40,8 @@ function parseGridScale(raw: string): GridScale {
                 parsed: {
                     multiplier: multiplier + digits,
                     unit,
-                    digits: regexMatch[2].length - 1
-                }
+                    digits: regexMatch[2].length - 1,
+                },
             };
         }
         if (!isNaN(multiplier) && isNaN(digits)) {
@@ -53,7 +74,6 @@ export default function Settings() {
     const [animationRate, _setAnimationRate] = useState<number | null>(null);
     const [modalOpened, setModalOpened] = useState<ModalType | null>(null);
     const [smartActionOnTarget, setSmartActionOnTarget] = useState<boolean | null>(null);
-    const [theme, setTheme] = useState<Theme>();
     const mainDiv = useRef<HTMLDivElement>(null);
 
     const setMostRecentSize = useCallback((size: string) => {
@@ -84,21 +104,21 @@ export default function Settings() {
     }, []);
 
     const handleAssetPicker = useCallback(() => {
-        OBR.assets.downloadImages(true).then(selection => {
+        OBR.assets.downloadImages(true).then((selection) => {
             if (selection.length > 0) {
                 setDefaultCaster(selection);
             }
-        })
+        });
     }, []);
 
     const handleSetCasterFromSelection = useCallback(() => {
-        OBR.player.getSelection().then(itemIDs => {
-            OBR.scene.items.getItems(itemIDs).then(items => {
-                const selection = items.filter(item => isImage(item));
+        OBR.player.getSelection().then((itemIDs) => {
+            OBR.scene.items.getItems(itemIDs).then((items) => {
+                const selection = items.filter((item) => isImage(item));
                 if (selection.length > 0) {
-                    setDefaultCaster(selection.map(selected => ({ ...selected, type: "CHARACTER" })));
+                    setDefaultCaster(selection.map((selected) => ({ ...selected, type: "CHARACTER" })));
                 }
-            })
+            });
         });
     }, []);
 
@@ -116,15 +136,6 @@ export default function Settings() {
     };
 
     useEffect(() => {
-        if (!obr.ready) {
-            return;
-        }
-
-        OBR.theme.getTheme().then(theme => setTheme(theme));
-        return OBR.theme.onChange(theme => setTheme(theme));
-    }, [obr.ready]);
-
-    useEffect(() => {
         reloadSettings();
     }, [reloadSettings]);
 
@@ -132,20 +143,26 @@ export default function Settings() {
         if (!obr.ready || !obr.sceneReady) {
             return;
         }
-        getGlobalSettingsValue(GLOBAL_STORAGE_KEYS.PLAYERS_CAN_CAST_SPELLS).then(value => setPlayersCastSpells(value as boolean));
-        getGlobalSettingsValue(GLOBAL_STORAGE_KEYS.SUMMONED_ENTITIES_RULE).then(value => setSummonedEntities(value as string));
-        getGlobalSettingsValue(GLOBAL_STORAGE_KEYS.DARKNESS_OPACITY_MODE).then(value => setDarknessOpacityMode((value as string) ?? "dynamic"));
+        getGlobalSettingsValue(GLOBAL_STORAGE_KEYS.PLAYERS_CAN_CAST_SPELLS).then((value) =>
+            setPlayersCastSpells(value as boolean)
+        );
+        getGlobalSettingsValue(GLOBAL_STORAGE_KEYS.SUMMONED_ENTITIES_RULE).then((value) =>
+            setSummonedEntities(value as string)
+        );
+        getGlobalSettingsValue(GLOBAL_STORAGE_KEYS.DARKNESS_OPACITY_MODE).then((value) =>
+            setDarknessOpacityMode((value as string) ?? "dynamic")
+        );
     }, [obr.ready, obr.sceneReady]);
 
     useEffect(() => {
         if (!obr.ready || !obr.sceneReady) {
             return;
         }
-        const handler = OBR.scene.grid.onChange(grid => {
+        const handler = OBR.scene.grid.onChange((grid) => {
             const parsedGridScale = parseGridScale(grid.scale);
             setGridScale(parsedGridScale);
         });
-        OBR.scene.grid.getScale().then(scale => setGridScale(scale));
+        OBR.scene.grid.getScale().then((scale) => setGridScale(scale));
 
         return handler;
     }, [obr.ready, obr.sceneReady]);
@@ -173,7 +190,7 @@ export default function Settings() {
 
     useEffect(() => {
         if (gridScalingFactor === undefined) return;
-         if (gridScalingFactor == null || isNaN(gridScalingFactor) || gridScalingFactor <= 0) {
+        if (gridScalingFactor == null || isNaN(gridScalingFactor) || gridScalingFactor <= 0) {
             setSettingsValue(LOCAL_STORAGE_KEYS.GRID_SCALING_FACTOR, null);
             return;
         }
@@ -226,178 +243,312 @@ export default function Settings() {
         setGlobalSettingsValue(GLOBAL_STORAGE_KEYS.DARKNESS_OPACITY_MODE, darknessOpacityMode);
     }, [darknessOpacityMode]);
 
-    return <div ref={mainDiv}>
-        <Typography
-            mb={"0.5rem"}
-            variant="h6"
-            className="title spellbook-options"
-        >
-            Settings
-        </Typography>
-        <div className="settings-menu">
-            <div>
-                <p className="subtitle" title="These settings apply to you only.">Local Settings</p>
-                <div className="settings-item" title="If set, the first target for some spells will be one of these token, when applicable.">
-                    <label>
-                        <p>Default caster</p>
-                    </label>
-                    <div style={{ maxWidth: "15rem" }}>
-                        <Button
-                            onClick={() => setModalOpened("choose-caster-type")}
-                            variant="outlined"
-                            color="primary"
-                        >
-                            {
-                                (defaultCaster == null || defaultCaster.length == 0) ?
-                                    "Select" :
-                                    defaultCaster.map(image => image.name).join(", ")
-                            }
-                        </Button>
-                    </div>
-                </div>
-                <div className="settings-item">
-                    <label htmlFor="grid-scaling-factor" title="A scaling factor for effects; a spell's width and height will be multiplied by this number. Useful if your grid size is not 5ft">
-                        <p>Grid scaling factor</p>
-                    </label>
-                    <input
-                        name="grid-scaling-factor"
-                        min="0"
-                        step="0.1"
-                        type="number"
-                        placeholder={(tryComputeGridScaling(gridScale) ?? 1).toString()}
-                        className="settings-input"
-                        value={gridScalingFactor ?? ""}
-                        onChange={event => setGridScalingFactor(event.target.value)}
-                    />
-                </div>
-                <div className="settings-item" title="Clicking a character token while aiming will immediately cast and roll the attack/spell (Shift+click for Advantage, Ctrl+click for Disadvantage).">
-                    <label htmlFor="smart-action-on-target">
-                        <p>Smart Action-on-Target</p>
-                    </label>
-                    <Checkbox
-                        checked={smartActionOnTarget ?? true}
-                        onChange={(event) => {
-                            setSmartActionOnTarget(event.currentTarget.checked);
-                            setSettingsValue(LOCAL_STORAGE_KEYS.SMART_ACTION_ON_TARGET, event.currentTarget.checked);
-                        }}
-                    />
-                </div>
-                <div className="settings-item" title="Whether to keep the selected targets the same after a spell is cast/the tool is de-selected.">
-                    <label htmlFor="recent-spells-list-size">
-                        <p>Keep selected targets</p>
-                    </label>
-                    <Checkbox checked={keepTargets ?? false} onChange={(event) => { setKeepTargets(event.currentTarget.checked) }} />
-                </div>
-                <div className="settings-item">
-                    <label htmlFor="recent-spells-list-size" title="The size of the recent spells list.">
-                        <p>Recent spells list size</p>
-                    </label>
-                    <input
-                        name="recent-spells-list-size"
-                        min="0"
-                        type="number"
-                        className="settings-input"
-                        value={mostRecentSize ?? ""}
-                        onChange={event => setMostRecentSize(event.target.value)}
-                    />
-                </div>
-                <div className="settings-item">
-                    <label htmlFor="animation-update-rate" title="How many updates (per second) are performed when animating items. WARNING: setting this to a high value may lag your computer.">
-                        <p>Animation update rate</p>
-                    </label>
-                    <input
-                        name="animation-update-rate"
-                        min="0"
-                        type="number"
-                        className="settings-input"
-                        value={animationRate ?? ""}
-                        onChange={event => setAnimationRate(event.target.value)}
-                    />
+    const casterNameDisplay = defaultCaster && defaultCaster.length > 0
+        ? defaultCaster.map((img) => img.name).join(", ")
+        : null;
+
+    return (
+        <div ref={mainDiv} className="settings-container">
+            <div className="settings-header">
+                <div className="settings-header-title">
+                    <FaGear className="settings-header-icon" />
+                    <span>Settings</span>
                 </div>
             </div>
-            {
-                obr.player?.role === "GM" && <>
-                    <hr style={{ margin: "0.5rem 0" }}></hr>
-                    <div>
-                        <p className="subtitle" title="These settings apply to all players and can only be set by the GM.">GM Settings</p>
-                        <div className="settings-item">
-                            <label htmlFor="recent-spells-list-size" title="If set to false, only the GM can cast spells.">
-                                <p>Players can cast spells</p>
-                            </label>
-                            <Checkbox checked={playersCastSpells ?? false} onChange={(event) => { setPlayersCastSpells(event.currentTarget.checked) }} />
+
+            <div className="settings-card">
+                <div className="settings-card-header">
+                    <div className="settings-card-title-group">
+                        <FaSliders style={{ color: "#38bdf8" }} />
+                        <span>Local Settings</span>
+                    </div>
+                    <span className="settings-card-badge local">Client Only</span>
+                </div>
+
+                <div className="settings-row" title="If set, the first target for some spells will be one of these tokens, when applicable.">
+                    <div className="settings-row-info">
+                        <span className="settings-row-label">Default caster</span>
+                        <span className="settings-row-desc">Initial target token for spells</span>
+                    </div>
+                    <div className="settings-row-control">
+                        {casterNameDisplay && (
+                            <span className="settings-caster-chip" title={casterNameDisplay}>
+                                {casterNameDisplay}
+                            </span>
+                        )}
+                        <button
+                            type="button"
+                            className="settings-btn-tactical"
+                            onClick={() => setModalOpened("choose-caster-type")}
+                        >
+                            <FaUser style={{ fontSize: "0.7rem" }} />
+                            <span>{casterNameDisplay ? "Change" : "Select"}</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div className="settings-row" title="A scaling factor for effects; a spell's width and height will be multiplied by this number. Useful if your grid size is not 5ft.">
+                    <div className="settings-row-info">
+                        <span className="settings-row-label">Grid scaling factor</span>
+                        <span className="settings-row-desc">Multiplier for non-5ft grids</span>
+                    </div>
+                    <div className="settings-row-control">
+                        <input
+                            name="grid-scaling-factor"
+                            min="0"
+                            step="0.1"
+                            type="number"
+                            placeholder={(tryComputeGridScaling(gridScale) ?? 1).toString()}
+                            className="settings-dark-input"
+                            value={gridScalingFactor ?? ""}
+                            onChange={(event) => setGridScalingFactor(event.target.value)}
+                        />
+                    </div>
+                </div>
+
+                <div className="settings-row" title="Clicking a character token while aiming will immediately cast and roll the attack/spell (Shift+click for Advantage, Ctrl+click for Disadvantage).">
+                    <div className="settings-row-info">
+                        <span className="settings-row-label">Smart Action-on-Target</span>
+                        <span className="settings-row-desc">Aim-click token to cast (Shift: Adv, Ctrl: Disadv)</span>
+                    </div>
+                    <div className="settings-row-control">
+                        <label className="settings-toggle-switch">
+                            <input
+                                type="checkbox"
+                                checked={smartActionOnTarget ?? true}
+                                onChange={(event) => {
+                                    setSmartActionOnTarget(event.currentTarget.checked);
+                                    setSettingsValue(LOCAL_STORAGE_KEYS.SMART_ACTION_ON_TARGET, event.currentTarget.checked);
+                                }}
+                            />
+                            <span className="settings-toggle-slider" />
+                        </label>
+                    </div>
+                </div>
+
+                <div className="settings-row" title="Whether to keep the selected targets the same after a spell is cast / the tool is de-selected.">
+                    <div className="settings-row-info">
+                        <span className="settings-row-label">Keep selected targets</span>
+                        <span className="settings-row-desc">Preserve targets after cast</span>
+                    </div>
+                    <div className="settings-row-control">
+                        <label className="settings-toggle-switch">
+                            <input
+                                type="checkbox"
+                                checked={keepTargets ?? false}
+                                onChange={(event) => setKeepTargets(event.currentTarget.checked)}
+                            />
+                            <span className="settings-toggle-slider" />
+                        </label>
+                    </div>
+                </div>
+
+                <div className="settings-row" title="The maximum size of the recent spells list in the spellbook.">
+                    <div className="settings-row-info">
+                        <span className="settings-row-label">Recent spells list size</span>
+                        <span className="settings-row-desc">Max items in quick spells</span>
+                    </div>
+                    <div className="settings-row-control">
+                        <input
+                            name="recent-spells-list-size"
+                            min="0"
+                            type="number"
+                            className="settings-dark-input"
+                            value={mostRecentSize ?? ""}
+                            onChange={(event) => setMostRecentSize(event.target.value)}
+                        />
+                    </div>
+                </div>
+
+                <div className="settings-row" title="How many updates per second are performed when animating items.">
+                    <div className="settings-row-info">
+                        <span className="settings-row-label">Animation update rate</span>
+                        <span className="settings-row-desc">Animation FPS (updates/sec)</span>
+                    </div>
+                    <div className="settings-row-control">
+                        <input
+                            name="animation-update-rate"
+                            min="0"
+                            type="number"
+                            className="settings-dark-input"
+                            value={animationRate ?? ""}
+                            onChange={(event) => setAnimationRate(event.target.value)}
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {obr.player?.role === "GM" && (
+                <div className="settings-card">
+                    <div className="settings-card-header">
+                        <div className="settings-card-title-group">
+                            <FaCrown style={{ color: "#fbbf24" }} />
+                            <span>GM Settings</span>
                         </div>
-                        <div className="settings-item" title={"Who should own items summoned by Embers. \"Caster\" means the player who cast the spell will own them, while \"GM\" means that the GM will own them regardless of who cast it."}>
-                            <label htmlFor="recent-spells-list-size">
-                                <p>Summoned entities rule</p>
+                        <span className="settings-card-badge gm">GM Only</span>
+                    </div>
+
+                    <div className="settings-row" title="If set to false, only the GM can cast spells.">
+                        <div className="settings-row-info">
+                            <span className="settings-row-label">Players can cast spells</span>
+                            <span className="settings-row-desc">Allow players to cast spells</span>
+                        </div>
+                        <div className="settings-row-control">
+                            <label className="settings-toggle-switch">
+                                <input
+                                    type="checkbox"
+                                    checked={playersCastSpells ?? false}
+                                    onChange={(event) => setPlayersCastSpells(event.currentTarget.checked)}
+                                />
+                                <span className="settings-toggle-slider" />
                             </label>
-                            <select className="settings-select" onChange={event => setSummonedEntities(event.target.value)} value={summonedEntities ?? ""} >
+                        </div>
+                    </div>
+
+                    <div
+                        className="settings-row"
+                        title='Who should own items summoned by Embers. "Caster" means the player who cast the spell will own them, while "GM" means that the GM will own them.'
+                    >
+                        <div className="settings-row-info">
+                            <span className="settings-row-label">Summoned entities rule</span>
+                            <span className="settings-row-desc">Ownership of summoned items</span>
+                        </div>
+                        <div className="settings-row-control">
+                            <select
+                                className="settings-dark-select"
+                                onChange={(event) => setSummonedEntities(event.target.value)}
+                                value={summonedEntities ?? ""}
+                            >
                                 <option value="gm-only">GM Only</option>
                                 <option value="caster">Caster</option>
                             </select>
                         </div>
-                        <div className="settings-item" title={"Darkness spell opacity mode. 'Dynamic' applies D&D rules (Devil's Sight/Truesight see through, others see opaque black fog). 'Always Transparent' makes all darkness transparent for the whole room. 'Always Opaque' forces solid fog for everyone."}>
-                            <label>
-                                <p>Darkness opacity mode</p>
-                            </label>
-                            <select className="settings-select" onChange={event => setDarknessOpacityMode(event.target.value)} value={darknessOpacityMode ?? "dynamic"}>
-                                <option value="dynamic">Dynamic (Vision-Based)</option>
+                    </div>
+
+                    <div
+                        className="settings-row"
+                        title="Darkness spell opacity mode. 'Dynamic' applies D&D rules (Devil's Sight/Truesight see through, others see opaque black fog). 'Always Transparent' makes all darkness transparent for the whole room. 'Always Opaque' forces solid fog for everyone."
+                    >
+                        <div className="settings-row-info">
+                            <span className="settings-row-label">Darkness opacity mode</span>
+                            <span className="settings-row-desc">Dynamic vision vs fixed fog</span>
+                        </div>
+                        <div className="settings-row-control">
+                            <select
+                                className="settings-dark-select"
+                                onChange={(event) => setDarknessOpacityMode(event.target.value)}
+                                value={darknessOpacityMode ?? "dynamic"}
+                            >
+                                <option value="dynamic">Dynamic (Vision)</option>
                                 <option value="always-transparent">Always Transparent</option>
                                 <option value="always-opaque">Always Opaque</option>
                             </select>
                         </div>
                     </div>
-                </>
-            }
+                </div>
+            )}
+
+            <Dialog
+                open={modalOpened === "choose-caster-type"}
+                onClose={closeModal}
+                slots={{ transition: Fade }}
+                slotProps={{
+                    transition: { timeout: 250 },
+                    paper: { className: "settings-modal-paper" },
+                }}
+                fullWidth
+                maxWidth="xs"
+            >
+                <DialogTitle className="settings-modal-title">
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <FaUser style={{ color: "#e11d48" }} />
+                            <span>Choose Default Caster</span>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={closeModal}
+                            style={{
+                                background: "none",
+                                border: "none",
+                                color: "#9ca3af",
+                                cursor: "pointer",
+                                fontSize: "1rem",
+                                padding: 4,
+                            }}
+                        >
+                            <FaXmark />
+                        </button>
+                    </div>
+                </DialogTitle>
+
+                <DialogContent sx={{ p: 2, pt: "12px !important" }}>
+                    <Typography variant="body2" sx={{ color: "#cbd5e1", mb: 1.5, fontSize: "0.82rem" }}>
+                        Choose an asset image or use your currently selected token on the scene map:
+                    </Typography>
+
+                    <div
+                        style={{
+                            background: "#182030",
+                            border: "1px solid #26334d",
+                            borderRadius: 6,
+                            padding: "8px 12px",
+                            marginBottom: "16px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                        }}
+                    >
+                        <span style={{ fontSize: "0.75rem", color: "#94a3b8", fontWeight: 700 }}>
+                            Current Caster:
+                        </span>
+                        <span
+                            style={{
+                                fontSize: "0.8rem",
+                                fontWeight: 800,
+                                color: casterNameDisplay ? "#60a5fa" : "#64748b",
+                            }}
+                        >
+                            {casterNameDisplay ?? "None"}
+                        </span>
+                    </div>
+
+                    <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                        <button
+                            type="button"
+                            className="settings-modal-btn primary"
+                            onClick={() => {
+                                handleSetCasterFromSelection();
+                                closeModal();
+                            }}
+                        >
+                            <FaArrowsToDot style={{ marginRight: 6 }} /> Use Selected Token
+                        </button>
+                        <button
+                            type="button"
+                            className="settings-modal-btn secondary"
+                            onClick={() => {
+                                handleAssetPicker();
+                                closeModal();
+                            }}
+                        >
+                            <FaImage style={{ marginRight: 6 }} /> Pick From Assets
+                        </button>
+                        {defaultCaster && defaultCaster.length > 0 && (
+                            <button
+                                type="button"
+                                className="settings-modal-btn danger"
+                                onClick={() => {
+                                    setDefaultCaster([]);
+                                    closeModal();
+                                }}
+                            >
+                                <FaTrashCan style={{ marginRight: 6 }} /> Clear Selection
+                            </button>
+                        )}
+                    </Box>
+                </DialogContent>
+            </Dialog>
         </div>
-        <Dialog
-            open={modalOpened === "choose-caster-type"}
-            onClose={closeModal}
-            slots={{ transition: Fade }}
-            slotProps={{ transition: { timeout: 300 }, paper: { sx: { backgroundColor: theme?.background?.paper } } }}
-            fullWidth
-            maxWidth="sm"
-        >
-            <DialogTitle>
-                Delete spell group
-            </DialogTitle>
-
-            <DialogContent>
-                <Typography variant="body1" gutterBottom>
-                    Please choose from one or more of your assets, or choose{" "}
-                    <strong>"Use Selected"</strong> to use your currently selected tokens.
-                </Typography>
-
-                <Typography variant="body1">
-                    <strong>Selected</strong>:{" "}
-                    {defaultCaster == null || defaultCaster.length === 0
-                        ? "None"
-                        : defaultCaster.map((image) => image.name).join(", ")}
-                </Typography>
-            </DialogContent>
-
-            <Box sx={{ alignItems: "center", padding: "2rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                <Button
-                    onClick={() => { handleAssetPicker(); closeModal(); }}
-                    variant="outlined"
-                    color="primary"
-                >
-                    Open Assets
-                </Button>
-                <Button
-                    onClick={() => { handleSetCasterFromSelection(); closeModal(); }}
-                    variant="outlined"
-                    color="primary"
-                >
-                    Use Selected
-                </Button>
-                <Button
-                    onClick={() => { setDefaultCaster([]); closeModal(); }}
-                    variant="outlined"
-                    color="primary"
-                >
-                    Clear Selection
-                </Button>
-            </Box>
-        </Dialog>
-    </div>;
+    );
 }
