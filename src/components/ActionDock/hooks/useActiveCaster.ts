@@ -8,12 +8,13 @@ import { getTokenBuffs } from "../../../services/buffService";
 import type { ActiveBuff } from "../../../services/buffService";
 import type { DDBParsedCharacter } from "../../../types/ddb";
 import { toolMetadataSelectedSpell } from "../../../effectsTool";
+import type { SyncMode } from "../domain/resourceMerge";
 
 const inFlightSyncs = new Map<number, Promise<DDBParsedCharacter | null>>();
 const lastSyncTimestamps = new Map<number, number>();
 const SYNC_THROTTLE_MS = 10000;
 
-export function useActiveCaster(applyDdbSlots: (character: DDBParsedCharacter) => void) {
+export function useActiveCaster(applyDdbSlots: (character: DDBParsedCharacter, mode?: SyncMode) => void) {
     const obr = useOBR();
     const [caster, setCaster] = useState<ActiveCasterInfo | null>(null);
     const [selectedSpell, setSelectedSpell] = useState<string | null>(null);
@@ -72,7 +73,7 @@ export function useActiveCaster(applyDdbSlots: (character: DDBParsedCharacter) =
                     if (characterId) {
                         const applyCharacter = (character: DDBParsedCharacter) => {
                             setSyncedDdbChar(character);
-                            applyDdbSlots(character);
+                            applyDdbSlots(character, "merge");
                             if (character.senses) {
                                 const currentVision = active.item!.metadata[TOKEN_VISION_METADATA_KEY] as unknown;
                                 if (!currentVision || JSON.stringify(currentVision) !== JSON.stringify(character.senses)) {
@@ -122,7 +123,7 @@ export function useActiveCaster(applyDdbSlots: (character: DDBParsedCharacter) =
             if (cancelled || !fresh) return;
             if (caster?.item && getLinkedDDBCharacterId(caster.item) === characterId) {
                 setSyncedDdbChar(fresh);
-                applyDdbSlots(fresh);
+                applyDdbSlots(fresh, "merge");
             }
         }).catch(() => {});
 
@@ -139,7 +140,7 @@ export function useActiveCaster(applyDdbSlots: (character: DDBParsedCharacter) =
             const fresh = await syncCharacter(characterId, force);
             if (fresh) {
                 setSyncedDdbChar(fresh);
-                applyDdbSlots(fresh);
+                applyDdbSlots(fresh, force ? "replace" : "merge");
                 OBR.notification.show(`${fresh.name} re-synced from D&D Beyond.`, "SUCCESS");
             }
         } catch {
@@ -160,7 +161,7 @@ export function useActiveCaster(applyDdbSlots: (character: DDBParsedCharacter) =
                 const cached = getCachedDDBCharacter(characterId);
                 if (cached && cached.id !== syncedDdbChar?.id) {
                     setSyncedDdbChar(cached);
-                    applyDdbSlots(cached);
+                    applyDdbSlots(cached, "merge");
                 }
             } else if (syncedDdbChar) {
                 setSyncedDdbChar(null);

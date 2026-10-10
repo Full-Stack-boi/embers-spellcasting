@@ -45,6 +45,7 @@ describe("combatStateService", () => {
         expect(def.exhaustionLevel).toBe(0);
         expect(def.conditions).toEqual([]);
         expect(def.concentrationSpellId).toBeNull();
+        expect(def.ddbBaseline).toEqual({});
     });
 
     it("saves and reloads state via storage including extended combat state fields", async () => {

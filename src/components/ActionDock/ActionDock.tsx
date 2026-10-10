@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState, useMemo } from "react";
+import React, { useCallback, useEffect, useState, useMemo, useRef } from "react";
 import "./ActionDock.css";
 import OBR, { isImage } from "@owlbear-rodeo/sdk";
 import { spellIDs } from "../../effects/spells";
@@ -35,8 +35,17 @@ import "./overlays/CustomDiceRoller.css";
 import {
     saveCombatState,
     COMBAT_STATE_STORAGE_PREFIX,
-    EmbersCombatState
+    EmbersCombatState,
+    type DdbResourceBaseline
 } from "../../services/combatStateService";
+import {
+    mergeSpellSlots,
+    mergePactSlots,
+    mergeFeatureUses,
+    mergeHitDice,
+    extractDdbBaseline,
+    type SyncMode
+} from "./domain/resourceMerge";
 import { resolveSpellFormula } from "../../services/spellFormulaBuilder";
 import { buildRegistry, setActiveRegistry } from "../../services/spellFormulaRegistry";
 import { BG3FlyoutBar } from "./overlays/BG3FlyoutBar";
@@ -160,37 +169,71 @@ export const ActionDock: React.FC = () => {
 
 
 
-    const applyDdbSlots = useCallback((char: DDBParsedCharacter) => {
-        const isCaster = (char.casterLevel ?? 0) > 0 || (char.classes || []).some(c =>
-            ["wizard", "sorcerer", "cleric", "druid", "bard", "paladin", "ranger", "artificer"].includes(c.name.toLowerCase()) ||
-            c.subclass?.toLowerCase().includes("eldritch knight") ||
-            c.subclass?.toLowerCase().includes("arcane trickster")
+    const createdSpellSlotsRef = useRef(createdSpellSlots);
+    createdSpellSlotsRef.current = createdSpellSlots;
+    const ddbBaselineRef = useRef<DdbResourceBaseline>({});
+
+    const applyDdbSlots = useCallback((char: DDBParsedCharacter, mode: SyncMode = "merge") => {
+        setSpellSlots(prev =>
+            mergeSpellSlots({
+                char,
+                currentSlots: prev,
+                createdSpellSlots: mode === "replace" ? {} : createdSpellSlotsRef.current,
+                baselineSlotsUsed: ddbBaselineRef.current.spellSlotsUsed,
+                mode,
+            })
         );
-        if (isCaster && char.spellSlots) {
-            const newSlots: Record<number, SpellSlotConfig> = {};
-            for (let lvl = 1; lvl <= 9; lvl++) {
-                const s = char.spellSlots[lvl];
-                newSlots[lvl] = {
-                    max: s ? s.max : 0,
-                    used: s ? s.used : 0
-                };
-            }
-            setSpellSlots(newSlots);
+
+        setPactSlots(prev =>
+            mergePactSlots({
+                char,
+                currentPact: prev,
+                baselinePactUsed: ddbBaselineRef.current.pactSlotsUsed,
+                mode,
+            })
+        );
+
+        if (mode === "replace") {
+            setCreatedSpellSlots({});
+            setFeatureUses(
+                mergeFeatureUses({
+                    char,
+                    currentFeatureUses: {},
+                    mode: "replace",
+                })
+            );
+            setHitDiceUsed(
+                mergeHitDice({
+                    char,
+                    currentHitDiceUsed: {},
+                    mode: "replace",
+                })
+            );
+            ddbBaselineRef.current = extractDdbBaseline(char);
         } else {
-            setSpellSlots({});
+            setFeatureUses(prev =>
+                mergeFeatureUses({
+                    char,
+                    currentFeatureUses: prev,
+                    baselineFeatureUses: ddbBaselineRef.current.featureUses,
+                    mode: "merge",
+                })
+            );
+            setHitDiceUsed(prev =>
+                mergeHitDice({
+                    char,
+                    currentHitDiceUsed: prev,
+                    baselineHitDiceUsed: ddbBaselineRef.current.hitDiceUsed,
+                    mode: "merge",
+                })
+            );
+            ddbBaselineRef.current = extractDdbBaseline(char);
         }
-        if (char.pactMagic) {
-            setPactSlots({
-                max: char.pactMagic.max,
-                used: char.pactMagic.used
-            });
-        } else {
-            setPactSlots({ max: 0, used: 0 });
-        }
+
         if (char.heroicInspiration !== undefined) {
             setHeroicInspiration(Boolean(char.heroicInspiration));
         }
-    }, [setSpellSlots, setPactSlots, setHeroicInspiration]);
+    }, [setSpellSlots, setPactSlots, setCreatedSpellSlots, setFeatureUses, setHitDiceUsed, setHeroicInspiration]);
 
     const {
         caster,
@@ -217,6 +260,10 @@ export const ActionDock: React.FC = () => {
         if (!syncedDdbChar) {
             setPactSlots({ max: 0, used: 0 });
             setSpellSlots({});
+            setCreatedSpellSlots({});
+            setFeatureUses({});
+            setHitDiceUsed({});
+            ddbBaselineRef.current = {};
         }
     }, [syncedDdbChar]);
 
@@ -254,6 +301,7 @@ export const ActionDock: React.FC = () => {
         setExhaustionLevel,
         conditions,
         setConditions,
+        ddbBaselineRef,
     });
 
     const {
@@ -506,6 +554,30 @@ export const ActionDock: React.FC = () => {
                         }
                         if (typeof raw.pactSlotsUsed === "number") {
                             setPactSlots(prev => prev.used === raw.pactSlotsUsed ? prev : { ...prev, used: raw.pactSlotsUsed });
+                        }
+                        if (raw.featureUses) {
+                            setFeatureUses(prev => {
+                                if (JSON.stringify(prev) !== JSON.stringify(raw.featureUses)) {
+                                    return raw.featureUses;
+                                }
+                                return prev;
+                            });
+                        }
+                        if (raw.hitDiceUsed) {
+                            setHitDiceUsed(prev => {
+                                if (JSON.stringify(prev) !== JSON.stringify(raw.hitDiceUsed)) {
+                                    return raw.hitDiceUsed;
+                                }
+                                return prev;
+                            });
+                        }
+                        if (raw.createdSpellSlots) {
+                            setCreatedSpellSlots(prev => {
+                                if (JSON.stringify(prev) !== JSON.stringify(raw.createdSpellSlots)) {
+                                    return raw.createdSpellSlots!;
+                                }
+                                return prev;
+                            });
                         }
                     }
                 }

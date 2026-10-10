@@ -2,6 +2,13 @@ import { APP_KEY } from "../config";
 
 export const COMBAT_STATE_STORAGE_PREFIX = `${APP_KEY}/combat-state/`;
 
+export interface DdbResourceBaseline {
+    spellSlotsUsed?: Record<number, number>;
+    pactSlotsUsed?: number;
+    featureUses?: Record<string, number>;
+    hitDiceUsed?: Record<string, number>;
+}
+
 export interface EmbersCombatState {
     characterId: number;
     spellSlotsUsed: Record<number, number>;
@@ -22,6 +29,7 @@ export interface EmbersCombatState {
     hitDiceUsed: Record<string, number>;
     exhaustionLevel: number;
     conditions: string[];
+    ddbBaseline?: DdbResourceBaseline;
     lastUpdated: string;
 }
 
@@ -53,6 +61,7 @@ export function getDefaultCombatState(characterId: number): EmbersCombatState {
         hitDiceUsed: {},
         exhaustionLevel: 0,
         conditions: [],
+        ddbBaseline: {},
         lastUpdated: new Date().toISOString()
     };
 }

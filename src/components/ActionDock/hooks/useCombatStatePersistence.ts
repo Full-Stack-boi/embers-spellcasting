@@ -1,8 +1,9 @@
 import { useEffect, useRef } from "react";
-import type { Dispatch, SetStateAction } from "react";
+import type { Dispatch, SetStateAction, MutableRefObject } from "react";
 import type { DDBParsedCharacter } from "../../../types/ddb";
-import { loadCombatState, saveCombatState } from "../../../services/combatStateService";
+import { loadCombatState, saveCombatState, type DdbResourceBaseline } from "../../../services/combatStateService";
 import type { SpellSlotConfig } from "../domain/types";
+import { extractDdbBaseline } from "../domain/resourceMerge";
 
 type StateSetter<T> = Dispatch<SetStateAction<T>>;
 type CustomHp = { current: number; max: number; temp: number } | null;
@@ -37,6 +38,7 @@ interface UseCombatStatePersistenceOptions {
     setExhaustionLevel: StateSetter<number>;
     conditions: string[];
     setConditions: StateSetter<string[]>;
+    ddbBaselineRef?: MutableRefObject<DdbResourceBaseline>;
 }
 
 export function useCombatStatePersistence({
@@ -67,8 +69,11 @@ export function useCombatStatePersistence({
     setExhaustionLevel,
     conditions,
     setConditions,
+    ddbBaselineRef,
 }: UseCombatStatePersistenceOptions) {
     const loadedCharIdRef = useRef<number | null>(null);
+    const internalBaselineRef = useRef<DdbResourceBaseline>({});
+    const effectiveBaselineRef = ddbBaselineRef || internalBaselineRef;
 
     useEffect(() => {
         if (!character?.id) {
@@ -81,14 +86,20 @@ export function useCombatStatePersistence({
             loadedCharIdRef.current = character.id;
             if (!persisted) {
                 setConcentrationSpell(null);
+                effectiveBaselineRef.current = character ? extractDdbBaseline(character) : {};
                 return;
             }
+            effectiveBaselineRef.current = persisted.ddbBaseline ?? (character ? extractDdbBaseline(character) : {});
             if (persisted.createdSpellSlots) {
                 setSpellSlots(previous => {
                     const next = { ...previous };
                     for (const [levelString, created] of Object.entries(persisted.createdSpellSlots ?? {})) {
                         const level = Number(levelString);
-                        if (next[level]) next[level] = { ...next[level], max: next[level].max + created };
+                        if (next[level]) {
+                            next[level] = { ...next[level], max: next[level].max + created };
+                        } else if (character?.spellSlots?.[level]) {
+                            next[level] = { max: character.spellSlots[level].max + created, used: 0 };
+                        }
                     }
                     return next;
                 });
@@ -99,13 +110,21 @@ export function useCombatStatePersistence({
                     const next = { ...previous };
                     for (const [levelString, used] of Object.entries(persisted.spellSlotsUsed)) {
                         const level = Number(levelString);
-                        if (next[level]) next[level] = { ...next[level], used: Math.min(next[level].max, used) };
+                        if (next[level]) {
+                            next[level] = { ...next[level], used: Math.min(next[level].max, used) };
+                        } else if (character?.spellSlots?.[level]) {
+                            const max = character.spellSlots[level].max + (persisted.createdSpellSlots?.[level] ?? 0);
+                            next[level] = { max, used: Math.min(max, used) };
+                        }
                     }
                     return next;
                 });
             }
             if (typeof persisted.pactSlotsUsed === "number") {
-                setPactSlots(previous => ({ ...previous, used: Math.min(previous.max, persisted.pactSlotsUsed) }));
+                setPactSlots(previous => {
+                    const max = previous.max > 0 ? previous.max : (character?.pactMagic?.max ?? 0);
+                    return { ...previous, max, used: Math.min(max, persisted.pactSlotsUsed) };
+                });
             }
             if (persisted.featureUses) setFeatureUses(persisted.featureUses);
             if (typeof persisted.hpCurrent === "number" && character.hp) {
@@ -149,6 +168,7 @@ export function useCombatStatePersistence({
                 hitDiceUsed,
                 exhaustionLevel,
                 conditions,
+                ddbBaseline: effectiveBaselineRef.current,
             }).catch(console.error);
         }, 500);
         return () => clearTimeout(timer);
@@ -169,4 +189,5 @@ export function useCombatStatePersistence({
         conditions,
     ]);
 
+    return { ddbBaselineRef: effectiveBaselineRef };
 }
