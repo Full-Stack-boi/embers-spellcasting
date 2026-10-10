@@ -66,8 +66,14 @@ import {
   rollDamageDDB,
   rollDamageExploding,
   rollDamageExplodingAnyDie,
+  combineDamageBonus,
+  doubleDiceFormula,
   DDBDamageResult,
 } from "./utils/dice";
+import {
+  resolveWeaponRiders,
+  type ActiveWeaponRider,
+} from "./services/weaponDamageRiders";
 import {
   getLinkedDDBCharacterId,
   getCachedDDBCharacter,
@@ -108,6 +114,7 @@ export const toolMetadataSelectedSpell = `${APP_KEY}/selected-spell`;
 export const toolMetadataSelectedCaster = `${APP_KEY}/selected-caster`;
 export const toolMetadataSelectedWeapon = `${APP_KEY}/selected-weapon-id`;
 export const toolMetadataAttackCount = `${APP_KEY}/attack-count`;
+export const selectedRiderChoiceMetadataKey = `${APP_KEY}/selected-rider-choice`;
 export const hexChosenAbilityMetadataKey = `${APP_KEY}/hex-chosen-ability`;
 export const selectedSpellDamageTypeMetadataKey = `${APP_KEY}/selected-spell-damage-type`;
 export const selectedSpellSlotLevelMetadataKey = `${APP_KEY}/selected-spell-slot-level`;
@@ -192,6 +199,7 @@ export async function stopAiming(): Promise<void> {
     [toolMetadataSelectedCaster]: undefined,
     [toolMetadataSelectedWeapon]: undefined,
     [toolMetadataAttackCount]: undefined,
+    [selectedRiderChoiceMetadataKey]: undefined,
     [playerSelectedTargetsMetadataKey]: [],
   });
   await OBR.tool.setMetadata(toolID, {
@@ -199,6 +207,7 @@ export async function stopAiming(): Promise<void> {
     [toolMetadataSelectedCaster]: undefined,
     [toolMetadataSelectedWeapon]: undefined,
     [toolMetadataAttackCount]: undefined,
+    [selectedRiderChoiceMetadataKey]: undefined,
   });
   try {
     const metadata = await OBR.player.getMetadata();
@@ -282,20 +291,22 @@ export function setSelectedSpell(
   spellName: string,
   casterId?: string,
   weaponId?: string,
-  attackCount?: number
+  attackCount?: number,
+  riderChoice?: string,
 ) {
-  // Set selected spell, caster, weapon, and attackCount
   OBR.player.setMetadata({
     [toolMetadataSelectedSpell]: spellName || undefined,
     [toolMetadataSelectedCaster]: casterId || undefined,
     [toolMetadataSelectedWeapon]: weaponId || undefined,
     [toolMetadataAttackCount]: attackCount || undefined,
+    [selectedRiderChoiceMetadataKey]: riderChoice || undefined,
   });
   OBR.tool.setMetadata(toolID, {
     [toolMetadataSelectedSpell]: spellName || undefined,
     [toolMetadataSelectedCaster]: casterId || undefined,
     [toolMetadataSelectedWeapon]: weaponId || undefined,
     [toolMetadataAttackCount]: attackCount || undefined,
+    [selectedRiderChoiceMetadataKey]: riderChoice || undefined,
   });
 }
 
@@ -1263,6 +1274,10 @@ async function setupTargetToolModes(
                 const isFlurry = selectedSpell === "flurry_of_blows";
                 const ddbCards: DDBRollCardData[] = [];
                 const reports: string[] = [];
+                const activeBuffNames = buffs.map((b) => b.name);
+                const savedRiderChoice =
+                  (playerMeta[selectedRiderChoiceMetadataKey] as string) || undefined;
+                const usedRidersThisTurn = new Set<string>();
 
                 for (let i = 1; i <= attackCount; i++) {
                   const strikeSuffix = isFlurry || attackCount > 1 ? ` (Strike ${i})` : "";
@@ -1298,13 +1313,107 @@ async function setupTargetToolModes(
                   let hexNotice = "";
 
                   if (!roll.isMiss) {
-                    const dmg = rollDamageBreakdown(
+                    const riders = resolveWeaponRiders({
+                      character: ddbChar,
+                      weapon,
+                      activeBuffs: activeBuffNames,
+                      riderChoice: savedRiderChoice,
+                      usedRidersThisTurn,
+                    });
+
+                    const effectiveFormula = combineDamageBonus(
                       weapon.damage,
+                      riders.flatBonus,
+                    );
+                    const baseDmg = rollDamageBreakdown(
+                      effectiveFormula,
                       weapon.damageType,
                       "",
                       undefined,
                       roll.isCrit,
                     );
+
+                    const extraRiderRolls: Array<{
+                      rider: ActiveWeaponRider;
+                      dmg: ReturnType<typeof rollDamageDDB>;
+                    }> = [];
+
+                    for (const rider of riders.activeDiceRiders) {
+                      const rolledDice =
+                        roll.isCrit && rider.dice
+                          ? rider.dice.replace(
+                              /^(\d+)d(\d+)/i,
+                              (_, n, s) => `${Number(n) * 2}d${s}`,
+                            )
+                          : rider.dice || "1d6";
+
+                      const riderFormula = rider.bonus
+                        ? `${rolledDice}+${rider.bonus}`
+                        : rolledDice;
+                      const riderRoll = rollDamageDDB(
+                        riderFormula,
+                        rider.damageType,
+                        "",
+                        false,
+                      );
+                      extraRiderRolls.push({ rider, dmg: riderRoll });
+                      if (rider.frequency === "first_hit_per_turn") {
+                        usedRidersThisTurn.add(rider.id);
+                      }
+                    }
+
+                    const totalDamage =
+                      baseDmg.total +
+                      extraRiderRolls.reduce((sum, r) => sum + r.dmg.total, 0);
+
+                    const baseFormulaForDisplay = roll.isCrit
+                      ? doubleDiceFormula(effectiveFormula)
+                      : effectiveFormula;
+
+                    let combinedFormula = `${baseFormulaForDisplay} ${weapon.damageType}`;
+                    if (extraRiderRolls.length > 0) {
+                      combinedFormula +=
+                        " + " +
+                        extraRiderRolls
+                          .map((r) => {
+                            const riderDiceForDisplay = roll.isCrit && r.rider.dice
+                              ? doubleDiceFormula(r.rider.dice)
+                              : (r.rider.dice || "1d6");
+                            return `${riderDiceForDisplay}${r.rider.bonus ? `+${r.rider.bonus}` : ""} ${r.rider.damageType}`;
+                          })
+                          .join(" + ");
+                    }
+
+                    const baseBreakdownClean = baseDmg.formatted
+                      .replace(/^Damage:\s*\d+\s*[A-Za-z]*\s*\(/, "")
+                      .replace(/\)$/, "")
+                      .replace(/\+/g, " + ");
+                    let combinedBreakdown = `${baseBreakdownClean} (${weapon.damageType})`;
+                    if (extraRiderRolls.length > 0) {
+                      combinedBreakdown +=
+                        " + " +
+                        extraRiderRolls
+                          .map(
+                            (r) =>
+                              `${r.dmg.breakdown.replace(/\+/g, " + ")} (${r.rider.damageType})`,
+                          )
+                          .join(" + ");
+                    }
+
+                    const subtitleParts: string[] = [
+                      `Damage (${weapon.damageType})`,
+                    ];
+                    if (riders.flatBonusReasons.length > 0) {
+                      subtitleParts.push(...riders.flatBonusReasons);
+                    }
+                    if (extraRiderRolls.length > 0) {
+                      subtitleParts.push(
+                        ...extraRiderRolls.map(
+                          (r) => `${r.rider.name} (${r.rider.damageType})`,
+                        ),
+                      );
+                    }
+
                     ddbCards.push({
                       id: `${Date.now()}-${i}-dmg`,
                       casterName,
@@ -1312,17 +1421,14 @@ async function setupTargetToolModes(
                       actionName: actionLabel,
                       actionType: "DAMAGE",
                       dieType: 8,
-                      diceBreakdown: dmg.formatted
-                        .replace(/^Damage:\s*\d+\s*[A-Za-z]*\s*\(/, "")
-                        .replace(/\)$/, "")
-                        .replace(/\+/g, " + "),
-                      formula: `${weapon.damage} ${weapon.damageType}`,
-                      total: dmg.total,
-                      subtitle: `Damage (${weapon.damageType})`,
+                      diceBreakdown: combinedBreakdown,
+                      formula: combinedFormula,
+                      total: totalDamage,
+                      subtitle: subtitleParts.join(" • "),
                       isCrit: roll.isCrit,
                       timestamp: Date.now() + (i * 3) + 1,
                     });
-                    dmgReport = ` | ${dmg.formatted}`;
+                    dmgReport = ` | Damage: ${totalDamage}`;
 
                     if (isHexActive) {
                       const hexDice = roll.isCrit ? "2d6" : "1d6";
@@ -1377,13 +1483,6 @@ async function setupTargetToolModes(
                 }
 
                 broadcastDDBRoll(ddbCards);
-                const summaryTitle = isFlurry
-                  ? "Flurry of Blows"
-                  : weapon.name;
-                OBR.notification.show(
-                  `${casterName} -> ${targetName} (${summaryTitle}): ${reports.join(" • ")}`,
-                  "INFO",
-                );
               } else {
                 if (activeCaster?.id) {
                   await checkAndFireActionTriggers(
@@ -1422,8 +1521,6 @@ async function setupTargetToolModes(
                     timestamp: Date.now(),
                   },
                 ];
-                let unarmedNotice = "";
-                let hexNotice = "";
                 if (!roll.isMiss) {
                   const unarmedDmg = Math.max(
                     1,
@@ -1443,7 +1540,6 @@ async function setupTargetToolModes(
                     isCrit: roll.isCrit,
                     timestamp: Date.now() + 1,
                   });
-                  unarmedNotice = ` | Damage: ${unarmedDmg} Bludgeoning`;
 
                   if (isHexActive) {
                     const hexDice = roll.isCrit ? "2d6" : "1d6";
@@ -1469,16 +1565,9 @@ async function setupTargetToolModes(
                       isCrit: roll.isCrit,
                       timestamp: Date.now() + 2,
                     });
-                    hexNotice = ` | Hex: +${hexDmg.total} Necrotic`;
                   }
-                } else {
-                  unarmedNotice = " | Miss (0 Damage)";
                 }
                 broadcastDDBRoll(ddbCards);
-                OBR.notification.show(
-                  `${casterName} -> ${targetName} (Unarmed): ${roll.formatted}${unarmedNotice}${hexNotice}`,
-                  roll.isCrit ? "SUCCESS" : roll.isMiss ? "WARNING" : "INFO",
-                );
               }
             } else {
               const applicableClass = spellFormula.category.classes
@@ -1648,10 +1737,17 @@ async function setupTargetToolModes(
                   : null;
                 const totalDamage =
                   weaponDamage.total + (extraDamage?.total ?? 0);
+                const weaponFormulaForDisplay = attack.isCrit
+                  ? doubleDiceFormula(damageParts.weaponFormula)
+                  : damageParts.weaponFormula;
+                const extraDiceForDisplay = attack.isCrit && damageParts.extraDice
+                  ? doubleDiceFormula(damageParts.extraDice)
+                  : damageParts.extraDice;
+
                 const damageFormula = [
-                  `${damageParts.weaponFormula} ${weaponDamageType}`,
-                  damageParts.extraDice
-                    ? `${damageParts.extraDice} ${extraDamageType}`
+                  `${weaponFormulaForDisplay} ${weaponDamageType}`,
+                  extraDiceForDisplay
+                    ? `${extraDiceForDisplay} ${extraDamageType}`
                     : "",
                 ]
                   .filter(Boolean)
@@ -1678,10 +1774,6 @@ async function setupTargetToolModes(
                     timestamp: Date.now(),
                   },
                 ];
-                let dmgReport = "";
-                let hexSuffix = "";
-                let triggerNotice = "";
-
                 if (!attack.isMiss) {
                   ddbCards.push({
                     id: `${Date.now()}-frigid-dmg`,
@@ -1705,7 +1797,6 @@ async function setupTargetToolModes(
                     isCrit: attack.isCrit,
                     timestamp: Date.now() + 1,
                   });
-                  dmgReport = ` | ${weaponDamage.formatted}${extraDamage ? ` + ${extraDamage.formatted}` : ""}`;
 
                   if (isHexActive) {
                     const hexDice = attack.isCrit ? "2d6" : "1d6";
@@ -1731,7 +1822,6 @@ async function setupTargetToolModes(
                       isCrit: attack.isCrit,
                       timestamp: Date.now() + 2,
                     });
-                    hexSuffix = ` | Hex: +${hexDamage.total} Necrotic`;
                   }
 
                   const triggerInfo = resolveSpellConditionalTrigger(
@@ -1768,7 +1858,6 @@ async function setupTargetToolModes(
                       ddbCards[1].pendingTriggerName = spellName;
                       ddbCards[1].subtitle = `${weapon.name} + ${spellName} (Condition Applied)`;
                     }
-                    triggerNotice = ` | Condition applied: triggers if ${triggerInfo.conditionDesc.toLowerCase()}`;
                   }
                 } else {
                   // Miss / Critical Miss!
@@ -1792,7 +1881,6 @@ async function setupTargetToolModes(
                       subtitle: "Potent Cantrip (Half Damage on Miss)",
                       timestamp: Date.now() + 1,
                     });
-                    dmgReport = ` | Potent Cantrip: ${halfDamage} ${extraDamageType}`;
                   } else if (hasWeaponGraze(weapon)) {
                     const abilityMod = Math.max(
                       1,
@@ -1811,21 +1899,10 @@ async function setupTargetToolModes(
                       subtitle: "Weapon Mastery: Graze (Damage on Miss)",
                       timestamp: Date.now() + 1,
                     });
-                    dmgReport = ` | Graze: ${abilityMod} ${weaponDamageType}`;
-                  } else {
-                    dmgReport = " | Miss (0 Damage)";
                   }
                 }
 
                 broadcastDDBRoll(ddbCards);
-                OBR.notification.show(
-                  `${casterName} -> ${targetName} (${spellName}, ${weapon.name}): ${attack.formatted}${dmgReport}${hexSuffix}${triggerNotice}`,
-                  attack.isCrit
-                    ? "SUCCESS"
-                    : attack.isMiss
-                      ? "WARNING"
-                      : "INFO",
-                );
               } else if (beamInfo.isMultiBeam) {
                 // Multi-beam attack (e.g. Eldritch Blast, Scorching Ray): roll for each beam in Grouped D&D Beyond format
                 const beamReports: string[] = [];
@@ -1967,11 +2044,14 @@ async function setupTargetToolModes(
                             /\+/g,
                             " + ",
                           ),
-                          formula:
-                            bDmgResult.explosionCount &&
-                            bDmgResult.explosionCount > 0
-                              ? `${ddbSpell?.damage || ""} ${damageType} (+${bDmgResult.explosionCount} Exploded)`.trim()
-                              : `${ddbSpell?.damage || ""} ${damageType}`.trim(),
+                          formula: (() => {
+                            const beamDiceForDisplay = roll.isCrit && ddbSpell?.damage
+                              ? doubleDiceFormula(ddbSpell.damage)
+                              : (ddbSpell?.damage || "");
+                            return bDmgResult.explosionCount && bDmgResult.explosionCount > 0
+                              ? `${beamDiceForDisplay} ${damageType} (+${bDmgResult.explosionCount} Exploded)`.trim()
+                              : `${beamDiceForDisplay} ${damageType}`.trim();
+                          })(),
                           isCrit: roll.isCrit,
                         }
                       : undefined,
@@ -2015,10 +2095,6 @@ async function setupTargetToolModes(
                 };
 
                 broadcastDDBRoll([groupedCard]);
-                OBR.notification.show(
-                  `${casterName} -> ${targetLabel} (${spellName}): ${beamReports.join(" • ")}`,
-                  anyCrit ? "SUCCESS" : "INFO",
-                );
               } else if (
                 ["spell_attack", "melee_spell_attack"].includes(
                   spellFormula.interaction?.type ?? "",
@@ -2074,8 +2150,6 @@ async function setupTargetToolModes(
                     timestamp: Date.now(),
                   },
                 ];
-                let dmgReport = "";
-                let hexNotice = "";
 
                 if (!roll.isMiss) {
                   if (dmg) {
@@ -2094,9 +2168,14 @@ async function setupTargetToolModes(
                       actionType: "DAMAGE",
                       dieType: dieFaces,
                       diceBreakdown: dmg.breakdown.replace(/\+/g, " + "),
-                      formula: isExploded
-                        ? `${damageDice || ""} ${damageType} (+${explosionCount} Exploded)`.trim()
-                        : `${damageDice || ""} ${damageType}`.trim(),
+                      formula: (() => {
+                        const spellDiceForDisplay = roll.isCrit && damageDice
+                          ? doubleDiceFormula(damageDice)
+                          : (damageDice || "");
+                        return isExploded
+                          ? `${spellDiceForDisplay} ${damageType} (+${explosionCount} Exploded)`.trim()
+                          : `${spellDiceForDisplay} ${damageType}`.trim();
+                      })(),
                       total: dmg.total,
                       subtitle: isExploded
                         ? `Damage (${damageType || "Spell"}) • ${explosionCount} Bonus ${explosionCount > 1 ? "Dice" : "Die"}`
@@ -2104,7 +2183,6 @@ async function setupTargetToolModes(
                       isCrit: roll.isCrit,
                       timestamp: Date.now(),
                     });
-                    dmgReport = ` | ${dmg.formatted}`;
                   }
 
                   if (isHexActive) {
@@ -2131,7 +2209,6 @@ async function setupTargetToolModes(
                       isCrit: roll.isCrit,
                       timestamp: Date.now() + 1,
                     });
-                    hexNotice = ` | Hex: +${hexDmg.total} Necrotic`;
                   }
                 } else {
                   // Miss / Critical Miss
@@ -2156,17 +2233,10 @@ async function setupTargetToolModes(
                       subtitle: "Potent Cantrip (Half Damage on Miss)",
                       timestamp: Date.now() + 1,
                     });
-                    dmgReport = ` | Potent Cantrip: ${halfDamage} ${damageType}`;
-                  } else {
-                    dmgReport = " | Miss (0 Damage)";
                   }
                 }
 
                 broadcastDDBRoll(ddbCards);
-                OBR.notification.show(
-                  `${casterName} -> ${targetName} (${spellName}): ${roll.formatted}${dmgReport}${hexNotice}`,
-                  roll.isCrit ? "SUCCESS" : roll.isMiss ? "WARNING" : "INFO",
-                );
               } else if (
                 spellFormula.interaction?.type === "save" ||
                 (ddbSpell?.saveOrAttack &&
@@ -2193,7 +2263,6 @@ async function setupTargetToolModes(
                 const dmg = damageDice
                   ? rollSpellDamageFormula(damageDice, damageType, false)
                   : null;
-                const dmgStr = dmg ? ` | ${dmg.formatted}` : "";
                 const ddbCards: DDBRollCardData[] = [
                   {
                     id: `${Date.now()}-save`,
@@ -2236,10 +2305,6 @@ async function setupTargetToolModes(
                   });
                 }
                 broadcastDDBRoll(ddbCards);
-                OBR.notification.show(
-                  `${casterName} -> ${targetName} (${spellName}): DC ${spellSaveDC} ${saveType} Save${dmgStr}`,
-                  "INFO",
-                );
               } else {
                 const triggerInfo = resolveSpellConditionalTrigger(
                   spellName,
@@ -2305,7 +2370,6 @@ async function setupTargetToolModes(
                   const dmg = damageDice
                     ? rollSpellDamageFormula(damageDice, damageType, false)
                     : null;
-                  const dmgStr = dmg ? `: ${dmg.formatted}` : " cast!";
                   if (dmg) {
                     const isExploded = Boolean(
                       dmg.explosionCount && dmg.explosionCount > 0,
@@ -2334,10 +2398,6 @@ async function setupTargetToolModes(
                       },
                     ]);
                   }
-                  OBR.notification.show(
-                    `${casterName} -> ${targetName} (${spellName})${dmgStr}`,
-                    "INFO",
-                  );
                 }
                 if (isTeleportSpell(selectedSpell)) {
                   await stopAiming();
@@ -2458,20 +2518,21 @@ async function setupTargetToolModes(
             ddbChar?.name || activeCaster?.item?.name || "Caster";
           const spellName = spell?.name || selectedSpell;
 
+          const ddbSpell = ddbChar?.spells?.find(
+            (s) =>
+              s.name.toLowerCase() === selectedSpell.toLowerCase() ||
+              s.id === selectedSpell,
+          );
+          const slotChoice = metadata?.[selectedSpellSlotLevelMetadataKey] as
+            | { spellId?: unknown; slotLevel?: unknown }
+            | undefined;
+          const castSlotLevel =
+            slotChoice?.spellId === selectedSpell &&
+            typeof slotChoice.slotLevel === "number"
+              ? slotChoice.slotLevel
+              : (ddbSpell?.level ?? 2);
+
           if (charId) {
-            const slotChoice = metadata?.[selectedSpellSlotLevelMetadataKey] as
-              | { spellId?: unknown; slotLevel?: unknown }
-              | undefined;
-            const ddbSpell = ddbChar?.spells?.find(
-              (s) =>
-                s.name.toLowerCase() === selectedSpell.toLowerCase() ||
-                s.id === selectedSpell,
-            );
-            const castSlotLevel =
-              slotChoice?.spellId === selectedSpell &&
-              typeof slotChoice.slotLevel === "number"
-                ? slotChoice.slotLevel
-                : (ddbSpell?.level ?? 2);
             if (castSlotLevel >= 1) {
               await deductSpellSlotIfLeveled(charId, castSlotLevel, ddbChar);
             }
@@ -2495,7 +2556,28 @@ async function setupTargetToolModes(
             }
           }
 
-          OBR.notification.show(`${casterName} cast ${spellName}!`, "SUCCESS");
+          const spellCard: DDBRollCardData = {
+            id: `${Date.now()}-cast-${selectedSpell}`,
+            casterName: casterName || "Character",
+            targetName: "GROUND / AOE",
+            actionName: spellName.toUpperCase(),
+            actionType: "SPELL",
+            dieType: 20,
+            diceBreakdown:
+              castSlotLevel > 0 ? `Level ${castSlotLevel}` : "Cantrip",
+            formula: ddbSpell?.school
+              ? `${ddbSpell.school} • ${castSlotLevel > 0 ? `Level ${castSlotLevel}` : "Cantrip"}`
+              : castSlotLevel > 0
+                ? `Level ${castSlotLevel}`
+                : "Cantrip",
+            total: "CAST",
+            subtitle: ddbSpell?.concentration
+              ? "Concentration Active"
+              : "Spell Cast",
+            timestamp: Date.now(),
+          };
+          broadcastDDBRoll([spellCard]);
+
           await stopAiming();
         }
       }

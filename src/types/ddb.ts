@@ -137,6 +137,7 @@ export interface DDBParsedCharacter {
   spellAttackBonus: number;
   spellAttackBonusDisplay: string;
   classSpellStats?: DDBClassSpellStats[];
+  casterLevel?: number;
   spellSlots: Record<number, DDBSpellSlot>;
   pactMagic?: {
     level: number;

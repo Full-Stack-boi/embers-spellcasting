@@ -205,6 +205,23 @@ export function doubleDiceFormula(formula: string): string {
     });
 }
 
+export function combineDamageBonus(formula: string, bonus: number): string {
+    if (!bonus || isNaN(bonus)) return formula;
+    const trimmed = (formula || "").trim();
+    if (!trimmed) return bonus >= 0 ? `+${bonus}` : `${bonus}`;
+
+    const modMatch = trimmed.match(/^([\s\S]*?)([+-]\s*\d+)$/);
+    if (modMatch) {
+        const dicePart = modMatch[1].trim();
+        const existingMod = parseInt(modMatch[2].replace(/\s+/g, ""), 10);
+        const newMod = existingMod + bonus;
+        if (newMod === 0) return dicePart;
+        return newMod > 0 ? `${dicePart}+${newMod}` : `${dicePart}${newMod}`;
+    }
+
+    return bonus > 0 ? `${trimmed}+${bonus}` : `${trimmed}${bonus}`;
+}
+
 export interface AttackRollResult {
     total: number;
     message: string;

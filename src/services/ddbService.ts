@@ -770,13 +770,16 @@ export function parseDDBCharacterData(raw: any): DDBParsedCharacter {
 
     // Calculate Spell Slots
     const spellSlots: Record<number, DDBSpellSlot> = {};
-    const maxSlotsArray = FULL_CASTER_SLOTS[Math.min(20, Math.max(1, casterLevel))] || [0, 0, 0, 0, 0, 0, 0, 0, 0];
+    const maxSlotsArray = casterLevel > 0
+        ? (FULL_CASTER_SLOTS[Math.min(20, casterLevel)] || [0, 0, 0, 0, 0, 0, 0, 0, 0])
+        : [0, 0, 0, 0, 0, 0, 0, 0, 0];
 
     for (let lvl = 1; lvl <= 9; lvl++) {
-        const max = maxSlotsArray[lvl - 1] || 0;
-        // Check used slots from DDB
+        const fromClass = maxSlotsArray[lvl - 1] || 0;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const usedEntry = data.spellSlots?.find((s: any) => s.level === lvl);
+        const fromDdb = casterLevel > 0 ? (usedEntry?.available || 0) : 0;
+        const max = Math.max(fromClass, fromDdb);
         const used = usedEntry ? usedEntry.used || 0 : 0;
         spellSlots[lvl] = {
             level: lvl,
@@ -1966,6 +1969,7 @@ export function parseDDBCharacterData(raw: any): DDBParsedCharacter {
         spellAttackBonus,
         spellAttackBonusDisplay,
         classSpellStats,
+        casterLevel,
         spellSlots,
         pactMagic,
         spells: Array.from(spellsMap.values()),
@@ -2013,6 +2017,21 @@ export function cacheDDBCharacter(char: DDBParsedCharacter): void {
     }
 }
 
+function sanitizeNonCasterSlots(char: DDBParsedCharacter): DDBParsedCharacter {
+    const isCaster = (char.casterLevel ?? 0) > 0 || (char.classes || []).some(c =>
+        ["wizard", "sorcerer", "cleric", "druid", "bard", "paladin", "ranger", "artificer"].includes(c.name.toLowerCase()) ||
+        c.subclass?.toLowerCase().includes("eldritch knight") ||
+        c.subclass?.toLowerCase().includes("arcane trickster")
+    );
+    if (!isCaster) {
+        char.spellSlots = {};
+        for (let lvl = 1; lvl <= 9; lvl++) {
+            char.spellSlots[lvl] = { level: lvl, max: 0, used: 0 };
+        }
+    }
+    return char;
+}
+
 /**
  * Loads character from local storage cache.
  */
@@ -2020,7 +2039,8 @@ export function getCachedDDBCharacter(characterId: number): DDBParsedCharacter |
     try {
         const raw = localStorage.getItem(`${DDB_CACHE_STORAGE_PREFIX}${characterId}`);
         if (!raw) return null;
-        return JSON.parse(raw) as DDBParsedCharacter;
+        const parsed = JSON.parse(raw) as DDBParsedCharacter;
+        return sanitizeNonCasterSlots(parsed);
     } catch {
         return null;
     }
@@ -2040,7 +2060,7 @@ export function getAllCachedDDBCharacters(): DDBParsedCharacter[] {
                 if (raw) {
                     try {
                         const parsed = JSON.parse(raw) as DDBParsedCharacter;
-                        if (parsed && parsed.id) list.push(parsed);
+                        if (parsed && parsed.id) list.push(sanitizeNonCasterSlots(parsed));
                     } catch {
                         // ignore malformed JSON
                     }

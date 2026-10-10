@@ -160,6 +160,29 @@ describe("ddbService", () => {
             expect(char.spellSlots[4].max).toBe(0);
         });
 
+        it("extracts 0 spell slots for non-caster characters (e.g. Barbarian)", () => {
+            const barbarianRaw = {
+                ...mockRawDDB,
+                classes: [
+                    {
+                        definition: { name: "Barbarian" },
+                        level: 4,
+                        isStartingClass: true,
+                        subclassDefinition: { name: "Path of the Zealot" }
+                    }
+                ],
+                spellSlots: [
+                    { level: 1, used: 0, available: 0 },
+                    { level: 2, used: 0, available: 0 }
+                ]
+            };
+            const char = parseDDBCharacterData(barbarianRaw);
+
+            for (let lvl = 1; lvl <= 9; lvl++) {
+                expect(char.spellSlots[lvl].max).toBe(0);
+            }
+        });
+
         it("parses spells and upcastable flags correctly", () => {
             const char = parseDDBCharacterData(mockRawDDB);
 

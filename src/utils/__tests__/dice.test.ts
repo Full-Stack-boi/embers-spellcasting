@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { rollFormula, rollAttack, rollDamageBreakdown, rollCustomDicePool, doubleDiceFormula, rollDamageDDB, rollDamageExplodingAnyDie, rollDamageExploding } from "../dice";
+import { rollFormula, rollAttack, rollDamageBreakdown, rollCustomDicePool, doubleDiceFormula, rollDamageDDB, rollDamageExplodingAnyDie, rollDamageExploding, combineDamageBonus } from "../dice";
 
 describe("dice utility", () => {
     it("rolls exploding dice for Sorcerous Burst (e.g. 2d8 with an 8 adds +1d8)", () => {
@@ -144,6 +144,7 @@ describe("dice utility", () => {
     });
 
     it("should double dice formula correctly on critical hits", () => {
+        expect(doubleDiceFormula("1d6+4")).toBe("2d6+4");
         expect(doubleDiceFormula("1d10+3")).toBe("2d10+3");
         expect(doubleDiceFormula("2d6")).toBe("4d6");
         expect(doubleDiceFormula("1d4+4+1d8")).toBe("2d4+4+2d8");
@@ -169,6 +170,15 @@ describe("dice utility", () => {
         expect(hexCrit.total).toBeLessThanOrEqual(12);
         expect(hexCrit.damageType).toBe("Necrotic");
         expect(hexCrit.formatted).toContain("Necrotic");
+    });
+
+    it("combines damage bonus into formulas correctly", () => {
+        expect(combineDamageBonus("1d12+4", 2)).toBe("1d12+6");
+        expect(combineDamageBonus("2d6 + 3", 2)).toBe("2d6+5");
+        expect(combineDamageBonus("1d8-1", 2)).toBe("1d8+1");
+        expect(combineDamageBonus("1d12", 2)).toBe("1d12+2");
+        expect(combineDamageBonus("1d12+4", 0)).toBe("1d12+4");
+        expect(combineDamageBonus("1d8+2", -2)).toBe("1d8");
     });
 });
 
