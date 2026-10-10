@@ -268,6 +268,13 @@
     white-space: nowrap;
 }
 
+.ddb-roll-card-total-num.is-text {
+    font-size: 16px;
+    font-weight: 800;
+    color: #e879f9;
+    letter-spacing: 0.5px;
+}
+
 /* Footer row */
 .ddb-roll-card-footer {
     display: flex;

@@ -5,7 +5,8 @@ import { hasWeaponGraze } from "../../../services/ddbService";
 import { addConditionalTrigger, checkAndFireActionTriggers } from "../../../services/conditionalTriggerService";
 import { resolveSpellConditionalTrigger } from "../../../services/spellTriggerResolver";
 import { broadcastDDBRoll } from "../../../services/rollLogService";
-import { rollAttack, rollDamageBreakdown, rollDamageDDB } from "../../../utils/dice";
+import { resolveWeaponRiders } from "../../../services/weaponDamageRiders";
+import { rollAttack, rollDamageBreakdown, rollDamageDDB, combineDamageBonus } from "../../../utils/dice";
 import type { DDBParsedCharacter, DDBWeaponAttack } from "../../../types/ddb";
 import type { DDBRollCardData } from "../../../types/ddbRollLog";
 import { parseRiderString } from "../domain/riders";
@@ -14,6 +15,10 @@ interface UseWeaponRollHandlersOptions {
     casterId?: string;
     character: DDBParsedCharacter | null;
     hasAttackAdvantage: boolean;
+    damageBonus?: number;
+    isRaging?: boolean;
+    activeBuffs?: string[];
+    riderChoice?: string;
     concentrationSpell: { id: string; name: string } | null;
     activeRiderMap: Record<string, string | null>;
     setActiveRiderMap: Dispatch<SetStateAction<Record<string, string | null>>>;
@@ -25,6 +30,10 @@ export function useWeaponRollHandlers({
     casterId,
     character,
     hasAttackAdvantage,
+    damageBonus,
+    isRaging,
+    activeBuffs,
+    riderChoice,
     concentrationSpell,
     activeRiderMap,
     setActiveRiderMap,
@@ -46,7 +55,6 @@ export function useWeaponRollHandlers({
             isCrit: roll.isCrit, isMiss: roll.isMiss, rollMode: roll.mode,
             isAdvantage: roll.mode === "advantage", isDisadvantage: roll.mode === "disadvantage", timestamp: Date.now()
         }];
-        let extraNotice = "";
         if (!roll.isMiss && isHexActive) {
             const hexDice = roll.isCrit ? "2d6" : "1d6";
             const hexDmg = rollDamageDDB("1d6", "Necrotic", "", roll.isCrit);
@@ -57,7 +65,6 @@ export function useWeaponRollHandlers({
                 subtitle: roll.isCrit ? "Hex Critical Hit (+2d6 Necrotic)" : "Hex Curse (+1d6 Necrotic)",
                 isCrit: roll.isCrit, timestamp: Date.now() + 1
             });
-            extraNotice = ` | Hex: +${hexDmg.total} Necrotic`;
         } else if (roll.isMiss && hasWeaponGraze(weapon)) {
             const abilityMod = Math.max(1, weapon.toHit - (character?.proficiencyBonus ?? 2));
             const weaponDamageType = weapon.damageType || "Slashing";
@@ -67,10 +74,8 @@ export function useWeaponRollHandlers({
                 diceBreakdown: `${abilityMod}`, formula: `${abilityMod} ${weaponDamageType}`, total: abilityMod,
                 subtitle: "Weapon Mastery: Graze (Damage on Miss)", timestamp: Date.now() + 1
             });
-            extraNotice = ` | Graze: ${abilityMod} ${weaponDamageType}`;
         }
         broadcastDDBRoll(cards);
-        OBR.notification.show(`${casterName} - ${weapon.name}: ${roll.formatted}${extraNotice}`, roll.isCrit ? "SUCCESS" : roll.isMiss ? "WARNING" : "INFO");
     };
 
     const handleWeaponDamageRoll = async (weapon: DDBWeaponAttack, riderName?: string | null) => {
@@ -82,7 +87,9 @@ export function useWeaponRollHandlers({
         }
         const triggerInfo = riderObj ? resolveSpellConditionalTrigger(riderObj.name, riderObj.raw, character?.level || 1) : null;
         const effectiveRiderDamage = triggerInfo?.hasTrigger ? (triggerInfo.immediateOnHitDice || "") : (riderObj?.damage || "");
-        const { total, formatted } = rollDamageBreakdown(weapon.damage, weapon.damageType, "", riderObj ? {
+        const bonusNum = typeof damageBonus === "number" && damageBonus > 0 ? damageBonus : 0;
+        const effectiveBaseDamage = combineDamageBonus(weapon.damage, bonusNum);
+        const { total, formatted } = rollDamageBreakdown(effectiveBaseDamage, weapon.damageType, "", riderObj ? {
             name: riderObj.name, damage: effectiveRiderDamage, damageType: riderObj.damageType, moveTrigger: undefined
         } : undefined);
         const casterName = character?.name || "Character";
@@ -116,15 +123,46 @@ export function useWeaponRollHandlers({
             });
             triggerSubtitle = ` • Condition Applied: ${triggerInfo.conditionDesc}`;
         }
+        const bonusNote = bonusNum > 0 ? (isRaging ? ` • Rage (+${bonusNum})` : ` • Buff (+${bonusNum})`) : "";
+
+        const buffsToPass = activeBuffs || (isRaging ? ["rage"] : []);
+        const riders = resolveWeaponRiders({
+            character,
+            weapon,
+            activeBuffs: buffsToPass,
+            riderChoice,
+        });
+
+        const extraRiderRolls: Array<{ rider: import("../../../services/weaponDamageRiders").ActiveWeaponRider; roll: import("../../../utils/dice").DDBDamageResult }> = [];
+        for (const r of riders.activeDiceRiders) {
+            const formula = r.bonus ? `${r.dice}+${r.bonus}` : (r.dice || "1d6");
+            const rRoll = rollDamageDDB(formula, r.damageType);
+            extraRiderRolls.push({ rider: r, roll: rRoll });
+        }
+
+        const ridersTotal = extraRiderRolls.reduce((sum, item) => sum + item.roll.total, 0);
+        const finalTotal = total + ridersTotal;
+
+        const baseBreakdown = formatted.replace(/^Damage:\s*\d+\s*[A-Za-z]*\s*\(/, "").replace(/\)$/, "").replace(/\+/g, " + ");
+        let finalBreakdown = baseBreakdown;
+        let finalFormula = `${effectiveBaseDamage} ${weapon.damageType}`;
+
+        if (extraRiderRolls.length > 0) {
+            finalBreakdown += " + " + extraRiderRolls.map(i => `${i.roll.breakdown.replace(/\+/g, " + ")} (${i.rider.damageType})`).join(" + ");
+            finalFormula += " + " + extraRiderRolls.map(i => `${i.rider.dice}${i.rider.bonus ? `+${i.rider.bonus}` : ""} ${i.rider.damageType}`).join(" + ");
+        }
+
+        const riderSubtitles = extraRiderRolls.map(i => ` • ${i.rider.name} (${i.rider.damageType})`).join("");
+        const finalSubtitle = `Damage (${weapon.damageType})${bonusNote}${riderSubtitles}${triggerSubtitle}`;
+
         const cards: DDBRollCardData[] = [{
             id: `${Date.now()}-dock-dmg`, casterName, targetName: "TARGET", actionName: weapon.name.toUpperCase(),
             actionType: "DAMAGE", dieType: 8,
-            diceBreakdown: formatted.replace(/^Damage:\s*\d+\s*[A-Za-z]*\s*\(/, "").replace(/\)$/, "").replace(/\+/g, " + "),
-            formula: `${weapon.damage} ${weapon.damageType}`, total,
-            subtitle: `Damage (${weapon.damageType})${triggerSubtitle}`, pendingTriggerId,
+            diceBreakdown: finalBreakdown,
+            formula: finalFormula, total: finalTotal,
+            subtitle: finalSubtitle, pendingTriggerId,
             pendingTriggerName: riderObj?.name, timestamp: Date.now()
         }];
-        let hexNotice = "";
         if (isHexActive) {
             const hexDmg = rollDamageDDB("1d6", "Necrotic");
             cards.push({
@@ -132,10 +170,8 @@ export function useWeaponRollHandlers({
                 actionType: "DAMAGE", dieType: 6, diceBreakdown: hexDmg.breakdown.replace(/\+/g, " + "),
                 formula: "1d6 Necrotic", total: hexDmg.total, subtitle: "Hex Curse (+1d6 Necrotic)", timestamp: Date.now() + 1
             });
-            hexNotice = ` | Hex: +${hexDmg.total} Necrotic`;
         }
         broadcastDDBRoll(cards);
-        OBR.notification.show(`${casterName} - ${weapon.name}: ${formatted}${hexNotice}`, "INFO");
     };
 
     const handleRiderClick = (weapon: DDBWeaponAttack, rider: ReturnType<typeof parseRiderString>) => {
@@ -148,7 +184,9 @@ export function useWeaponRollHandlers({
             setSelected(matchSpell.id);
             OBR.tool.activateTool(toolID);
         }
-        const { total, formatted } = rollDamageBreakdown(weapon.damage, weapon.damageType, "", {
+        const bonusNum = typeof damageBonus === "number" && damageBonus > 0 ? damageBonus : 0;
+        const effectiveBaseDamage = combineDamageBonus(weapon.damage, bonusNum);
+        const { total, formatted } = rollDamageBreakdown(effectiveBaseDamage, weapon.damageType, "", {
             name: rider.name, damage: rider.damage, damageType: rider.damageType, moveTrigger: rider.moveTrigger
         });
         const casterName = character?.name || "Character";
@@ -156,9 +194,8 @@ export function useWeaponRollHandlers({
             id: `${Date.now()}-dock-rider-dmg`, casterName, targetName: "TARGET", actionName: weapon.name.toUpperCase(),
             actionType: "DAMAGE", dieType: 8,
             diceBreakdown: formatted.replace(/^Damage:\s*\d+\s*[A-Za-z]*\s*\(/, "").replace(/\)$/, "").replace(/\+/g, " + "),
-            formula: `${weapon.damage} + ${rider.damage}`, total, subtitle: `${rider.name} Rider Damage`, timestamp: Date.now()
+            formula: `${effectiveBaseDamage} + ${rider.damage}`, total, subtitle: `${rider.name} Rider Damage`, timestamp: Date.now()
         }]);
-        OBR.notification.show(`${casterName} - ${weapon.name}: ${formatted}`, "INFO");
     };
 
     return { handleWeaponAttackRoll, handleWeaponDamageRoll, handleRiderClick };

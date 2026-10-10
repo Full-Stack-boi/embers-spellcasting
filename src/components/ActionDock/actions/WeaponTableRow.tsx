@@ -2,12 +2,19 @@ import React from "react";
 import type { DDBWeaponAttack } from "../../../types/ddb";
 import { IconDiceD20, IconFire, getWeaponIcon } from "../shared/Bg3Icons";
 import { parseRiderString } from "../domain/riders";
+import { combineDamageBonus } from "../../../utils/dice";
+
+import type { ResolvedWeaponRiders } from "../../../services/weaponDamageRiders";
 
 export type WeaponAimMode = "melee" | "thrown";
 
 export interface WeaponTableRowProps {
     weapon: DDBWeaponAttack;
     activeRider?: string | null;
+    resolvedRiders?: ResolvedWeaponRiders;
+    selectedRiderChoice?: string;
+    effectiveBonusDamage?: number;
+    onSelectRiderChoice?: (choice: string) => void;
     onSelectWeapon: (weapon: DDBWeaponAttack, mode: WeaponAimMode) => void;
     onAttackRoll: (weapon: DDBWeaponAttack) => void;
     onDamageRoll: (weapon: DDBWeaponAttack, rider?: string | null) => void;
@@ -18,6 +25,10 @@ export interface WeaponTableRowProps {
 export const WeaponTableRow: React.FC<WeaponTableRowProps> = ({
     weapon,
     activeRider,
+    resolvedRiders,
+    selectedRiderChoice,
+    effectiveBonusDamage = 0,
+    onSelectRiderChoice,
     onSelectWeapon,
     onAttackRoll,
     onDamageRoll,
@@ -25,6 +36,16 @@ export const WeaponTableRow: React.FC<WeaponTableRowProps> = ({
     onOpenDetails,
 }) => {
     const riders = (weapon.cantripRiders || []).map(parseRiderString);
+    const totalBonus = (typeof effectiveBonusDamage === "number" && effectiveBonusDamage > 0 ? effectiveBonusDamage : 0) + (resolvedRiders?.flatBonus ?? 0);
+    const baseDamageFormula = combineDamageBonus(weapon.damage, totalBonus);
+    const riderChoiceInfo = resolvedRiders?.availableRiderChoice;
+    const isRiderActive = Boolean(riderChoiceInfo && selectedRiderChoice && selectedRiderChoice !== "none");
+    const activeDiceRider = resolvedRiders?.activeDiceRiders.find(r => r.id === riderChoiceInfo?.riderId);
+    const riderBonusNum = activeDiceRider?.bonus ?? (riderChoiceInfo?.flatBonus ?? 0);
+    const riderBonusStr = riderBonusNum > 0 ? `+${riderBonusNum}` : "";
+    const riderTag = isRiderActive && riderChoiceInfo
+        ? `+${riderChoiceInfo.bonusDice}${riderBonusStr} ${(selectedRiderChoice || "").slice(0, 3)}`
+        : "";
 
     return (
         <tr
@@ -69,15 +90,47 @@ export const WeaponTableRow: React.FC<WeaponTableRowProps> = ({
                     type="button"
                     className="ddb-roll-pill dmg-pill"
                     onClick={() => onDamageRoll(weapon, activeRider)}
-                    title={`Roll Damage: ${weapon.damage} ${weapon.damageType}${activeRider ? ` (+ ${activeRider})` : ""}`}
+                    title={`Roll Damage: ${baseDamageFormula} ${weapon.damageType}${isRiderActive ? ` (${riderTag})` : ""}${activeRider ? ` (+ ${activeRider})` : ""}`}
                 >
                     <IconFire size={11} />
-                    <span>{weapon.damage}</span>
-                    <span className="ddb-type-text">{weapon.damageType}</span>
+                    <span>{baseDamageFormula}</span>
+                    <span className="ddb-type-text">
+                        {weapon.damageType}
+                        {isRiderActive && ` • ${riderTag}`}
+                    </span>
                 </button>
             </td>
             <td className="td-notes" onClick={event => event.stopPropagation()}>
                 {weapon.properties.length > 0 && <span className="ddb-prop-list">{weapon.properties.join(", ")}</span>}
+                {riderChoiceInfo && (
+                    <div className="ddb-fury-chips-wrap">
+                        <span className="ddb-fury-label">{riderChoiceInfo.riderName}:</span>
+                        <button
+                            type="button"
+                            className={`ddb-fury-pill ${(!selectedRiderChoice || selectedRiderChoice === "none") ? "selected" : ""}`}
+                            onClick={() => onSelectRiderChoice?.("none")}
+                            title={`${riderChoiceInfo.riderName}: Off`}
+                        >
+                            None
+                        </button>
+                        {riderChoiceInfo.choices.map(choice => {
+                            const isSelected = (selectedRiderChoice || riderChoiceInfo.currentChoice) === choice && selectedRiderChoice !== "none";
+                            const choiceCap = choice.charAt(0).toUpperCase() + choice.slice(1);
+                            const bonusStr = riderChoiceInfo.flatBonus > 0 ? `+${riderChoiceInfo.flatBonus}` : "";
+                            return (
+                                <button
+                                    key={choice}
+                                    type="button"
+                                    className={`ddb-fury-pill ${choice.toLowerCase()} ${isSelected ? "selected" : ""}`}
+                                    onClick={() => onSelectRiderChoice?.(isSelected ? "none" : choice)}
+                                    title={`${riderChoiceInfo.riderName}: +${riderChoiceInfo.bonusDice}${bonusStr} ${choiceCap} damage`}
+                                >
+                                    {choiceCap} (+{riderChoiceInfo.bonusDice}{bonusStr})
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
                 {riders.length > 0 && (
                     <div className="ddb-rider-chips-wrap">
                         {riders.map((rider, index) => (

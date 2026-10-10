@@ -1,6 +1,8 @@
 import type { DDBFeatureAction, DDBWeaponAttack } from "../../../types/ddb";
 import { COMBAT_ACTIONS } from "../domain/constants";
 import type { DockSpell } from "../domain/types";
+import { isActivatableBuffFeature } from "../../../services/buffService";
+import { getFeatureFlyoutKind } from "../../../assets/manual-formulas/index";
 
 interface UseActionListsOptions {
     search: string;
@@ -20,6 +22,7 @@ export function useActionLists({ search, weapons, spells, features }: UseActionL
         const normalizedName = name.toLowerCase();
         return normalizedName.includes("circle spell") || normalizedName.includes("initiate a circle spell");
     };
+    const isDivineFury = (name: string) => name.toLowerCase().includes("divine fury");
     const matchesFeature = (feature: DDBFeatureAction) => matchesSearch(feature.name) || matchesSearch(feature.description);
     const matchesSpell = (spell: DockSpell) => matchesSearch(spell.name) || matchesSearch(spell.damageType) || matchesSearch(spell.notes);
     const visibleSpells = spells.filter(spell => spell.isPrepared || spell.level === 0);
@@ -43,17 +46,26 @@ export function useActionLists({ search, weapons, spells, features }: UseActionL
     });
 
     const actionFeatures = features.filter(feature => feature.activationType === "action" &&
-        !isSpellName(feature.name) && !isCircleSpellFeature(feature.name) && matchesFeature(feature));
+        !isSpellName(feature.name) && !isCircleSpellFeature(feature.name) && !isDivineFury(feature.name) && matchesFeature(feature));
     const bonusActionFeatures = features.filter(feature => feature.activationType === "bonus" &&
-        !isSpellName(feature.name) && !isCircleSpellFeature(feature.name) && matchesFeature(feature));
+        !isSpellName(feature.name) && !isCircleSpellFeature(feature.name) && !isDivineFury(feature.name) && matchesFeature(feature));
     const reactionFeatures = features.filter(feature => feature.activationType === "reaction" &&
-        !isSpellName(feature.name) && matchesFeature(feature));
+        !isSpellName(feature.name) && !isDivineFury(feature.name) && matchesFeature(feature));
+    const isActionableFeature = (feature: DDBFeatureAction) => {
+        if (feature.limitedUse && feature.limitedUse.max > 0) return true;
+        if (getFeatureFlyoutKind(feature) !== null) return true;
+        if (isActivatableBuffFeature(feature.name, feature.description)) return true;
+        return false;
+    };
     const otherFeatures = features.filter(feature =>
         (feature.activationType === "special" || feature.activationType === "none") &&
-        !isCircleSpellFeature(feature.name) && matchesFeature(feature));
+        !isCircleSpellFeature(feature.name) &&
+        !isDivineFury(feature.name) &&
+        isActionableFeature(feature) &&
+        matchesFeature(feature));
     const limitedUseFeatures = features.filter(feature =>
         Boolean(feature.limitedUse && feature.limitedUse.max > 0) &&
-        !isCircleSpellFeature(feature.name) && matchesFeature(feature));
+        !isCircleSpellFeature(feature.name) && !isDivineFury(feature.name) && matchesFeature(feature));
     const filteredCombatActions = COMBAT_ACTIONS.filter(action => matchesSearch(action.name) || matchesSearch(action.description));
 
     return {

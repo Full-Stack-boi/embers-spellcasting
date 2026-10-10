@@ -2,6 +2,7 @@ import type { Dispatch, SetStateAction } from "react";
 import OBR from "@owlbear-rodeo/sdk";
 import { extractBuffEffects } from "../../../services/descriptionParser";
 import { KNOWN_BUFFS, toggleTokenBuff, type ActiveBuff } from "../../../services/buffService";
+import type { DDBParsedCharacter } from "../../../types/ddb";
 interface ActivatableFeature {
     id: string;
     name: string;
@@ -13,6 +14,7 @@ interface ActivatableFeature {
 
 interface UseFeatureActivationOptions {
     casterId?: string;
+    character?: DDBParsedCharacter | null;
     featureUses: Record<string, number>;
     setFeatureUses: Dispatch<SetStateAction<Record<string, number>>>;
     setActiveBuffs: Dispatch<SetStateAction<ActiveBuff[]>>;
@@ -24,6 +26,7 @@ interface UseFeatureActivationOptions {
 
 export function useFeatureActivation({
     casterId,
+    character,
     featureUses,
     setFeatureUses,
     setActiveBuffs,
@@ -52,7 +55,14 @@ export function useFeatureActivation({
         if (featLower.includes("innate sorcery")) {
             buffData = KNOWN_BUFFS.innate_sorcery;
         } else if (featLower.includes("rage")) {
-            buffData = KNOWN_BUFFS.rage;
+            const barbClass = character?.classes?.find(c => c.name.toLowerCase().includes("barbarian"));
+            const barbLevel = barbClass?.level ?? character?.level ?? 1;
+            const rageBonus = barbLevel >= 16 ? 4 : barbLevel >= 9 ? 3 : 2;
+            buffData = {
+                ...KNOWN_BUFFS.rage,
+                damageBonus: rageBonus,
+                description: `Advantage on STR checks & saving throws, +${rageBonus} melee damage, resistance to physical damage.`,
+            };
         } else if (featLower.includes("bladesong")) {
             buffData = KNOWN_BUFFS.bladesong;
         } else {

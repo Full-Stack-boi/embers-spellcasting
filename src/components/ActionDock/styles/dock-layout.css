@@ -125,6 +125,37 @@
     color: #f87171;
     border: 1px solid rgba(239, 68, 68, 0.3);
 }
+.ddb-quick-resync-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid rgba(59, 130, 246, 0.4);
+    color: #60a5fa;
+    border-radius: 3px;
+    width: 15px;
+    height: 15px;
+    font-size: 11px;
+    line-height: 1;
+    cursor: pointer;
+    transition: all 120ms ease;
+    padding: 0;
+    margin-left: 2px;
+}
+.ddb-quick-resync-btn:hover {
+    background: #1d4ed8;
+    color: #ffffff;
+    border-color: #93c5fd;
+}
+.ddb-quick-resync-btn.spinning {
+    animation: ddb-spin 800ms linear infinite;
+    pointer-events: none;
+    opacity: 0.7;
+}
+@keyframes ddb-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
 .ddb-vitals-pillar .ddb-caster-subline {
     font-size: 0.67rem;
     color: var(--ddb-text-muted);
@@ -648,6 +679,7 @@
 
 /* Search in Top Strip */
 .ddb-deck-search-wrap {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 4px;
@@ -658,6 +690,13 @@
     flex-shrink: 0;
     width: 130px;
     transition: border-color 0.12s ease, width 0.15s ease;
+}
+.ddb-deck-search-wrap .ddb-search-icon {
+    position: static;
+    left: auto;
+    color: #64748b;
+    flex-shrink: 0;
+    pointer-events: none;
 }
 .ddb-deck-search-wrap:focus-within {
     border-color: #3b82f6;

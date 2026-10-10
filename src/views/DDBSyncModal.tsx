@@ -17,7 +17,7 @@ export async function openDDBSyncModal(tokenId?: string) {
         id: ddbSyncModalId,
         url: `${window.location.origin}/ddb-sync-modal${tokenParam}${search}`,
         width: 480,
-        height: 560,
+        height: 500,
     });
 }
 
@@ -39,12 +39,13 @@ export const DDBSyncModal: React.FC = () => {
     return (
         <Box
             sx={{
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                minHeight: "100vh",
-                bgcolor: "#0a0c10",
+                width: "100%",
+                height: "100vh",
+                bgcolor: "#0d1117",
+                color: "#e5e7eb",
+                overflow: "hidden",
                 p: 0,
+                m: 0,
             }}
         >
             <DDBCharacterSyncModal

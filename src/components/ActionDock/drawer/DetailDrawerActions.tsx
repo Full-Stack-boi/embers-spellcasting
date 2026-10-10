@@ -2,6 +2,7 @@ import React from "react";
 import { IconCastLightning, IconDiceD20, IconDragon, IconFire } from "../shared/Bg3Icons";
 import type { ActiveBuff } from "../../../services/buffService";
 import { isActivatableBuffFeature } from "../../../services/buffService";
+import { findMatchingActionFormula } from "../../../assets/manual-formulas/index";
 import type { DDBInventoryItem, DDBWeaponAttack } from "../../../types/ddb";
 import type { DetailDrawerItem, DockSpell } from "../domain/types";
 
@@ -34,6 +35,7 @@ interface DetailDrawerActionsProps {
     onToggleItemAttunement: (item: DDBInventoryItem) => void;
     onClearHistory: () => void;
     onClose: () => void;
+    onFeatureOptionClick?: (feature: FeatureItem, optionId: string) => void;
 }
 
 export const DetailDrawerActions: React.FC<DetailDrawerActionsProps> = ({
@@ -61,6 +63,7 @@ export const DetailDrawerActions: React.FC<DetailDrawerActionsProps> = ({
     onToggleItemAttunement,
     onClearHistory,
     onClose,
+    onFeatureOptionClick,
 }) => {
     const isBuffActive = item.type === "feature" && activeBuffs.some(buff =>
         buff.name.toLowerCase() === item.name.toLowerCase()
@@ -149,6 +152,25 @@ export const DetailDrawerActions: React.FC<DetailDrawerActionsProps> = ({
             {item.type === "feature" && (item.name.toLowerCase().includes("bonus unarmed strike") || (item.name.toLowerCase().includes("martial arts") && item.activationType === "bonus")) && !item.name.toLowerCase().includes("flurry") && (
                 <button type="button" className="ddb-drawer-action-btn primary" onClick={() => { onBonusUnarmedStrike(); onClose(); }}><IconDragon size={12} /><span>Bonus Strike (1 Strike)</span></button>
             )}
+            {item.type === "feature" && (() => {
+                const formula = findMatchingActionFormula(item.name);
+                if (!formula?.options || formula.options.length === 0) return null;
+                return (
+                    <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "6px" }}>
+                        {formula.options.map(opt => (
+                            <button
+                                key={opt.id}
+                                type="button"
+                                className="ddb-drawer-action-btn primary"
+                                onClick={() => { onFeatureOptionClick?.(item, opt.id); onClose(); }}
+                                title={opt.desc || opt.name}
+                            >
+                                <IconFire size={12} /><span>{opt.name}</span>
+                            </button>
+                        ))}
+                    </div>
+                );
+            })()}
             {item.type === "feature" && linkedSpells.length > 0 && (
                 <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "6px" }}>
                     {linkedSpells.map(spell => (

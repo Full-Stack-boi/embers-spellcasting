@@ -43,6 +43,8 @@ interface ActionDockVitalsRailProps {
     concentrationSpell: { id: string; name: string } | null;
     unreadRolls: number;
     onUnreadRollsClear: () => void;
+    isSyncing?: boolean;
+    onResync?: () => void;
     onLongRest: () => void;
     onDeathSaveRoll: () => void;
     onHeal: () => void;
@@ -62,7 +64,7 @@ export function ActionDockVitalsRail({
     otherOwnerName, currentHp, maxHp, temporaryHp, customTemporaryHp, deathSaves, setDeathSaves,
     heroicInspiration, drawerItem, setDrawerItem, isDiceRollerOpen, setIsDiceRollerOpen,
     isConditionsMenuOpen, conditions, exhaustionLevel, setExhaustionLevel,
-    activeBuffs, concentrationSpell, unreadRolls, onUnreadRollsClear, onLongRest, onDeathSaveRoll,
+    activeBuffs, concentrationSpell, unreadRolls, onUnreadRollsClear, isSyncing, onResync, onLongRest, onDeathSaveRoll,
     onHeal, onDamage, onInitiativeRoll, onToggleInspiration, onOpenSpellBrowser, onClearTargets,
     onBreakConcentration, onToggleCondition, onToggleConditionMenu, onRemoveBuff,
 }: ActionDockVitalsRailProps) {
@@ -88,6 +90,8 @@ export function ActionDockVitalsRail({
                 name={casterName}
                 classSummary={classSummary}
                 isSynced={Boolean(character)}
+                isSyncing={isSyncing}
+                onResync={onResync}
                 isReadOnlyInspection={isReadOnlyInspection}
                 isPlayer={player?.role === "PLAYER"}
                 isOwnedByMe={isOwnedByMe}

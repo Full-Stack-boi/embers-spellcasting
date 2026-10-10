@@ -32,7 +32,7 @@ export function useCharacterTabData({
         if (spellsFilter === "0" && spell.level !== 0) return false;
         if (spellsFilter === "1" && spell.level !== 1) return false;
         if (spellsFilter === "2" && spell.level !== 2) return false;
-        if (spellsFilter === "PACT" && (!spell.fromChar || spell.level !== (pactMagicLevel || 2))) return false;
+        if (spellsFilter === "PACT" && (!pactMagicLevel || !spell.fromChar || spell.level !== pactMagicLevel)) return false;
         if (spellsFilter === "3+" && spell.level < 3) return false;
         return !spellSearch || spell.name.toLowerCase().includes(spellSearch.toLowerCase());
     }), [spells, spellsFilter, spellSearch, pactMagicLevel]);

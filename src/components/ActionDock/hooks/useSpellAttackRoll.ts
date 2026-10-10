@@ -3,7 +3,7 @@ import { getSpellBeamInfo } from "../../../services/spellBeamService";
 import { broadcastDDBRoll } from "../../../services/rollLogService";
 import { checkAndFireActionTriggers } from "../../../services/conditionalTriggerService";
 import { hasPotentCantrip } from "../../../services/ddbService";
-import { rollAttack, rollDamageDDB } from "../../../utils/dice";
+import { rollAttack, rollDamageDDB, doubleDiceFormula } from "../../../utils/dice";
 import type { DDBParsedCharacter } from "../../../types/ddb";
 import type { DDBRollCardData, DDBSubRollEntry, DDBSubRollExtraDamage } from "../../../types/ddbRollLog";
 
@@ -87,7 +87,12 @@ export function useSpellAttackRoll({
                         damage: bDmgResult ? {
                             total: bDmgResult.total, damageType,
                             diceBreakdown: bDmgResult.breakdown.replace(/\+/g, " + "),
-                            formula: `${ddbSpell?.damage || ""} ${damageType}`.trim(), isCrit: roll.isCrit,
+                            formula: (() => {
+                                const beamDiceForDisplay = roll.isCrit && ddbSpell?.damage
+                                    ? doubleDiceFormula(ddbSpell.damage)
+                                    : (ddbSpell?.damage || "");
+                                return `${beamDiceForDisplay} ${damageType}`.trim();
+                            })(), isCrit: roll.isCrit,
                         } : undefined,
                         extraDamage: extraDamage.length > 0 ? extraDamage : undefined,
                     });

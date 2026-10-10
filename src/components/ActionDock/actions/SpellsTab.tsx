@@ -27,6 +27,7 @@ export interface SpellsTabProps {
     onDamageRoll: (spell: DockSpell) => void;
     onOpenUpcastPicker: (spell: DockSpell) => void;
     renderUpcastPickerRow: (spell: DockSpell, colSpan: number) => React.ReactNode;
+    hasPactMagic?: boolean;
 }
 
 export const SpellsTab: React.FC<SpellsTabProps> = ({
@@ -51,7 +52,10 @@ export const SpellsTab: React.FC<SpellsTabProps> = ({
     onDamageRoll,
     onOpenUpcastPicker,
     renderUpcastPickerRow,
-}) => (
+    hasPactMagic = false,
+}) => {
+    const spellFilters = hasPactMagic ? SPELL_FILTERS : SPELL_FILTERS.filter(value => value !== "PACT");
+    return (
     <div className="ddb-tab-panel spells-panel">
         <div className="ddb-spells-top-stats-banner">
             <div className="ddb-stat-box">
@@ -76,7 +80,7 @@ export const SpellsTab: React.FC<SpellsTabProps> = ({
 
         <div className="ddb-spells-filter-search-row">
             <div className="ddb-subfilter-bar">
-                {SPELL_FILTERS.map(value => (
+                {spellFilters.map(value => (
                     <button
                         key={value}
                         type="button"
@@ -198,4 +202,5 @@ export const SpellsTab: React.FC<SpellsTabProps> = ({
             </table>
         </div>
     </div>
-);
+    );
+};

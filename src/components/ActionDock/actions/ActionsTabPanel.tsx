@@ -28,6 +28,10 @@ interface ActionsTabData {
     selectedSpellId: string | null;
     spellDamageTypeOverrides: Record<string, string>;
     upcastPickerSpellId: string | null;
+    resolvedRiders?: import("../../../services/weaponDamageRiders").ResolvedWeaponRiders;
+    selectedRiderChoice?: string;
+    effectiveBonusDamage?: number;
+    onSelectRiderChoice?: (choice: string) => void;
 }
 
 interface ActionsTabPanelProps {
@@ -35,7 +39,8 @@ interface ActionsTabPanelProps {
     search: string;
     data: ActionsTabData;
     attackTableHandlers: Omit<AttackActionsTableProps,
-        "weapons" | "spells" | "activeRiderMap" | "selectedSpellId" | "damageTypeOverrides" | "upcastPickerSpellId">;
+        "weapons" | "spells" | "activeRiderMap" | "selectedSpellId" | "damageTypeOverrides" | "upcastPickerSpellId" |
+        "resolvedRiders" | "selectedRiderChoice" | "effectiveBonusDamage" | "onSelectRiderChoice">;
     onFilterChange: (filter: ActionsFilter) => void;
     onSearchChange: (search: string) => void;
     renderFeatureCard: (feature: DDBFeatureAction) => ReactNode;
@@ -69,6 +74,10 @@ export function ActionsTabPanel({
             selectedSpellId={data.selectedSpellId}
             damageTypeOverrides={data.spellDamageTypeOverrides}
             upcastPickerSpellId={data.upcastPickerSpellId}
+            resolvedRiders={data.resolvedRiders}
+            selectedRiderChoice={data.selectedRiderChoice}
+            effectiveBonusDamage={data.effectiveBonusDamage}
+            onSelectRiderChoice={data.onSelectRiderChoice}
         />
     );
 
@@ -156,6 +165,7 @@ export function ActionsTabPanel({
                     bonusActionSpells={data.bonusActionSpells}
                     reactionFeatures={data.reactionFeatures}
                     reactionSpells={data.reactionSpells}
+                    otherFeatures={data.otherFeatures}
                     combatActions={data.filteredCombatActions}
                     search={search}
                     renderFeatureCard={renderFeatureCard}

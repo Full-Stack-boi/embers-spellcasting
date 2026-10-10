@@ -258,7 +258,7 @@ export const CharacterChecks: React.FC<{ passedChar?: DDBParsedCharacter | null 
                         <button
                             key={key}
                             type="button"
-                            className="ddb-ability-strip-pill"
+                            className={`ddb-ability-strip-pill ${key.toLowerCase()}`}
                             onClick={() => handleRollAbilityCheck(key, full)}
                             title={`Roll ${full} Check (${modStr})`}
                         >
@@ -326,7 +326,7 @@ export const CharacterChecks: React.FC<{ passedChar?: DDBParsedCharacter | null 
                                                 title={save.proficient ? "Proficient" : "Not Proficient"}
                                             />
                                             <span className="ddb-save-full-name">{full}</span>
-                                            <span className="ddb-save-short-tag">({label})</span>
+                                            <span className={`ddb-save-short-tag ${key.toLowerCase()}`}>({label})</span>
                                             {save.proficient && (
                                                 <span className="ddb-save-prof-badge">PROFICIENT</span>
                                             )}
@@ -365,7 +365,7 @@ export const CharacterChecks: React.FC<{ passedChar?: DDBParsedCharacter | null 
                                 <button
                                     key={f}
                                     type="button"
-                                    className={`ddb-filter-chip ${abilityFilter === f ? "active" : ""}`}
+                                    className={`ddb-filter-chip ${f.toLowerCase()} ${abilityFilter === f ? "active" : ""}`}
                                     onClick={() => setAbilityFilter(f)}
                                 >
                                     {f === "PROFICIENT" ? "★ PROF" : f}

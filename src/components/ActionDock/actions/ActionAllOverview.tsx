@@ -24,6 +24,7 @@ interface ActionAllOverviewProps {
     bonusActionSpells: DockSpell[];
     reactionFeatures: DDBFeatureAction[];
     reactionSpells: DockSpell[];
+    otherFeatures?: DDBFeatureAction[];
     combatActions: CombatAction[];
     search: string;
     renderFeatureCard: (feature: DDBFeatureAction) => ReactNode;
@@ -47,6 +48,7 @@ export function ActionAllOverview({
     bonusActionSpells,
     reactionFeatures,
     reactionSpells,
+    otherFeatures,
     combatActions,
     search,
     renderFeatureCard,
@@ -58,7 +60,7 @@ export function ActionAllOverview({
 }: ActionAllOverviewProps) {
     const hasContent = weapons.length > 0 || attackSpells.length > 0 || actionFeatures.length > 0 || actionSpells.length > 0 ||
         bonusActionFeatures.length > 0 || bonusActionSpells.length > 0 || reactionFeatures.length > 0 ||
-        reactionSpells.length > 0 || combatActions.length > 0;
+        reactionSpells.length > 0 || combatActions.length > 0 || (otherFeatures && otherFeatures.length > 0);
 
     return (
         <div className="ddb-actions-list-panel all-actions-panel">
@@ -98,6 +100,13 @@ export function ActionAllOverview({
                     </div>
                     {reactionFeatures.map(renderFeatureCard)}
                     {reactionSpells.length > 0 && <SpellLine spells={reactionSpells} onSelect={onSelectSpell} onOpenDetails={onOpenSpellDetails} />}
+                </div>
+            )}
+
+            {otherFeatures && otherFeatures.length > 0 && (
+                <div className="ddb-action-category-block">
+                    <div className="ddb-actions-category-header"><span className="ddb-category-title">OTHER &amp; SPECIAL ACTIONS</span></div>
+                    {otherFeatures.map(renderFeatureCard)}
                 </div>
             )}
 

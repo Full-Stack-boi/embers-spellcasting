@@ -13,6 +13,10 @@ export interface AttackActionsTableProps {
     selectedSpellId: string | null;
     damageTypeOverrides: Record<string, string>;
     upcastPickerSpellId: string | null;
+    resolvedRiders?: import("../../../services/weaponDamageRiders").ResolvedWeaponRiders;
+    selectedRiderChoice?: string;
+    effectiveBonusDamage?: number;
+    onSelectRiderChoice?: (choice: string) => void;
     onSelectWeapon: WeaponTableRowProps["onSelectWeapon"];
     onWeaponAttackRoll: WeaponTableRowProps["onAttackRoll"];
     onWeaponDamageRoll: WeaponTableRowProps["onDamageRoll"];
@@ -33,6 +37,10 @@ export const AttackActionsTable: React.FC<AttackActionsTableProps> = ({
     selectedSpellId,
     damageTypeOverrides,
     upcastPickerSpellId,
+    resolvedRiders,
+    selectedRiderChoice,
+    effectiveBonusDamage,
+    onSelectRiderChoice,
     onSelectWeapon,
     onWeaponAttackRoll,
     onWeaponDamageRoll,
@@ -61,6 +69,10 @@ export const AttackActionsTable: React.FC<AttackActionsTableProps> = ({
                     key={weapon.id}
                     weapon={weapon}
                     activeRider={activeRiderMap[weapon.id]}
+                    resolvedRiders={resolvedRiders}
+                    selectedRiderChoice={selectedRiderChoice}
+                    effectiveBonusDamage={effectiveBonusDamage}
+                    onSelectRiderChoice={onSelectRiderChoice}
                     onSelectWeapon={onSelectWeapon}
                     onAttackRoll={onWeaponAttackRoll}
                     onDamageRoll={onWeaponDamageRoll}

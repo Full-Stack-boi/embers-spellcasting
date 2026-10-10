@@ -1,5 +1,4 @@
-import React from "react";
-import { getFeatureFlyoutKind } from "../../../assets/manual-formulas/index";
+import { getFeatureFlyoutKind, findMatchingActionFormula } from "../../../assets/manual-formulas/index";
 import { isActivatableBuffFeature } from "../../../services/buffService";
 import type { DDBFeatureAction } from "../../../types/ddb";
 import type { DetailDrawerItem, DockSpell } from "../domain/types";
@@ -17,6 +16,7 @@ export interface FeatureActionCardProps {
     onBonusStrike: () => void;
     onOpenSpell: (spell: DockSpell) => void;
     onToggleUse: (feature: DDBFeatureAction, index: number) => void;
+    onFeatureOptionClick?: (feature: DDBFeatureAction, optionId: string) => void;
 }
 
 function toDrawerItem(feature: DDBFeatureAction): NonNullable<DetailDrawerItem> {
@@ -46,12 +46,14 @@ export const FeatureActionCard: React.FC<FeatureActionCardProps> = ({
     onBonusStrike,
     onOpenSpell,
     onToggleUse,
+    onFeatureOptionClick,
 }) => {
     const featureName = feature.name.toLowerCase();
     const canActivate = isActivatableBuffFeature(feature.name);
     const flyoutKind = getFeatureFlyoutKind(feature);
     const isFlurry = featureName.includes("flurry of blows");
     const isBonusStrike = featureName.includes("bonus unarmed strike") || (featureName.includes("martial arts") && feature.activationType === "bonus");
+    const matchingFormula = findMatchingActionFormula(feature.name);
     const linkedSpells = spells.filter(spell => {
         if (spell.rawDdbSpell?.componentId && feature.componentId && spell.rawDdbSpell.componentId === feature.componentId) return true;
         const featureDescription = (feature.description || "").toLowerCase();
@@ -87,10 +89,21 @@ export const FeatureActionCard: React.FC<FeatureActionCardProps> = ({
                 </div>
             </div>
 
-            {(isFlurry || isBonusStrike || linkedSpells.length > 0) && (
+            {(isFlurry || isBonusStrike || (matchingFormula?.options && matchingFormula.options.length > 0) || linkedSpells.length > 0) && (
                 <div className="ddb-feature-linked-spells" style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "4px", marginBottom: "4px" }} onClick={event => event.stopPropagation()}>
                     {isFlurry && <button type="button" className="ddb-feature-cast-spell-btn" onClick={onFlurry} title="Execute 2 Unarmed Strikes (1 Focus Point, Bonus Action)">Strike x2 (1 Focus)</button>}
                     {isBonusStrike && !isFlurry && <button type="button" className="ddb-feature-cast-spell-btn" onClick={onBonusStrike} title="Execute 1 Unarmed Strike (Bonus Action)">Bonus Strike</button>}
+                    {matchingFormula?.options?.map(opt => (
+                        <button
+                            key={opt.id}
+                            type="button"
+                            className="ddb-feature-cast-spell-btn"
+                            onClick={() => onFeatureOptionClick?.(feature, opt.id)}
+                            title={opt.desc || opt.name}
+                        >
+                            {opt.name}
+                        </button>
+                    ))}
                     {linkedSpells.map(spell => (
                         <button key={spell.id} type="button" className="ddb-feature-cast-spell-btn" onClick={() => onOpenSpell(spell)} title={`Cast ${spell.name} from ${feature.name}`}>
                             Cast {spell.name}

@@ -1,8 +1,9 @@
 import { useMemo, type Dispatch, type SetStateAction } from "react";
 import OBR from "@owlbear-rodeo/sdk";
-import { computeClassFeatureResource, getFeatureFlyoutKind } from "../../../assets/manual-formulas/index";
+import { findMatchingActionFormula } from "../../../assets/manual-formulas/index";
+import { resolveFeatureResource } from "../../../services/classResourceService";
 import type { DDBFeatureAction, DDBParsedCharacter } from "../../../types/ddb";
-import type { BG3FlyoutFeatureData } from "../overlays/BG3FlyoutBar";
+import type { BG3FlyoutFeatureData, FeatureFlyoutKind } from "../overlays/BG3FlyoutBar";
 import type { SpellSlotConfig } from "../domain/types";
 
 interface UseFeatureFlyoutDataOptions {
@@ -41,8 +42,25 @@ export function useFeatureFlyoutData({
 
     const featureData = useMemo<BG3FlyoutFeatureData | null>(() => {
         if (!feature) return null;
-        const kind = getFeatureFlyoutKind(feature);
-        if (!kind) return null;
+        const matchingFormula = findMatchingActionFormula(feature.name) || findMatchingActionFormula(feature.id);
+
+        const lowerName = feature.name.toLowerCase().trim();
+        const isFont = matchingFormula?.flyoutType === "convert_slots" || lowerName.includes("font of magic");
+        const isArcaneRecovery = lowerName.includes("arcane recovery");
+        const isHarness = lowerName.includes("harness divine power");
+        const hasOptions = Boolean(matchingFormula?.options && matchingFormula.options.length > 0);
+
+        if (!isFont && !isArcaneRecovery && !isHarness && !hasOptions) {
+            return null;
+        }
+
+        const kind: FeatureFlyoutKind = isFont
+            ? "font_of_magic"
+            : isHarness
+                ? "harness_divine_power"
+                : isArcaneRecovery
+                    ? "arcane_recovery"
+                    : "options_grid";
 
         const levelOf = (className: string) => character?.classes
             .filter(classInfo => classInfo.name.toLowerCase().includes(className))
@@ -52,14 +70,23 @@ export function useFeatureFlyoutData({
         const wizardLevel = levelOf("wizard");
         const proficiencyBonus = character?.proficiencyBonus || 2;
         const used = featureUses[feature.id] ?? (feature.limitedUse?.used || 0);
-        const resource = computeClassFeatureResource({ kind, character, feature, featureUses });
+
+        const resource = resolveFeatureResource({
+            formula: matchingFormula,
+            character,
+            feature,
+            featureUses,
+        });
+
         const pact = character?.pactMagic ? {
             max: pactSlots.max,
             used: pactSlots.used,
             level: character.pactMagic.level,
         } : undefined;
 
-        if (kind === "metamagic") {
+        const options = matchingFormula?.options;
+
+        if (lowerName.includes("metamagic")) {
             const fontFeature = features.find(item => item.name.toLowerCase().includes("font of magic"));
             if (fontFeature) {
                 const fontUsed = featureUses[fontFeature.id] ?? (fontFeature.limitedUse?.used || 0);
@@ -67,13 +94,14 @@ export function useFeatureFlyoutData({
                 return {
                     id: feature.id,
                     name: feature.name,
-                    kind,
+                    kind: "metamagic",
                     resourceName: "Sorcery Points",
                     availablePoints: Math.max(0, fontMax - fontUsed),
                     maxPoints: fontMax,
                     sorcererLevel,
                     spellSlots,
                     pactSlots: pact,
+                    options,
                     onSpendResourceAction: (actionName, cost, details, actionType) => {
                         setFeatureUses(previous => ({ ...previous, [fontFeature.id]: fontUsed + cost }));
                         if (actionType === "bonus") setBonusActionUsed(true);
@@ -97,6 +125,7 @@ export function useFeatureFlyoutData({
             proficiencyBonus,
             spellSlots,
             pactSlots: pact,
+            options,
             onConvertSlotToResource: (slotLevel, isPact) => onConvertSlot(slotLevel, Boolean(isPact), feature.id),
             onCreateSpellSlot: (slotLevel, cost, minLevel) => onCreateSpellSlot(slotLevel, cost, minLevel, feature.id),
             onRegainExpendedSlot: slotLevel => {

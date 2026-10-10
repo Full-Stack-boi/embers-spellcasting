@@ -311,7 +311,7 @@ export const DDBRollCard: React.FC<DDBRollCardProps> = ({ data }) => {
                     </div>
 
                     <div className="ddb-roll-card-right-total">
-                        <span className="ddb-roll-card-total-num">
+                        <span className={`ddb-roll-card-total-num ${typeof data.total === "string" && isNaN(Number(data.total)) ? "is-text" : ""}`}>
                             {data.total}
                         </span>
                     </div>

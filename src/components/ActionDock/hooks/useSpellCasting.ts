@@ -8,6 +8,8 @@ import { cacheDDBCharacter } from "../../../services/ddbService";
 import { getSortedTargets, stopAiming } from "../../../effectsTool";
 import type { DDBFeatureAction, DDBParsedCharacter } from "../../../types/ddb";
 import type { SpellSlotConfig } from "../domain/types";
+import { broadcastDDBRoll } from "../../../services/rollLogService";
+import type { DDBRollCardData } from "../../../types/ddbRollLog";
 
 interface UseSpellCastingOptions {
     selectedSpell: string | null;
@@ -139,13 +141,26 @@ export function useSpellCasting({
             setConcentrationSpell({ id: matchedSpell.id, name: concentrationName });
         }
 
-        if (isHexSpell && isAlreadyHex) {
-            OBR.notification.show(`Moved Hex (${(hexAbility || selectedHexAbility || "dexterity").toUpperCase()}) curse to new target (Bonus Action)`, "INFO");
-        } else if (isHexSpell) {
-            OBR.notification.show(`Casting Hex (${(hexAbility || selectedHexAbility || "dexterity").toUpperCase()})${upcastMessage}`, "INFO");
-        } else {
-            OBR.notification.show(`Casting ${spellDisplayName}${upcastMessage}`, "INFO");
-        }
+        const casterName = character?.name || "Character";
+        const spellCard: DDBRollCardData = {
+            id: `${Date.now()}-cast-${targetId}`,
+            casterName,
+            targetName: currentTargets.length > 0 ? "TARGET" : "SELF",
+            actionName: spellDisplayName.toUpperCase(),
+            actionType: "SPELL",
+            dieType: 20,
+            diceBreakdown: targetLevel > 0 ? `Level ${targetLevel}` : "Cantrip",
+            formula: matchedSpell?.school
+                ? `${matchedSpell.school} • ${targetLevel > 0 ? `Level ${targetLevel}` : "Cantrip"}`
+                : targetLevel > 0
+                  ? `Level ${targetLevel}`
+                  : "Cantrip",
+            total: "CAST",
+            subtitle: matchedSpell?.concentration ? "Concentration Active" : "Spell Cast",
+            timestamp: Date.now(),
+        };
+        broadcastDDBRoll([spellCard]);
+
         await doSpell(targetId, playerId, role === "GM");
         setSelected(null);
         setUpcastPickerSpellId(null);

@@ -19,12 +19,27 @@
 }
 
 /* Custom Scrollbar */
+.ddb-checks-container {
+    scrollbar-width: thin;
+    scrollbar-color: #283347 #0d1117;
+}
 .ddb-checks-container::-webkit-scrollbar {
-    width: 5px;
+    width: 6px;
+}
+.ddb-checks-container::-webkit-scrollbar-track {
+    background: #0d1117;
 }
 .ddb-checks-container::-webkit-scrollbar-thumb {
     background: #2a3241;
     border-radius: 4px;
+}
+.ddb-checks-container::-webkit-scrollbar-thumb:hover {
+    background: #c82d38;
+}
+.ddb-checks-container::-webkit-scrollbar-button {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
 }
 
 /* ── Top Header ─────────────────────────────────────────── */
@@ -127,13 +142,9 @@
 
 .ddb-ability-strip-pill:hover {
     background: #243048;
-    border-color: #d97706;
+    border-color: #c82d38;
     transform: translateY(-1px);
-    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
-}
-
-.ddb-ability-strip-pill:hover .pill-mod {
-    color: #fbbf24;
+    box-shadow: 0 3px 8px rgba(200, 45, 56, 0.3);
 }
 
 .ddb-ability-strip-pill .pill-label {
@@ -145,17 +156,18 @@
 }
 
 .ddb-ability-strip-pill .pill-mod {
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     font-weight: 900;
-    color: #f8fafc;
+    color: #ffffff;
     line-height: 1.1;
     margin: 1px 0;
 }
 
 .ddb-ability-strip-pill .pill-score {
-    font-size: 0.6rem;
-    font-weight: 600;
-    color: #64748b;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1.1;
 }
 
 /* ── Subtabs Navigation Bar ──────────────────────────────── */
@@ -341,6 +353,7 @@
     color: #94a3b8;
 }
 
+
 .ddb-save-prof-badge {
     font-size: 0.54rem;
     font-weight: 800;
@@ -430,6 +443,7 @@
     font-weight: 800;
 }
 
+
 .ddb-skill-search-wrap {
     display: flex;
     align-items: center;
@@ -443,7 +457,7 @@
 }
 
 .ddb-skill-search-wrap:focus-within {
-    border-color: #d97706;
+    border-color: #c82d38;
 }
 
 .ddb-skill-search-icon {
@@ -625,8 +639,8 @@
 
 .ddb-skill-bonus-pill:hover {
     background: #2a3750;
-    border-color: #d97706;
-    color: #fbbf24;
+    border-color: #c82d38;
+    color: #fca5a5;
     transform: scale(1.04);
 }
 

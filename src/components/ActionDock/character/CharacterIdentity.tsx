@@ -6,6 +6,8 @@ export interface CharacterIdentityProps {
     name: string;
     classSummary: string;
     isSynced: boolean;
+    isSyncing?: boolean;
+    onResync?: () => void;
     isReadOnlyInspection: boolean;
     isPlayer: boolean;
     isOwnedByMe: boolean;
@@ -22,6 +24,8 @@ export const CharacterIdentity: React.FC<CharacterIdentityProps> = ({
     name,
     classSummary,
     isSynced,
+    isSyncing,
+    onResync,
     isReadOnlyInspection,
     isPlayer,
     isOwnedByMe,
@@ -37,7 +41,7 @@ export const CharacterIdentity: React.FC<CharacterIdentityProps> = ({
             <div
                 className="ddb-caster-identity"
                 onClick={onOpenSync}
-                title={isSynced ? `${name} (Click to re-sync)` : "Click to link D&D Beyond Character"}
+                title={isSynced ? `${name} (Click to open sync settings)` : "Click to link D&D Beyond Character"}
             >
                 <div className="ddb-caster-avatar-ring">
                     <img className="ddb-caster-avatar-img" src={avatarUrl} alt={name} />
@@ -75,6 +79,21 @@ export const CharacterIdentity: React.FC<CharacterIdentityProps> = ({
                             <IconDragon size={10} />
                             {isSynced ? "DDB" : "Sync"}
                         </span>
+                        {isSynced && onResync && (
+                            <button
+                                type="button"
+                                className={`ddb-quick-resync-btn ${isSyncing ? "spinning" : ""}`}
+                                onClick={event => {
+                                    event.stopPropagation();
+                                    onResync();
+                                }}
+                                title={isSyncing ? "Syncing from D&D Beyond..." : "Re-sync from D&D Beyond"}
+                                disabled={isSyncing}
+                                aria-label="Re-sync character data"
+                            >
+                                ↻
+                            </button>
+                        )}
                     </div>
                     <span className="ddb-caster-subline">{classSummary}</span>
                 </div>

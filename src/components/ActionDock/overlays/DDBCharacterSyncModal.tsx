@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import "./DDBCharacterSyncModal";
+import "./DDBCharacterSyncModal.css";
+import { FaDiceD20, FaXmark } from "react-icons/fa6";
 import OBR from "@owlbear-rodeo/sdk";
 import {
     extractDDBCharacterId,
@@ -153,18 +154,22 @@ export const DDBCharacterSyncModal: React.FC<DDBCharacterSyncModalProps> = ({
     };
 
     const extractedId = extractDDBCharacterId(urlInput);
-    const ddbApiUrl = `https://character-service.dndbeyond.com/character/v5/character/${extractedId || 170484944}`;
+    const activeCharId = extractedId || character?.id;
+    const ddbApiUrl = activeCharId
+        ? `https://character-service.dndbeyond.com/character/v5/character/${activeCharId}`
+        : "https://character-service.dndbeyond.com/character/v5/character/170484944";
 
     return (
-        <div className="ddb-modal-backdrop" onClick={onClose}>
-            <div className="ddb-modal-card" onClick={e => e.stopPropagation()}>
-                <div className="ddb-modal-header">
-                    <div className="ddb-modal-title-group">
-                        <span className="ddb-modal-icon">🐉</span>
-                        <h3 className="ddb-modal-title">D&D Beyond Character Sync</h3>
-                    </div>
-                    <button className="ddb-modal-close-btn" onClick={onClose}>✕</button>
+        <div className="ddb-modal-card">
+            <div className="ddb-modal-header">
+                <div className="ddb-modal-title-group">
+                    <FaDiceD20 style={{ color: "#e11d48", fontSize: "1.2rem" }} />
+                    <h3 className="ddb-modal-title">D&D Beyond Character Sync</h3>
                 </div>
+                <button className="ddb-modal-close-btn" onClick={onClose} title="Close">
+                    <FaXmark />
+                </button>
+            </div>
 
                 <div className="ddb-modal-body">
                     <p className="ddb-modal-desc">
@@ -200,7 +205,7 @@ export const DDBCharacterSyncModal: React.FC<DDBCharacterSyncModalProps> = ({
                                     target="_blank"
                                     rel="noreferrer"
                                 >
-                                    D&D Beyond API Link ↗
+                                    {activeCharId ? `D&D Beyond API Link (${activeCharId}) ↗` : "D&D Beyond API Link ↗"}
                                 </a>{" "}
                                 in a new tab.<br />
                                 2. Copy all text (Ctrl+A, Ctrl+C) and paste below:
@@ -260,21 +265,52 @@ export const DDBCharacterSyncModal: React.FC<DDBCharacterSyncModalProps> = ({
 
                             <div className="ddb-char-stats-grid">
                                 <div className="ddb-stat-chip">
-                                    <span className="ddb-stat-label">Spell Save DC</span>
-                                    <span className="ddb-stat-value">{character.spellSaveDC}</span>
+                                    <span className="ddb-stat-label">Hit Points</span>
+                                    <span className="ddb-stat-value">{character.hp?.current ?? character.hp?.max ?? 10} / {character.hp?.max ?? 10}</span>
                                 </div>
                                 <div className="ddb-stat-chip">
-                                    <span className="ddb-stat-label">Spell Attack</span>
-                                    <span className="ddb-stat-value">+{character.spellAttackBonus}</span>
+                                    <span className="ddb-stat-label">Armor Class</span>
+                                    <span className="ddb-stat-value">{character.armorClass ?? 10}</span>
                                 </div>
                                 <div className="ddb-stat-chip">
-                                    <span className="ddb-stat-label">Ability</span>
-                                    <span className="ddb-stat-value">{character.spellCastingAbility}</span>
+                                    <span className="ddb-stat-label">Speed</span>
+                                    <span className="ddb-stat-value">{character.speed ?? 30} ft</span>
                                 </div>
                                 <div className="ddb-stat-chip">
-                                    <span className="ddb-stat-label">Spells</span>
-                                    <span className="ddb-stat-value">{character.spells.length} loaded</span>
+                                    <span className="ddb-stat-label">Proficiency</span>
+                                    <span className="ddb-stat-value">+{character.proficiencyBonus ?? 2}</span>
                                 </div>
+                                {(character.spells && character.spells.length > 0) || (character.spellCastingAbility && character.spellCastingAbility !== "NONE") ? (
+                                    <>
+                                        <div className="ddb-stat-chip">
+                                            <span className="ddb-stat-label">Spell Save DC</span>
+                                            <span className="ddb-stat-value">{character.spellSaveDC}</span>
+                                        </div>
+                                        <div className="ddb-stat-chip">
+                                            <span className="ddb-stat-label">Spell Attack</span>
+                                            <span className="ddb-stat-value">+{character.spellAttackBonus}</span>
+                                        </div>
+                                        <div className="ddb-stat-chip">
+                                            <span className="ddb-stat-label">Spell Ability</span>
+                                            <span className="ddb-stat-value">{character.spellCastingAbility}</span>
+                                        </div>
+                                        <div className="ddb-stat-chip">
+                                            <span className="ddb-stat-label">Spells</span>
+                                            <span className="ddb-stat-value">{character.spells?.length ?? 0} loaded</span>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="ddb-stat-chip">
+                                            <span className="ddb-stat-label">Weapons</span>
+                                            <span className="ddb-stat-value">{character.weapons?.length || 0} equipped</span>
+                                        </div>
+                                        <div className="ddb-stat-chip">
+                                            <span className="ddb-stat-label">Actions</span>
+                                            <span className="ddb-stat-value">{character.actions?.length || 0} loaded</span>
+                                        </div>
+                                    </>
+                                )}
                             </div>
 
                             {character.senses?.darkvision ? (
@@ -296,6 +332,5 @@ export const DDBCharacterSyncModal: React.FC<DDBCharacterSyncModalProps> = ({
                     )}
                 </div>
             </div>
-        </div>
     );
 };

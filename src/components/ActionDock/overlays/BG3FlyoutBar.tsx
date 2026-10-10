@@ -15,7 +15,10 @@ import {
     IconDiceD6,
     IconCaretUp,
     IconSquarePip,
+    getWeaponIcon,
+    IconFire,
 } from "../shared/Bg3Icons";
+import type { DDBWeaponAttack } from "../../../types/ddb";
 import {
     FaFireFlameCurved,
     FaWandMagicSparkles,
@@ -23,19 +26,21 @@ import {
     FaHandFist,
     FaShieldHalved,
 } from "react-icons/fa6";
-import {
-    FONT_CREATE_OPTIONS,
-    METAMAGIC_OPTIONS,
-    MANEUVER_OPTIONS,
-    FOCUS_POINT_OPTIONS,
-    LAY_ON_HANDS_OPTIONS,
-    CUNNING_STRIKE_OPTIONS,
-    TACTICAL_MIND_OPTIONS,
-    DIVINE_SPARK_OPTIONS
-} from "../../../assets/manual-formulas/index";
-import type { FeatureFlyoutKind } from "../../../assets/manual-formulas/index";
+import { FONT_CREATE_OPTIONS } from "../../../assets/manual-formulas/index";
 
-export type { FeatureFlyoutKind };
+export type FeatureFlyoutKind =
+    | "font_of_magic"
+    | "harness_divine_power"
+    | "arcane_recovery"
+    | "focus_points"
+    | "lay_on_hands"
+    | "metamagic"
+    | "maneuvers"
+    | "cunning_strike"
+    | "second_wind"
+    | "tactical_mind"
+    | "divine_spark"
+    | "options_grid";
 
 export interface BG3FlyoutSpell {
     id: string;
@@ -48,6 +53,16 @@ export interface BG3FlyoutSpell {
     rangeText?: string;
     notes?: string;
     rawDdbSpell?: DDBParsedSpell;
+}
+
+export interface BG3FlyoutWeaponData {
+    weapon: DDBWeaponAttack;
+    effectiveDamage: string;
+    resolvedRiders?: import("../../../services/weaponDamageRiders").ResolvedWeaponRiders;
+    selectedRiderChoice?: string;
+    onSelectRiderChoice?: (choice: string) => void;
+    onAttackRoll?: (weapon: DDBWeaponAttack) => void;
+    onDamageRoll?: (weapon: DDBWeaponAttack) => void;
 }
 
 export interface BG3FlyoutFeatureData {
@@ -66,11 +81,13 @@ export interface BG3FlyoutFeatureData {
     onConvertSlotToResource?: (slotLevel: number, isPact?: boolean) => void;
     onCreateSpellSlot?: (slotLevel: number, cost: number, minLevel: number) => void;
     onRegainExpendedSlot?: (slotLevel: number) => void;
+    options?: import("../../../types/manualFormula").FeatureActionOption[];
     onSpendResourceAction?: (actionName: string, cost: number, details?: string, actionType?: "bonus" | "action" | "reaction" | "none") => void;
 }
 
 interface BG3FlyoutBarProps {
     spell?: BG3FlyoutSpell;
+    weaponData?: BG3FlyoutWeaponData;
     featureData?: BG3FlyoutFeatureData;
     selectedLevel?: number;
     availableLevels?: number[];
@@ -90,6 +107,7 @@ const ROMAN_NUMERALS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"];
 
 export const BG3FlyoutBar: React.FC<BG3FlyoutBarProps> = ({
     spell,
+    weaponData,
     featureData,
     selectedLevel = 1,
     availableLevels = [],
@@ -140,19 +158,43 @@ export const BG3FlyoutBar: React.FC<BG3FlyoutBarProps> = ({
             if (e.key === "Escape") {
                 onClose();
             } else if (e.key === "Enter") {
-                if (isSpell && onCast) {
+                if (weaponData) {
+                    weaponData.onAttackRoll?.(weaponData.weapon);
+                } else if (isSpell && onCast) {
                     onCast(selectedLevel, isHex ? chosenAbility : undefined, currentDamageType);
                 }
             }
         };
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [isSpell, onCast, selectedLevel, isHex, chosenAbility, currentDamageType, onClose]);
+    }, [isSpell, onCast, selectedLevel, isHex, chosenAbility, currentDamageType, weaponData, onClose]);
 
     // -------------------------------------------------------------
     // HEADER CONTENT
     // -------------------------------------------------------------
     const headerContent = useMemo(() => {
+        if (weaponData) {
+            const riders = weaponData.resolvedRiders;
+            let ridersText = "";
+            if (riders) {
+                const reasons = riders.flatBonusReasons.length > 0 ? ` (${riders.flatBonusReasons.join(", ")})` : "";
+                const diceTexts = riders.activeDiceRiders.map(r => {
+                    const bonusStr = r.flatBonus && r.flatBonus > 0 ? `+${r.flatBonus}` : "";
+                    const capType = r.damageType ? r.damageType.charAt(0).toUpperCase() + r.damageType.slice(1) : "";
+                    return ` • ${r.name}: +${r.dice ?? ""}${bonusStr} ${capType}`;
+                }).join("");
+                ridersText = `${reasons}${diceTexts}`;
+            }
+            return (
+                <span className="ddb-flyout-header-base">
+                    <span className="ddb-flyout-spell-title">{weaponData.weapon.name}</span>
+                    <span className="ddb-flyout-base-meta">
+                        {" "}• Range: {weaponData.weapon.rangeText} • Hit: +{weaponData.weapon.toHit} • Damage: {weaponData.effectiveDamage} {weaponData.weapon.damageType}{ridersText}
+                    </span>
+                </span>
+            );
+        }
+
         if (featureData) {
             switch (featureData.kind) {
                 case "font_of_magic":
@@ -193,46 +235,13 @@ export const BG3FlyoutBar: React.FC<BG3FlyoutBarProps> = ({
                             </span>
                         </span>
                     );
-                case "focus_points": {
-                    const opt = FOCUS_POINT_OPTIONS[selectedActionIndex] || FOCUS_POINT_OPTIONS[0];
+                default: {
+                    const opt = featureData.options?.[selectedActionIndex] || featureData.options?.[0];
                     return (
                         <span className="ddb-flyout-header-base">
-                            <span className="ddb-flyout-spell-title">Focus Points (Ki)</span>
+                            <span className="ddb-flyout-spell-title">{featureData.name}</span>
                             <span className="ddb-flyout-base-meta">
-                                {" "}• <strong>{featureData.availablePoints} / {featureData.maxPoints} FP</strong> available • {opt.name}: {opt.desc}
-                            </span>
-                        </span>
-                    );
-                }
-                case "lay_on_hands": {
-                    const opt = LAY_ON_HANDS_OPTIONS[selectedActionIndex] || LAY_ON_HANDS_OPTIONS[0];
-                    return (
-                        <span className="ddb-flyout-header-base">
-                            <span className="ddb-flyout-spell-title">Lay on Hands</span>
-                            <span className="ddb-flyout-base-meta">
-                                {" "}• <strong>{featureData.availablePoints} / {featureData.maxPoints} HP Pool</strong> available • {opt.name}: {opt.desc}
-                            </span>
-                        </span>
-                    );
-                }
-                case "metamagic": {
-                    const opt = METAMAGIC_OPTIONS[selectedActionIndex] || METAMAGIC_OPTIONS[0];
-                    return (
-                        <span className="ddb-flyout-header-base">
-                            <span className="ddb-flyout-spell-title">Metamagic</span>
-                            <span className="ddb-flyout-base-meta">
-                                {" "}• <strong>{featureData.availablePoints} / {featureData.maxPoints} SP</strong> available • {opt.name} ({opt.cost} SP): {opt.desc}
-                            </span>
-                        </span>
-                    );
-                }
-                case "maneuvers": {
-                    const opt = MANEUVER_OPTIONS[selectedActionIndex] || MANEUVER_OPTIONS[0];
-                    return (
-                        <span className="ddb-flyout-header-base">
-                            <span className="ddb-flyout-spell-title">Battle Master Maneuver</span>
-                            <span className="ddb-flyout-base-meta">
-                                {" "}• <strong>{featureData.availablePoints} / {featureData.maxPoints} Superiority Dice</strong> available • {opt.name}: {opt.desc}
+                                {" "}• <strong>{featureData.availablePoints} / {featureData.maxPoints} {featureData.resourceName}</strong> available{opt ? ` • ${opt.name}: ${opt.desc}` : ""}
                             </span>
                         </span>
                     );
@@ -313,7 +322,7 @@ export const BG3FlyoutBar: React.FC<BG3FlyoutBarProps> = ({
                 </span>
             </span>
         );
-    }, [featureData, fontMode, featureSlotLevel, selectedActionIndex, spell, isHex, hoveredAbility, hasChoices, hasUpcast, selectedLevel, currentDamageType]);
+    }, [featureData, fontMode, featureSlotLevel, selectedActionIndex, spell, isHex, hoveredAbility, hasChoices, hasUpcast, selectedLevel, currentDamageType, weaponData]);
 
     return (
         <div className="ddb-bg3-flyout-bar" onClick={e => e.stopPropagation()}>
@@ -387,10 +396,76 @@ export const BG3FlyoutBar: React.FC<BG3FlyoutBarProps> = ({
 
             {/* Bottom row: Tiles Row */}
             <div className="ddb-bg3-flyout-tiles-row">
-                {/* ------------------------------------------------------------- */}
-                {/* FEATURE FLYOUT (FONT OF MAGIC, HARNESS DIVINE POWER, ETC.)    */}
-                {/* ------------------------------------------------------------- */}
-                {featureData ? (
+                {weaponData ? (
+                    <>
+                        <div className="ddb-bg3-flyout-tile base-tile" title={weaponData.weapon.name}>
+                            {getWeaponIcon(weaponData.weapon.name, weaponData.weapon.type, 24)}
+                        </div>
+
+                        <div className="ddb-bg3-flyout-tile-divider" />
+
+                        {weaponData.resolvedRiders?.availableRiderChoice && (
+                            <>
+                                <div className="ddb-bg3-flyout-subchoices-group">
+                                    {weaponData.resolvedRiders.availableRiderChoice.choices.map((choice) => {
+                                        const meta = DAMAGE_TYPE_META[choice.toLowerCase()] || {
+                                            label: choice.toUpperCase(),
+                                            color: "#cbd5e1",
+                                            border: "#475569",
+                                            bg: "#1e293b",
+                                        };
+                                        const current = weaponData.selectedRiderChoice || weaponData.resolvedRiders?.availableRiderChoice?.currentChoice;
+                                        const isSelected = current === choice;
+                                        const riderChoice = weaponData.resolvedRiders?.availableRiderChoice;
+                                        const bonusStr = riderChoice && riderChoice.flatBonus > 0 ? `+${riderChoice.flatBonus}` : "";
+                                        const tooltip = `${riderChoice?.riderName}: +${riderChoice?.bonusDice}${bonusStr} ${meta.label} damage`;
+                                        const icon = getDamageTypeIcon(choice, 22);
+
+                                        return (
+                                            <button
+                                                key={choice}
+                                                type="button"
+                                                className={`ddb-bg3-flyout-tile choice-tile ${isSelected ? "selected" : ""}`}
+                                                style={{
+                                                    background: meta.bg,
+                                                    borderColor: isSelected ? "#ffffff" : meta.border,
+                                                    color: meta.color,
+                                                }}
+                                                onClick={() => weaponData.onSelectRiderChoice?.(choice)}
+                                                title={tooltip}
+                                                aria-label={tooltip}
+                                            >
+                                                {icon || <span style={{ fontSize: "11px", fontWeight: 800 }}>{meta.label.slice(0, 3)}</span>}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                <div className="ddb-bg3-flyout-tile-divider" />
+                            </>
+                        )}
+
+                        <div className="ddb-bg3-flyout-subchoices-group">
+                            <button
+                                type="button"
+                                className="ddb-bg3-flyout-tile mode-tile"
+                                onClick={() => weaponData.onAttackRoll?.(weaponData.weapon)}
+                                title={`Roll Attack (${weaponData.weapon.toHit >= 0 ? `+${weaponData.weapon.toHit}` : weaponData.weapon.toHit})`}
+                            >
+                                <IconDiceD6 size={12} />
+                                <span>To Hit</span>
+                            </button>
+                            <button
+                                type="button"
+                                className="ddb-bg3-flyout-tile mode-tile"
+                                onClick={() => weaponData.onDamageRoll?.(weaponData.weapon)}
+                                title="Roll Damage"
+                            >
+                                <IconFire size={12} />
+                                <span>Damage</span>
+                            </button>
+                        </div>
+                    </>
+                ) : featureData ? (
                     (() => {
                         if (featureData.kind === "font_of_magic") {
                             return (
@@ -523,14 +598,7 @@ export const BG3FlyoutBar: React.FC<BG3FlyoutBarProps> = ({
                             );
                         }
 
-                        // Generic Options List (Focus Points, Lay on Hands, Metamagic, Maneuvers, Cunning Strike, Tactical Mind, Divine Spark)
-                        const options = featureData.kind === "focus_points" ? FOCUS_POINT_OPTIONS :
-                            featureData.kind === "lay_on_hands" ? LAY_ON_HANDS_OPTIONS :
-                            featureData.kind === "metamagic" ? METAMAGIC_OPTIONS :
-                            featureData.kind === "cunning_strike" ? CUNNING_STRIKE_OPTIONS :
-                            featureData.kind === "tactical_mind" ? TACTICAL_MIND_OPTIONS :
-                            featureData.kind === "divine_spark" ? DIVINE_SPARK_OPTIONS :
-                            MANEUVER_OPTIONS;
+                        const options = featureData.options || [];
 
                         return (
                             <>
@@ -546,7 +614,13 @@ export const BG3FlyoutBar: React.FC<BG3FlyoutBarProps> = ({
                                 <div className="ddb-bg3-flyout-tile-divider" />
                                 <div className="ddb-bg3-flyout-subchoices-group">
                                     {options.map((opt) => {
-                                        const affordable = featureData.availablePoints >= opt.cost;
+                                        const cost = opt.cost ?? 0;
+                                        const desc = opt.desc || opt.description || "";
+                                        const actionType: "action" | "bonus" | "reaction" | "none" =
+                                            opt.actionType === "action" || opt.actionType === "bonus" || opt.actionType === "reaction"
+                                                ? opt.actionType
+                                                : "none";
+                                        const affordable = featureData.availablePoints >= cost;
                                         return (
                                             <button
                                                 key={opt.id}
@@ -554,10 +628,10 @@ export const BG3FlyoutBar: React.FC<BG3FlyoutBarProps> = ({
                                                 className={`ddb-bg3-flyout-tile mode-tile ${!affordable ? "exhausted" : ""}`}
                                                 onClick={() => {
                                                     if (!affordable) return;
-                                                    featureData.onSpendResourceAction?.(opt.name, opt.cost, opt.desc, opt.actionType);
+                                                    featureData.onSpendResourceAction?.(opt.name, cost, desc, actionType);
                                                     onClose();
                                                 }}
-                                                title={`${opt.name} (${opt.cost} ${featureData.resourceName})\n${opt.desc}\nClick to use`}
+                                                title={`${opt.name} (${cost} ${featureData.resourceName})\n${desc}\nClick to use`}
                                             >
                                                 <span>{opt.name}</span>
                                             </button>
@@ -806,7 +880,13 @@ export const BG3FlyoutBar: React.FC<BG3FlyoutBarProps> = ({
 
             {/* Footer hint: ESC / Right-Click to cancel aiming • Enter to Quick-Cast */}
             <div className="ddb-bg3-flyout-hint">
-                <span>Click map to cast • <kbd>ESC</kbd> / <kbd>Right-Click</kbd> to cancel • <kbd>Enter</kbd> to Quick-Cast</span>
+                <span>
+                    {weaponData ? (
+                        <>Click map to attack • <kbd>ESC</kbd> / <kbd>Right-Click</kbd> to cancel aiming</>
+                    ) : (
+                        <>Click map to cast • <kbd>ESC</kbd> / <kbd>Right-Click</kbd> to cancel • <kbd>Enter</kbd> to Quick-Cast</>
+                    )}
+                </span>
             </div>
         </div>
     );

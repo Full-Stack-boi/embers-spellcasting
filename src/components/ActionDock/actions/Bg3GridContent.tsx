@@ -23,6 +23,7 @@ interface Bg3GridContentProps {
     bonusActionFeatures: DDBFeatureAction[];
     reactionSpells: DockSpell[];
     reactionFeatures: DDBFeatureAction[];
+    otherFeatures?: DDBFeatureAction[];
     combatActions: CombatAction[];
     spells: DockSpell[];
     renderWeaponCard: (weapon: DDBWeaponAttack, index: number) => ReactNode;
@@ -46,6 +47,7 @@ export function Bg3GridContent({
     bonusActionFeatures,
     reactionSpells,
     reactionFeatures,
+    otherFeatures,
     combatActions,
     spells,
     renderWeaponCard,
@@ -96,7 +98,10 @@ export function Bg3GridContent({
             });
         }
         if (actionsFilter === "ALL" || actionsFilter === "OTHER") {
-            addSection("Other", items => combatActions.forEach(action => addUnique(items, `act:${action.name}`, () => renderCombatActionCard(action, cardIndex++))));
+            addSection("Other", items => {
+                otherFeatures?.forEach(feature => addUnique(items, `feat:${feature.name}`, () => renderFeatureCard(feature, cardIndex++)));
+                combatActions.forEach(action => addUnique(items, `act:${action.name}`, () => renderCombatActionCard(action, cardIndex++)));
+            });
         }
 
         if (sections.length === 0) {
