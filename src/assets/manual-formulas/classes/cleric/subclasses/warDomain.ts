@@ -46,6 +46,27 @@ export const WAR_DOMAIN_FORMULAS: Record<string, ManualActionFormula> = {
     source: "Player's Handbook (2024), Cleric: War Domain",
   },
 
+  warGodsBlessing: {
+    id: "embers:cleric:war:war-gods-blessing",
+    name: "War God's Blessing",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["cleric"],
+    subclass: "warDomain",
+    activationType: "special",
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Unfettered Warfare",
+        description:
+          "You can cast Shield of Faith and Spiritual Weapon without requiring Concentration (duration 1 minute each, only one un-concentrated spell at a time). In addition, you can use Guided Strike on an ally within 30 feet.",
+      },
+    ],
+    description:
+      "Cast key war domain spells without concentrating on them and bolster ally strikes.",
+    source: "Player's Handbook (2024), Cleric: War Domain",
+  },
+
   avatarOfBattle: {
     id: "embers:cleric:war:avatar-of-battle",
     name: "Avatar of Battle",

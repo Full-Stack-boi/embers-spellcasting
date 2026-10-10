@@ -48,6 +48,25 @@ export const CIRCLE_OF_THE_LAND_FORMULAS: Record<string, ManualActionFormula> =
       source: "Player's Handbook (2024), Druid: Circle of the Land",
     },
 
+    naturesWard: {
+      id: "embers:druid:land:natures-ward",
+      name: "Nature's Ward",
+      kind: "class_feature",
+      status: "verified",
+      classes: ["druid"],
+      subclass: "circleOfTheLand",
+      activationType: "special",
+      description: "You gain immunity to the Poisoned condition and resistance to Poison damage, plus resistance to your chosen land's damage type.",
+      source: "Player's Handbook (2024), Druid: Circle of the Land",
+      operations: [
+        {
+          type: "apply_effect",
+          name: "Poison Immunity & Elemental Resistance",
+          description: "Immune to Poison damage and the Poisoned condition. Resistance to damage type associated with your current Land type (Fire, Cold, Lightning, or Acid).",
+        },
+      ],
+    },
+
     naturesSanctuary: {
       id: "embers:druid:land:natures-sanctuary",
       name: "Nature's Sanctuary",

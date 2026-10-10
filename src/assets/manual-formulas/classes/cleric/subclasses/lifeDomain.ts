@@ -62,4 +62,25 @@ export const LIFE_DOMAIN_FORMULAS: Record<string, ManualActionFormula> = {
       "Heal yourself whenever providing life-saving restoration to allies.",
     source: "Player's Handbook (2024), Cleric: Life Domain",
   },
+
+  supremeHealing: {
+    id: "embers:cleric:life:supreme-healing",
+    name: "Supreme Healing",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["cleric"],
+    subclass: "lifeDomain",
+    activationType: "special",
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Maximized Healing",
+        description:
+          "Whenever you would normally roll one or more dice to restore Hit Points with a spell, you instead use the highest number possible for each die.",
+      },
+    ],
+    description:
+      "Level 17 Capstone: Maximize all healing dice rolled by your spells without rolling.",
+    source: "Player's Handbook (2024), Cleric: Life Domain",
+  },
 };

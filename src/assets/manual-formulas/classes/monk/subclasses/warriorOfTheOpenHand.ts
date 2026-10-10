@@ -12,12 +12,36 @@ export const WARRIOR_OF_THE_OPEN_HAND_FORMULAS: Record<
     classes: ["monk"],
     subclass: "warriorOfTheOpenHand",
     activationType: "special",
+    flyoutType: "options_grid",
     operations: [
       {
         type: "apply_effect",
         name: "Martial Manipulation",
         description:
           "Whenever you hit a creature with one of your Flurry of Blows attacks: Addle (no reactions until start of next turn), Push (push target 15 ft on failed STR save), or Topple (knock target Prone on failed DEX save).",
+      },
+    ],
+    options: [
+      {
+        id: "addle",
+        name: "Addle",
+        cost: 0,
+        desc: "Target cannot make Opportunity Attacks or take reactions until start of its next turn.",
+        actionType: "none",
+      },
+      {
+        id: "push",
+        name: "Push (15 ft)",
+        cost: 0,
+        desc: "Force target to make a Strength save or be pushed up to 15 feet away from you.",
+        actionType: "none",
+      },
+      {
+        id: "topple",
+        name: "Topple (Prone)",
+        cost: 0,
+        desc: "Force target to make a Dexterity save or have the Prone condition.",
+        actionType: "none",
       },
     ],
     description:
@@ -42,11 +66,32 @@ export const WARRIOR_OF_THE_OPEN_HAND_FORMULAS: Record<
         type: "apply_effect",
         name: "Somatic Restoration",
         description:
-          "Bonus Action heal yourself for a roll of your Martial Arts die + Wisdom modifier (Proficiency Bonus uses per Long Rest).",
+          "Bonus Action heal yourself for a roll of your Martial Arts die + Wisdom modifier (Wisdom modifier uses per Long Rest).",
       },
     ],
     description:
       "Channel internal reserves to rapidly knit wounds and purify body tissues.",
+    source: "Player's Handbook (2024), Monk: Warrior of the Open Hand",
+  },
+
+  fleetStep: {
+    id: "embers:monk:open-hand:fleet-step",
+    name: "Fleet Step",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["monk"],
+    subclass: "warriorOfTheOpenHand",
+    activationType: "special",
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Fluid Agility",
+        description:
+          "When you take a Bonus Action other than Step of the Wind, you can also use Step of the Wind as part of that same Bonus Action.",
+      },
+    ],
+    description:
+      "Seamlessly blend Step of the Wind into any Bonus Action you take.",
     source: "Player's Handbook (2024), Monk: Warrior of the Open Hand",
   },
 

@@ -65,4 +65,25 @@ export const WARRIOR_OF_THE_ELEMENTS_FORMULAS: Record<
       "Ride thermal updrafts and atmospheric currents with agile flight.",
     source: "Player's Handbook (2024), Monk: Warrior of the Elements",
   },
+
+  elementalEpitome: {
+    id: "embers:monk:elements:elemental-epitome",
+    name: "Elemental Epitome",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["monk"],
+    subclass: "warriorOfTheElements",
+    activationType: "special",
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Elemental Mastery Aura",
+        description:
+          "While Elemental Attunement is active: gain Resistance to your chosen damage type (Acid, Cold, Fire, Lightning, or Thunder); once per turn deal extra damage equal to your Martial Arts die on hit; and reaction reduce incoming elemental damage.",
+      },
+    ],
+    description:
+      "Level 17 Capstone: Attain elemental apotheosis with permanent resistance and bonus damage.",
+    source: "Player's Handbook (2024), Monk: Warrior of the Elements",
+  },
 };

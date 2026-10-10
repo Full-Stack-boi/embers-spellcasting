@@ -63,4 +63,23 @@ export const COLLEGE_OF_DANCE_FORMULAS: Record<string, ManualActionFormula> = {
       "Coordinate opening positioning to ensure your party strikes first.",
     source: "Player's Handbook (2024), Bard: College of Dance",
   },
+
+  leadingEvasion: {
+    id: "embers:bard:dance:leading-evasion",
+    name: "Leading Evasion",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["bard"],
+    subclass: "collegeOfDance",
+    activationType: "special",
+    description: "When you succeed on a Dexterity saving throw to take half damage, you take no damage, and half damage on failure. Allies within 5 feet share this benefit.",
+    source: "Player's Handbook (2024), Bard: College of Dance",
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Synchronized Evasion",
+        description: "Take no damage on successful Dex saves and half damage on failures; creatures within 5 feet share this benefit while you are not Incapacitated.",
+      },
+    ],
+  },
 };

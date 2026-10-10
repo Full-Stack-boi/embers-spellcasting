@@ -50,6 +50,26 @@ const featureFallbacks: FeatureFallback[] = [
         }
     },
 
+    // ── Barbarian: Path of the Zealot ─────────────────────────────────────────
+    {
+        matches: character => character.classes.some(c => c.name.toLowerCase().includes("barbarian") && (c.subclass?.toLowerCase().includes("zealot") ?? false)) || hasSubclassOrAction(character, "divine fury"),
+        findExisting: features => features.find(f => f.name.toLowerCase().includes("divine fury")),
+        create: character => {
+            const barbarianLevel = character.classes
+                .filter(c => c.name.toLowerCase().includes("barbarian"))
+                .reduce((total, c) => total + c.level, 0) || character.level || 1;
+            const bonus = Math.floor(barbarianLevel / 2);
+            return {
+                id: "class_feature_divine_fury",
+                name: "Divine Fury",
+                source: "class",
+                activationType: "special",
+                description: `You can channel divine power into your strikes. On each of your turns while your Rage is active, the first creature you hit with a weapon or an Unarmed Strike takes extra damage equal to 1d6 + ${bonus} (half your Barbarian level). The extra damage is Necrotic or Radiant; you choose the type each time you deal the damage.`,
+                rangeText: "Self",
+            };
+        }
+    },
+
     // ── VSSPP2 Subclass Features ────────────────────────────────────────────────
     {
         matches: character => hasSubclassOrAction(character, "masks"),
@@ -186,6 +206,42 @@ const featureFallbacks: FeatureFallback[] = [
             source: "class",
             activationType: "bonus",
             description: `On weapon or unarmed hit, spend 2 Sorcery Points as a Bonus Action for Blinding Attack (+2d8, DC ${character.spellSaveDC} CON save vs Blinded), Ruinous Blow (+2d8, −3 AC), or Wounding Strike (+2d8, 1d8/turn bleed).`,
+            rangeText: "Self"
+        })
+    },
+    {
+        matches: character => hasSubclassOrAction(character, "heroic"),
+        findExisting: features => features.find(f => f.name.toLowerCase().includes("innate bladework")),
+        create: () => ({
+            id: "embers:sorcerer:heroic-sorcery:innate-bladework",
+            name: "Heroic Sorcery: Innate Bladework",
+            source: "class",
+            activationType: "special",
+            description: "While Innate Sorcery is active, use Charisma instead of Strength or Dexterity for attack and damage rolls with proficient weapons. Gain Martial weapons, Light/Medium armor, and Shields training.",
+            rangeText: "Self"
+        })
+    },
+    {
+        matches: character => hasSubclassOrAction(character, "heroic"),
+        findExisting: features => features.find(f => f.name.toLowerCase().includes("sorcerous kindling")),
+        create: () => ({
+            id: "embers:sorcerer:heroic-sorcery:sorcerous-kindling",
+            name: "Heroic Sorcery: Sorcerous Kindling",
+            source: "class",
+            activationType: "special",
+            description: "Once per turn when you score a critical hit with a weapon attack or reduce a hostile creature to 0 HP with a weapon attack, regain 2 Sorcery Points.",
+            rangeText: "Self"
+        })
+    },
+    {
+        matches: character => hasSubclassOrAction(character, "heroic"),
+        findExisting: features => features.find(f => f.name.toLowerCase().includes("heroic haste")),
+        create: () => ({
+            id: "embers:sorcerer:heroic-sorcery:heroic-haste",
+            name: "Heroic Sorcery: Heroic Haste",
+            source: "class",
+            activationType: "special",
+            description: "Whenever you cast Haste targeting yourself, the spell does not require Concentration, and you suffer no lethargy penalty when it ends.",
             rangeText: "Self"
         })
     },

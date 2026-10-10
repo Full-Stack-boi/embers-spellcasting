@@ -45,6 +45,25 @@ export const CELESTIAL_PATRON_FORMULAS: Record<string, ManualActionFormula> = {
     source: "Player's Handbook (2024), Warlock: Celestial Patron",
   },
 
+  celestialResilience: {
+    id: "embers:warlock:celestial:celestial-resilience",
+    name: "Celestial Resilience",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["warlock"],
+    subclass: "celestialPatron",
+    activationType: "special",
+    description: "Gain Temporary HP equal to your Warlock level + Charisma modifier whenever you finish a Short or Long Rest, and up to five allies gain half your Warlock level + Charisma modifier.",
+    source: "Player's Handbook (2024), Warlock: Celestial Patron",
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Luminous Aura of Vitality",
+        description: "Gain Warlock level + CHA mod Temp HP on rest; grant half level + CHA mod Temp HP to up to 5 allies.",
+      },
+    ],
+  },
+
   searingVengeance: {
     id: "embers:warlock:celestial:searing-vengeance",
     name: "Searing Vengeance",

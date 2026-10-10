@@ -43,6 +43,68 @@ export const ABERRANT_SORCERY_FORMULAS: Record<string, ManualActionFormula> = {
     source: "Player's Handbook (2024), Sorcerer: Aberrant Sorcery",
   },
 
+  psychicDefenses: {
+    id: "embers:sorcerer:aberrant:psychic-defenses",
+    name: "Psychic Defenses",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["sorcerer"],
+    subclass: "aberrantSorcery",
+    activationType: "special",
+    description: "You have Resistance to Psychic damage, and you have Advantage on saving throws against being Charmed or Frightened.",
+    source: "Player's Handbook (2024), Sorcerer: Aberrant Sorcery",
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Alien Mind Ward",
+        description: "Resistance to Psychic damage; Advantage on saves against Charmed and Frightened.",
+      },
+    ],
+  },
+
+  revelationInFlesh: {
+    id: "embers:sorcerer:aberrant:revelation-in-flesh",
+    name: "Revelation in Flesh",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["sorcerer"],
+    subclass: "aberrantSorcery",
+    activationType: "bonus",
+    description: "Spend 1 or more Sorcery Points as a Bonus Action to transform your body for 10 minutes, choosing adaptations: flying, swimming/breathing, squeezing/escape, or seeing invisible creatures.",
+    source: "Player's Handbook (2024), Sorcerer: Aberrant Sorcery",
+    operations: [],
+    options: [
+      {
+        id: "see_invisible",
+        name: "See the Invisible",
+        cost: 1,
+        desc: "See invisible creatures within 60 feet that aren't behind total cover",
+        actionType: "bonus",
+      },
+      {
+        id: "flying",
+        name: "Flying",
+        cost: 1,
+        desc: "Gain a Fly speed equal to your Speed and can hover",
+        actionType: "bonus",
+      },
+      {
+        id: "swimming",
+        name: "Swimming",
+        cost: 1,
+        desc: "Gain a Swim speed twice your Speed and breathe underwater",
+        actionType: "bonus",
+      },
+      {
+        id: "gaseous",
+        name: "Squeeze & Escape",
+        cost: 1,
+        desc: "Move through spaces as narrow as 1 inch without squeezing; spend 5 ft of movement to escape nonmagical restraints or grapples",
+        actionType: "bonus",
+      },
+    ],
+  },
+
   warpingImplosion: {
     id: "embers:sorcerer:aberrant:warping-implosion",
     name: "Warping Implosion",

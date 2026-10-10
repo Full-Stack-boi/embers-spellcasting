@@ -68,4 +68,27 @@ export const COLLEGE_OF_GLAMOUR_FORMULAS: Record<string, ManualActionFormula> =
         "Assume unearthly sovereign grandeur that forces foes to obey your every command.",
       source: "Player's Handbook (2024), Bard: College of Glamour",
     },
+
+    unbreakableMajesty: {
+      id: "embers:bard:glamour:unbreakable-majesty",
+      name: "Unbreakable Majesty",
+      kind: "class_feature",
+      status: "verified",
+      classes: ["bard"],
+      subclass: "collegeOfGlamour",
+      activationType: "bonus",
+      resource: {
+        name: "Unbreakable Majesty",
+        resetType: "Long Rest",
+      },
+      operations: [
+        {
+          type: "apply_effect",
+          name: "Aura of Inviolable Grandeur",
+          description: "For 1 minute, whenever any creature hits you with an attack roll, it must make a Charisma save against your spell save DC or the attack misses. Can also be used by expending 1 Bardic Inspiration.",
+        },
+      ],
+      description: "Assume a terrifyingly majestic presence that turns enemy strikes aside.",
+      source: "Player's Handbook (2024), Bard: College of Glamour",
+    },
   };

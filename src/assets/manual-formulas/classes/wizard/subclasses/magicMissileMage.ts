@@ -70,6 +70,7 @@ export const MAGIC_MISSILE_MAGE_FORMULAS: Record<string, ManualActionFormula> =
       classes: ["wizard"],
       subclass: "magicMissileMage",
       activationType: "special",
+      options: VERSATILE_MISSILE_OPTIONS,
       operations: [
         {
           type: "apply_effect",

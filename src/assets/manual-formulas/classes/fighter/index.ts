@@ -1,14 +1,36 @@
-import type { ManualActionFormula } from "../../../../types/manualFormula";
-import { MANEUVER_OPTIONS } from "../../mechanics/classMechanicRegistry";
+import type {
+  ManualActionFormula,
+  FeatureActionOption,
+} from "../../../../types/manualFormula";
 import { ARCANE_ARCHER_FORMULAS } from "./subclasses/arcaneArcher";
 import { BANNERET_FORMULAS } from "./subclasses/banneret";
-import { BATTLE_MASTER_FORMULAS } from "./subclasses/battleMaster";
+import {
+  BATTLE_MASTER_FORMULAS,
+  MANEUVER_OPTIONS,
+} from "./subclasses/battleMaster";
 import { BULWARK_WARRIOR_FORMULAS } from "./subclasses/bulwarkWarrior";
 import { CHAMPION_FORMULAS } from "./subclasses/champion";
 import { ELDRITCH_KNIGHT_FORMULAS } from "./subclasses/eldritchKnight";
 import { LIVING_CRUCIBLE_FORMULAS } from "./subclasses/livingCrucible";
 import { NIGHTWATCHER_FORMULAS } from "./subclasses/nightwatcher";
 import { PSI_WARRIOR_FORMULAS } from "./subclasses/psiWarrior";
+
+const TACTICAL_MIND_OPTIONS: FeatureActionOption[] = [
+  {
+    id: "tactical_mind",
+    name: "Tactical Mind",
+    cost: 1,
+    desc: "On failed d20 test: expend 1 Second Wind use to add 1d10 to the result (not expended if still failing)",
+    actionType: "none",
+  },
+  {
+    id: "tactical_shift",
+    name: "Tactical Shift",
+    cost: 0,
+    desc: "When activating Second Wind as a Bonus Action, move up to half speed without provoking Opportunity Attacks",
+    actionType: "bonus",
+  },
+];
 
 export const FIGHTER_CLASS_FORMULAS: Record<string, ManualActionFormula> = {
   secondWind: {
@@ -18,9 +40,19 @@ export const FIGHTER_CLASS_FORMULAS: Record<string, ManualActionFormula> = {
     status: "verified",
     classes: ["fighter"],
     activationType: "bonus",
+    flyoutType: "options_grid",
     resource: {
       name: "Second Wind",
       resetType: "Short or Long Rest",
+      scaling: {
+        type: "level_table",
+        classId: "fighter",
+        table: [
+          { minLevel: 1, value: 2 },
+          { minLevel: 4, value: 3 },
+          { minLevel: 10, value: 4 },
+        ],
+      },
     },
     operations: [
       {
@@ -49,6 +81,14 @@ export const FIGHTER_CLASS_FORMULAS: Record<string, ManualActionFormula> = {
     resource: {
       name: "Action Surge",
       resetType: "Short or Long Rest",
+      scaling: {
+        type: "level_table",
+        classId: "fighter",
+        table: [
+          { minLevel: 2, value: 1 },
+          { minLevel: 17, value: 2 },
+        ],
+      },
     },
     operations: [
       {
@@ -74,6 +114,8 @@ export const FIGHTER_CLASS_FORMULAS: Record<string, ManualActionFormula> = {
     status: "verified",
     classes: ["fighter"],
     activationType: "special",
+    flyoutType: "options_grid",
+    options: TACTICAL_MIND_OPTIONS,
     operations: [
       {
         type: "apply_effect",
@@ -115,6 +157,15 @@ export const FIGHTER_CLASS_FORMULAS: Record<string, ManualActionFormula> = {
     resource: {
       name: "Indomitable",
       resetType: "Long Rest",
+      scaling: {
+        type: "level_table",
+        classId: "fighter",
+        table: [
+          { minLevel: 9, value: 1 },
+          { minLevel: 13, value: 2 },
+          { minLevel: 17, value: 3 },
+        ],
+      },
     },
     operations: [
       {
@@ -127,6 +178,106 @@ export const FIGHTER_CLASS_FORMULAS: Record<string, ManualActionFormula> = {
     description:
       "Reroll failed saves with an overwhelming bonus equal to your Fighter level.",
     source: "Player's Handbook (2024), Fighter: Indomitable",
+  },
+
+  weaponMastery: {
+    id: "embers:fighter:weapon-mastery",
+    name: "Weapon Mastery",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["fighter"],
+    activationType: "special",
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Mastery Properties",
+        description:
+          "Use the mastery properties of 3 weapons (increases to 4 at level 4, 5 at level 10, and 6 at level 16).",
+      },
+    ],
+    description:
+      "Master the tactical properties of your chosen weapons with peerless skill.",
+    source: "Player's Handbook (2024), Fighter: Weapon Mastery",
+  },
+
+  extraAttack: {
+    id: "embers:fighter:extra-attack",
+    name: "Extra Attack",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["fighter"],
+    activationType: "special",
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Multiattack Strike",
+        description:
+          "You can attack twice instead of once whenever you take the Attack action on your turn.",
+      },
+    ],
+    description:
+      "Attack twice whenever you take the Attack action on your turn.",
+    source: "Player's Handbook (2024), Fighter: Extra Attack",
+  },
+
+  twoExtraAttacks: {
+    id: "embers:fighter:two-extra-attacks",
+    name: "Two Extra Attacks",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["fighter"],
+    activationType: "special",
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Triple Attack",
+        description:
+          "You can attack three times instead of once whenever you take the Attack action on your turn.",
+      },
+    ],
+    description:
+      "Attack three times whenever you take the Attack action on your turn.",
+    source: "Player's Handbook (2024), Fighter: Extra Attack (2)",
+  },
+
+  studiedAttacks: {
+    id: "embers:fighter:studied-attacks",
+    name: "Studied Attacks",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["fighter"],
+    activationType: "special",
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Tactical Read",
+        description:
+          "If you make an attack roll against a creature and miss, you have Advantage on your next attack roll against that creature before the end of your next turn.",
+      },
+    ],
+    description:
+      "Study opponent defenses on a miss to gain Advantage on your next strike.",
+    source: "Player's Handbook (2024), Fighter: Studied Attacks",
+  },
+
+  threeExtraAttacks: {
+    id: "embers:fighter:three-extra-attacks",
+    name: "Three Extra Attacks",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["fighter"],
+    activationType: "special",
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Quadruple Attack",
+        description:
+          "You can attack four times instead of once whenever you take the Attack action on your turn.",
+      },
+    ],
+    description:
+      "Level 20 Capstone: Attack four times whenever you take the Attack action on your turn.",
+    source: "Player's Handbook (2024), Fighter: Extra Attack (3)",
   },
   ...ARCANE_ARCHER_FORMULAS,
   ...BANNERET_FORMULAS,
@@ -141,6 +292,7 @@ export const FIGHTER_CLASS_FORMULAS: Record<string, ManualActionFormula> = {
 
 export {
   MANEUVER_OPTIONS,
+  TACTICAL_MIND_OPTIONS,
   ARCANE_ARCHER_FORMULAS,
   BANNERET_FORMULAS,
   BATTLE_MASTER_FORMULAS,

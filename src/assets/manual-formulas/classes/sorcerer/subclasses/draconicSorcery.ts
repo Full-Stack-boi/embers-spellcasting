@@ -62,4 +62,27 @@ export const DRACONIC_SORCERY_FORMULAS: Record<string, ManualActionFormula> = {
     description: "Sprout draconic wings to take to the skies at will.",
     source: "Player's Handbook (2024), Sorcerer: Draconic Sorcery",
   },
+
+  dragonCompanion: {
+    id: "embers:sorcerer:draconic:dragon-companion",
+    name: "Dragon Companion",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["sorcerer"],
+    subclass: "draconicSorcery",
+    activationType: "action",
+    resource: {
+      name: "Dragon Companion",
+      resetType: "Long Rest",
+    },
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Summon Dragon",
+        description: "Cast Summon Dragon without material components (1/Long Rest, or spend 5 Sorcery Points).",
+      },
+    ],
+    description: "Summon an allied draconic spirit to fight alongside you.",
+    source: "Player's Handbook (2024), Sorcerer: Draconic Sorcery",
+  },
 };

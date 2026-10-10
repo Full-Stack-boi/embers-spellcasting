@@ -47,6 +47,25 @@ export const FIEND_PATRON_FORMULAS: Record<string, ManualActionFormula> = {
     source: "Player's Handbook (2024), Warlock: Fiend Patron",
   },
 
+  fiendishResilience: {
+    id: "embers:warlock:fiend:fiendish-resilience",
+    name: "Fiendish Resilience",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["warlock"],
+    subclass: "fiendPatron",
+    activationType: "special",
+    description: "Choose one damage type whenever you finish a Short or Long Rest: you gain Resistance to that damage type until you choose a different one.",
+    source: "Player's Handbook (2024), Warlock: Fiend Patron",
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Infernal Resistance",
+        description: "Choose one damage type on Short or Long Rest to gain Resistance to.",
+      },
+    ],
+  },
+
   hurlThroughHell: {
     id: "embers:warlock:fiend:hurl-through-hell",
     name: "Hurl Through Hell",

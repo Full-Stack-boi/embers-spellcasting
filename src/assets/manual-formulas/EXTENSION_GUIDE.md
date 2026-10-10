@@ -138,8 +138,11 @@ Include each entry in `ALL_BACKGROUNDS`.
 ### Step 6: Class & Subclass Mechanics
 When adding class mechanics:
 1. Place subclass features under `src/assets/manual-formulas/classes/<class>/subclasses/<subclass>.ts`.
-2. Register subclass action formulas and resources in `src/assets/manual-formulas/mechanics/classMechanicRegistry.ts`.
-3. Ensure resource resets (Short Rest vs. Long Rest) and level-based scaling formulas are explicitly defined.
+2. **Never write just text in `apply_effect` when real mechanics exist**: Always specify machine-readable fields (`weaponRider`, `options`, `resource`).
+3. For comprehensive details, code schemas, and implementation examples, see:
+   👉 **`src/assets/manual-formulas/CLASS_MECHANICS_GUIDE.md`**
+4. Register subclass action formulas and resources in `src/assets/manual-formulas/mechanics/classMechanicRegistry.ts`.
+5. Ensure resource resets (Short Rest vs. Long Rest) and level-based scaling formulas are explicitly defined.
 
 ---
 

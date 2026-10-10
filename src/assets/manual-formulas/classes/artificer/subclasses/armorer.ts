@@ -1,4 +1,24 @@
-import type { ManualActionFormula } from "../../../../../types/manualFormula";
+import type {
+  ManualActionFormula,
+  FeatureActionOption,
+} from "../../../../../types/manualFormula";
+
+export const ARMOR_MODEL_OPTIONS: FeatureActionOption[] = [
+  {
+    id: "guardian",
+    name: "Guardian Model",
+    cost: 0,
+    desc: "Thunder Gauntlets (disadvantage to attack others) & Defensive Field temp HP",
+    actionType: "bonus",
+  },
+  {
+    id: "infiltrator",
+    name: "Infiltrator Model",
+    cost: 0,
+    desc: "Lightning Launcher (+1d6 lightning first hit) & Powered Steps (+5 ft speed, advantage on stealth)",
+    actionType: "none",
+  },
+];
 
 export const ARMORER_FORMULAS: Record<string, ManualActionFormula> = {
   toolsOfTheTrade: {
@@ -72,9 +92,21 @@ export const ARMORER_FORMULAS: Record<string, ManualActionFormula> = {
     classes: ["artificer"],
     subclass: "armorer",
     activationType: "bonus",
+    options: ARMOR_MODEL_OPTIONS,
     resource: {
       name: "Armor Model",
       resetType: "Short or Long Rest",
+    },
+    weaponRider: {
+      type: "weapon_damage_rider",
+      id: "embers:artificer:armorer:lightning-launcher:rider",
+      name: "Lightning Launcher",
+      classId: "artificer",
+      subclassId: "armorer",
+      minLevel: 3,
+      dice: "1d6",
+      damageType: "lightning",
+      frequency: "first_hit_per_turn",
     },
     operations: [
       {

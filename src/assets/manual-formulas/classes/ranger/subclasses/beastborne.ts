@@ -50,6 +50,22 @@ export const BEASTBORNE_FORMULAS: Record<string, ManualActionFormula> = {
     classes: ["ranger"],
     subclass: "beastborne",
     activationType: "bonus",
+    options: BESTIAL_ASPECT_LEVELS,
+    weaponRider: {
+      type: "weapon_damage_rider",
+      id: "embers:ranger:beastborne:carnage:rider",
+      name: "Bestial Aspect: Carnage",
+      classId: "ranger",
+      subclassId: "beastborne",
+      minLevel: 3,
+      flat: {
+        byClassLevel: [
+          { minLevel: 3, value: 2 },
+          { minLevel: 11, value: 3 },
+        ],
+      },
+      frequency: "every_hit",
+    },
     resource: {
       name: "Bestial Aspect Level",
       resetType: "Combat Momentum",

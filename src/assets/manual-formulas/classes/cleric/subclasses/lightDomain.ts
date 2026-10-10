@@ -47,6 +47,27 @@ export const LIGHT_DOMAIN_FORMULAS: Record<string, ManualActionFormula> = {
     source: "Player's Handbook (2024), Cleric: Light Domain",
   },
 
+  improvedWardingFlare: {
+    id: "embers:cleric:light:improved-warding-flare",
+    name: "Improved Warding Flare",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["cleric"],
+    subclass: "lightDomain",
+    activationType: "special",
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Luminescent Ward",
+        description:
+          "You can use Warding Flare to protect allies within 30 feet. In addition, whenever you use Warding Flare, you grant the target of the attack Temporary Hit Points equal to 2d6 + your Wisdom modifier.",
+      },
+    ],
+    description:
+      "Empower your Warding Flare to shield allies and grant radiant temporary hit points.",
+    source: "Player's Handbook (2024), Cleric: Light Domain",
+  },
+
   coronaOfLight: {
     id: "embers:cleric:light:corona-of-light",
     name: "Corona of Light",

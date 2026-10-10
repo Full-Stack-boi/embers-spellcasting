@@ -1,0 +1,39 @@
+import { createCdpClient } from "./queryDdb.mjs";
+
+async function main() {
+  const client = await createCdpClient();
+  const res = await client.send("Target.getTargets");
+  const target = res.targetInfos.find(t => t.url.includes("/classes"));
+  if (!target) {
+    console.log("No /classes tab found");
+    client.close();
+    process.exit(1);
+  }
+  const session = await client.send("Target.attachToTarget", {
+    targetId: target.targetId,
+    flatten: true,
+  });
+
+  const evalRes = await client.send(
+    "Runtime.evaluate",
+    {
+      expression: `(() => {
+        const links = Array.from(document.querySelectorAll('a'))
+          .filter(a => a.href && a.href.includes('/classes/'))
+          .map(a => ({ text: a.textContent.trim().replace(/\\s+/g, ' '), href: a.href }));
+        return Array.from(new Set(links.map(l => l.text + ' -> ' + l.href)));
+      })()`,
+      returnByValue: true,
+    },
+    session.sessionId
+  );
+
+  console.log("Found class links:\n" + evalRes?.result?.value?.join("\n"));
+  client.close();
+  process.exit(0);
+}
+
+main().catch((err) => {
+  console.error("Error:", err);
+  process.exit(1);
+});

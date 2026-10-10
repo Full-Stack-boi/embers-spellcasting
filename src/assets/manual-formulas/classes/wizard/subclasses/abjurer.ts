@@ -63,4 +63,23 @@ export const ABJURER_FORMULAS: Record<string, ManualActionFormula> = {
       "Unravel hostile spells with effortless, clinical counter-magic mastery.",
     source: "Player's Handbook (2024), Wizard: Abjurer",
   },
+
+  spellResistance: {
+    id: "embers:wizard:abjurer:spell-resistance",
+    name: "Spell Resistance",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["wizard"],
+    subclass: "abjurer",
+    activationType: "special",
+    description: "You have Advantage on saving throws against spells, and Resistance against damage dealt by spells.",
+    source: "Player's Handbook (2024), Wizard: Abjurer",
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Abjuration Immunity Ward",
+        description: "Advantage on saving throws against spells; Resistance against the damage of spells.",
+      },
+    ],
+  },
 };

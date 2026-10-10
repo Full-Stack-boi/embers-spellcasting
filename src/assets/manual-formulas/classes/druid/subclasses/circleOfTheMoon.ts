@@ -23,6 +23,24 @@ export const CIRCLE_OF_THE_MOON_FORMULAS: Record<string, ManualActionFormula> =
       source: "Player's Handbook (2024), Druid: Circle of the Moon",
     },
 
+    improvedCircleForms: {
+      id: "embers:druid:moon:improved-circle-forms",
+      name: "Improved Circle Forms",
+      kind: "class_feature",
+      status: "verified",
+      classes: ["druid"],
+      subclass: "circleOfTheMoon",
+      activationType: "special",
+      description: "While in a beast shape from Wild Shape, you add your Wisdom modifier to the damage rolls of your beast attacks.",
+      source: "Player's Handbook (2024), Druid: Circle of the Moon",
+      operations: [],
+      weaponDamageRider: {
+        damageFormula: "WIS",
+        damageType: "radiant",
+        condition: "While in Wild Shape beast form",
+      },
+    },
+
     moonlightStep: {
       id: "embers:druid:moon:moonlight-step",
       name: "Moonlight Step",
@@ -46,5 +64,23 @@ export const CIRCLE_OF_THE_MOON_FORMULAS: Record<string, ManualActionFormula> =
       description:
         "Fade into moonbeams and blink across the battlefield with lethal momentum.",
       source: "Player's Handbook (2024), Druid: Circle of the Moon",
+    },
+
+    lunarForm: {
+      id: "embers:druid:moon:lunar-form",
+      name: "Lunar Form",
+      kind: "class_feature",
+      status: "verified",
+      classes: ["druid"],
+      subclass: "circleOfTheMoon",
+      activationType: "special",
+      description: "When using Moonlight Step, you can teleport a willing ally with you. In addition, once per turn while in Wild Shape, you can deal an extra 2d10 Radiant damage on a hit.",
+      source: "Player's Handbook (2024), Druid: Circle of the Moon",
+      operations: [],
+      weaponDamageRider: {
+        damageFormula: "2d10",
+        damageType: "radiant",
+        condition: "Once per turn while in Wild Shape",
+      },
     },
   };

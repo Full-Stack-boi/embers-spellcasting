@@ -78,6 +78,7 @@ export const COLLEGE_OF_MASKS_FORMULAS: Record<string, ManualActionFormula> = {
     classes: ["bard"],
     subclass: "collegeOfMasks",
     activationType: "bonus",
+    options: PERSONA_MASK_OPTIONS,
     resource: {
       name: "Bardic Inspiration",
       resetType: "Short or Long Rest",

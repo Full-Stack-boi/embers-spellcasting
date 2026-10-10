@@ -100,6 +100,9 @@ export {
   BATTLE_MASTER_FORMULAS,
   FOCUS_POINT_OPTIONS,
   LAY_ON_HANDS_OPTIONS,
+  TACTICAL_MIND_OPTIONS,
+  CUNNING_STRIKE_OPTIONS,
+  DIVINE_SPARK_OPTIONS,
   MAGIC_MISSILE_MAGE_FORMULAS,
   VERSATILE_MISSILE_OPTIONS,
   DRAGON_DOMAIN_FORMULAS,
@@ -110,18 +113,16 @@ export {
   BEASTBORNE_FORMULAS,
   BESTIAL_ASPECT_LEVELS,
   PISTOLERO_FORMULAS,
+  findMatchingActionFormula,
 } from "./classes";
 export {
   getFeatureFlyoutKind,
-  computeClassFeatureResource,
-  CUNNING_STRIKE_OPTIONS,
-  TACTICAL_MIND_OPTIONS,
-  DIVINE_SPARK_OPTIONS,
-} from "./mechanics/classMechanicRegistry";
+  resolveFeatureResource,
+} from "../../services/classResourceService";
 export type {
   FeatureFlyoutKind,
-  FeatureResourceCalculation,
-} from "./mechanics/classMechanicRegistry";
+  ResolvedFeatureResource,
+} from "../../services/classResourceService";
 export {
   ALL_MANUAL_FEAT_FORMULAS,
   PHB_2024_FEAT_FORMULAS,

@@ -47,6 +47,48 @@ export const GLOOM_STALKER_FORMULAS: Record<string, ManualActionFormula> = {
     source: "Player's Handbook (2024), Ranger: Gloom Stalker",
   },
 
+  ironMind: {
+    id: "embers:ranger:gloom-stalker:iron-mind",
+    name: "Iron Mind",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["ranger"],
+    subclass: "gloomStalker",
+    activationType: "special",
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Mental Discipline",
+        description:
+          "You gain proficiency in Wisdom saving throws (or Intelligence/Charisma if you already have Wisdom proficiency).",
+      },
+    ],
+    description:
+      "Hone mental iron discipline to resist supernatural enchantments and fear.",
+    source: "Player's Handbook (2024), Ranger: Gloom Stalker",
+  },
+
+  stalkersFlurry: {
+    id: "embers:ranger:gloom-stalker:stalkers-flurry",
+    name: "Stalker's Flurry",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["ranger"],
+    subclass: "gloomStalker",
+    activationType: "special",
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Chained Ambush Shock",
+        description:
+          "The extra damage of your Dread Ambusher increases from 2d6 to 2d8. In addition, you can cause a second creature within 5 feet of the target to also take the extra damage and be subject to the Frightened effect.",
+      },
+    ],
+    description:
+      "Amplify your dread ambusher strikes into a cascading flurry that shocks multiple enemies.",
+    source: "Player's Handbook (2024), Ranger: Gloom Stalker",
+  },
+
   shadowyDodge: {
     id: "embers:ranger:gloom-stalker:shadowy-dodge",
     name: "Shadowy Dodge",
@@ -58,12 +100,12 @@ export const GLOOM_STALKER_FORMULAS: Record<string, ManualActionFormula> = {
     operations: [
       {
         type: "apply_effect",
-        name: "Gloom Evasion",
+        name: "Gloom Evasion and Jaunt",
         description:
-          "Reaction when a creature attacks you without Advantage: impose Disadvantage on the attack roll.",
+          "Reaction when a creature attacks you without Advantage: impose Disadvantage on the attack roll, and teleport up to 30 feet to an unoccupied space you can see.",
       },
     ],
-    description: "Disrupt an enemy's aim by fading momentarily into gloom.",
+    description: "Disrupt an enemy's aim by fading into gloom and teleporting up to 30 feet.",
     source: "Player's Handbook (2024), Ranger: Gloom Stalker",
   },
 };

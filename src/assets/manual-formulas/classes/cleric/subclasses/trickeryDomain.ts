@@ -61,4 +61,25 @@ export const TRICKERY_DOMAIN_FORMULAS: Record<string, ManualActionFormula> = {
     description: "Swap places with your duplicate in the blink of an eye.",
     source: "Player's Handbook (2024), Cleric: Trickery Domain",
   },
+
+  improvedDuplicity: {
+    id: "embers:cleric:trickery:improved-duplicity",
+    name: "Improved Duplicity",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["cleric"],
+    subclass: "trickeryDomain",
+    activationType: "special",
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Supreme Illusion",
+        description:
+          "Your illusory duplicate now grants Advantage on attack rolls to you and your allies within 5 feet of it. In addition, when you cast a spell that restores Hit Points, you can cause the duplicate to heal a creature near it as well.",
+      },
+    ],
+    description:
+      "Level 17 Capstone: Empower your illusory duplicate to grant party-wide advantage and mirror spells.",
+    source: "Player's Handbook (2024), Cleric: Trickery Domain",
+  },
 };

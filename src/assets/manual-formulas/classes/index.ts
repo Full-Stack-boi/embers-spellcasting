@@ -6,6 +6,8 @@ import {
   ARTILLERIST_FORMULAS,
   BATTLE_SMITH_FORMULAS,
   CARTOGRAPHER_FORMULAS,
+  INFUSION_OPTIONS,
+  ARMOR_MODEL_OPTIONS,
 } from "./artificer";
 import {
   BARBARIAN_CLASS_FORMULAS,
@@ -32,6 +34,7 @@ import {
 } from "./bard";
 import {
   CLERIC_CLASS_FORMULAS,
+  DIVINE_SPARK_OPTIONS,
   ARCANA_DOMAIN_FORMULAS,
   DRAGON_DOMAIN_FORMULAS,
   ELDRITCH_DOMAIN_FORMULAS,
@@ -58,6 +61,7 @@ import {
 import {
   FIGHTER_CLASS_FORMULAS,
   MANEUVER_OPTIONS,
+  TACTICAL_MIND_OPTIONS,
   ARCANE_ARCHER_FORMULAS,
   BANNERET_FORMULAS,
   BATTLE_MASTER_FORMULAS,
@@ -196,6 +200,15 @@ export const ALL_MANUAL_ACTION_FORMULAS: Record<string, ManualActionFormula> =
       return all;
     }, {});
 
+export function findMatchingActionFormula(featureName: string): ManualActionFormula | undefined {
+  if (!featureName) return undefined;
+  const norm = featureName.toLowerCase().trim();
+  return Object.values(ALL_MANUAL_ACTION_FORMULAS).find((f) => {
+    const fName = f.name.toLowerCase().trim();
+    return fName === norm || norm.includes(fName) || fName.includes(norm);
+  });
+}
+
 export {
   ARTIFICER_CLASS_FORMULAS,
   ALCHEMIST_FORMULAS,
@@ -203,6 +216,8 @@ export {
   ARTILLERIST_FORMULAS,
   BATTLE_SMITH_FORMULAS,
   CARTOGRAPHER_FORMULAS,
+  INFUSION_OPTIONS,
+  ARMOR_MODEL_OPTIONS,
   BARBARIAN_CLASS_FORMULAS,
   PATH_OF_THE_BERSERKER_FORMULAS,
   PATH_OF_THE_FRACTURED_FORMULAS,
@@ -234,6 +249,7 @@ export {
   TRICKERY_DOMAIN_FORMULAS,
   WAR_DOMAIN_FORMULAS,
   LEGENDARY_ASPECT_OPTIONS,
+  DIVINE_SPARK_OPTIONS,
   DRUID_CLASS_FORMULAS,
   CIRCLE_OF_BLOOD_FORMULAS,
   CIRCLE_OF_ENTROPY_FORMULAS,
@@ -245,6 +261,7 @@ export {
   CIRCLE_OF_THE_STARS_FORMULAS,
   FIGHTER_CLASS_FORMULAS,
   MANEUVER_OPTIONS,
+  TACTICAL_MIND_OPTIONS,
   ARCANE_ARCHER_FORMULAS,
   BANNERET_FORMULAS,
   BATTLE_MASTER_FORMULAS,

@@ -22,6 +22,27 @@ export const ASSASSIN_FORMULAS: Record<string, ManualActionFormula> = {
     source: "Player's Handbook (2024), Rogue: Assassin",
   },
 
+  assassinsInfiltration: {
+    id: "embers:rogue:assassin:assassins-infiltration",
+    name: "Assassin's Infiltration",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["rogue"],
+    subclass: "assassin",
+    activationType: "special",
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Deceptive Identity",
+        description:
+          "You have Advantage on Charisma (Deception) checks to mimic identities and speech, and you can reliably forge official credentials.",
+      },
+    ],
+    description:
+      "Master the subtle arts of identity theft, disguise, and infiltration.",
+    source: "Player's Handbook (2024), Rogue: Assassin",
+  },
+
   envenomWeapons: {
     id: "embers:rogue:assassin:envenom-weapons",
     name: "Envenom Weapons",

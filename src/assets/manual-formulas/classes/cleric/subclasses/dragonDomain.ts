@@ -128,6 +128,7 @@ export const DRAGON_DOMAIN_FORMULAS: Record<string, ManualActionFormula> = {
     classes: ["cleric"],
     subclass: "dragonDomain",
     activationType: "special",
+    options: LEGENDARY_ASPECT_OPTIONS,
     resource: {
       name: "Legendary Actions",
       resetType: "Long Rest",

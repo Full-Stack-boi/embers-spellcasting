@@ -48,13 +48,64 @@ export const WIZARD_CLASS_FORMULAS: Record<string, ManualActionFormula> = {
     operations: [
       {
         type: "apply_effect",
-        name: "Academic Expertise",
+        name: "Academic Advantage",
         description:
-          "Gain Expertise in one proficient academic skill: Arcana, History, Nature, Religion, or Medicine.",
+          "Gain Advantage on checks with one chosen academic skill: Arcana, History, Investigation, Nature, or Religion.",
       },
     ],
     description: "Deep academic specialization in scholarly disciplines.",
     source: "Player's Handbook (2024), Wizard: Scholar",
+  },
+  memorizeSpell: {
+    id: "embers:wizard:memorize-spell",
+    name: "Memorize Spell",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["wizard"],
+    activationType: "special",
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Spellbook Study",
+        description: "Whenever you finish a Short Rest, you can study your spellbook and replace one of your prepared spells with another spell of your choice from your spellbook.",
+      },
+    ],
+    description: "Swap a prepared spell during a short rest by consulting your spellbook.",
+    source: "Player's Handbook (2024), Wizard: Memorize Spell",
+  },
+  spellMastery: {
+    id: "embers:wizard:spell-mastery",
+    name: "Spell Mastery",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["wizard"],
+    activationType: "special",
+    operations: [
+      {
+        type: "apply_effect",
+        name: "At-Will 1st & 2nd Level Spells",
+        description: "Choose one 1st-level spell and one 2nd-level spell in your spellbook. You always have them prepared and can cast them at their lowest level without expending a spell slot.",
+      },
+    ],
+    description: "Cast chosen 1st- and 2nd-level spells at will without using spell slots.",
+    source: "Player's Handbook (2024), Wizard: Spell Mastery",
+  },
+  signatureSpells: {
+    id: "embers:wizard:signature-spells",
+    name: "Signature Spells",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["wizard"],
+    activationType: "special",
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Free 3rd-Level Signature Casts",
+        description: "Choose two 3rd-level spells in your spellbook as signature spells. They are always prepared, and you can cast each once at level 3 without expending a spell slot (recharges on Short or Long Rest).",
+      },
+    ],
+    description: "Two 3rd-level spells become your signature magic, castable for free each rest.",
+    source: "Player's Handbook (2024), Wizard: Signature Spells",
   },
   ...ABJURER_FORMULAS,
   ...BLADESINGER_FORMULAS,

@@ -67,4 +67,27 @@ export const CLOCKWORK_SORCERY_FORMULAS: Record<string, ManualActionFormula> = {
       "Enter a state of supreme cosmic order where probability bends to perfection.",
     source: "Player's Handbook (2024), Sorcerer: Clockwork Sorcery",
   },
+
+  clockworkCavalcade: {
+    id: "embers:sorcerer:clockwork:clockwork-cavalcade",
+    name: "Clockwork Cavalcade",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["sorcerer"],
+    subclass: "clockworkSorcery",
+    activationType: "action",
+    resource: {
+      name: "Clockwork Cavalcade",
+      resetType: "Long Rest",
+    },
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Spirits of Mechanus",
+        description: "Action spend 7 Sorcery Points or 1/Long Rest: summon spirits in a 30-foot cube to heal up to 100 Hit Points divided among creatures, repair objects, and dispel all spells of level 6 or lower.",
+      },
+    ],
+    description: "Summon a march of modron spirits of absolute order to repair and cleanse reality.",
+    source: "Player's Handbook (2024), Sorcerer: Clockwork Sorcery",
+  },
 };

@@ -71,4 +71,23 @@ export const DIVINER_FORMULAS: Record<string, ManualActionFormula> = {
       "Awaken your mystical third eye to perceive unseen dimensional truths.",
     source: "Player's Handbook (2024), Wizard: Diviner",
   },
+
+  greaterPortent: {
+    id: "embers:wizard:diviner:greater-portent",
+    name: "Greater Portent",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["wizard"],
+    subclass: "diviner",
+    activationType: "special",
+    description: "The vision of your portent grows clearer: roll three d20s for your Portent feature instead of two.",
+    source: "Player's Handbook (2024), Wizard: Diviner",
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Three Portent Dice",
+        description: "Roll three d20s at the end of a Long Rest for your Portent pool.",
+      },
+    ],
+  },
 };

@@ -43,6 +43,27 @@ export const ELDRITCH_KNIGHT_FORMULAS: Record<string, ManualActionFormula> = {
     source: "Player's Handbook (2024), Fighter: Eldritch Knight",
   },
 
+  eldritchStrike: {
+    id: "embers:fighter:eldritch-knight:eldritch-strike",
+    name: "Eldritch Strike",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["fighter"],
+    subclass: "eldritchKnight",
+    activationType: "special",
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Spell Vulnerability",
+        description:
+          "When you hit a creature with a weapon attack, that creature has Disadvantage on the next saving throw it makes against a spell you cast before the end of your next turn.",
+      },
+    ],
+    description:
+      "Undermine enemy arcane defenses with physical strikes, giving them Disadvantage against your spells.",
+    source: "Player's Handbook (2024), Fighter: Eldritch Knight",
+  },
+
   arcaneCharge: {
     id: "embers:fighter:eldritch-knight:arcane-charge",
     name: "Arcane Charge",
@@ -61,6 +82,27 @@ export const ELDRITCH_KNIGHT_FORMULAS: Record<string, ManualActionFormula> = {
     ],
     description:
       "Teleport across the battlefield when unleashing your explosive Action Surge.",
+    source: "Player's Handbook (2024), Fighter: Eldritch Knight",
+  },
+
+  improvedWarMagic: {
+    id: "embers:fighter:eldritch-knight:improved-war-magic",
+    name: "Improved War Magic",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["fighter"],
+    subclass: "eldritchKnight",
+    activationType: "special",
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Leveled Spell Strike",
+        description:
+          "When you take the Attack action on your turn, you can replace two of your attacks with casting one of your level 1 or level 2 Wizard spells that has a casting time of 1 action.",
+      },
+    ],
+    description:
+      "Weave level 1 or 2 Wizard spells directly into your attack sequence in place of two attacks.",
     source: "Player's Handbook (2024), Fighter: Eldritch Knight",
   },
 };

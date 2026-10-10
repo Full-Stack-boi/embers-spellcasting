@@ -238,6 +238,17 @@ describe("All Sourcebooks Classes and Subclasses Registry", () => {
             // Battle Smith
             expect(ARTIFICER_CLASS_FORMULAS.steelDefender).toBeDefined();
             expect(ARTIFICER_CLASS_FORMULAS.steelDefender.subclass).toBe("battleSmith");
+            expect(ARTIFICER_CLASS_FORMULAS.arcaneJolt?.weaponRider).toBeDefined();
+            expect(ARTIFICER_CLASS_FORMULAS.arcaneJolt.weaponRider?.damageType).toBe("force");
+
+            // Armorer
+            expect(ARTIFICER_CLASS_FORMULAS.armorModel?.weaponRider).toBeDefined();
+            expect(ARTIFICER_CLASS_FORMULAS.armorModel.weaponRider?.damageType).toBe("lightning");
+
+            // Base Class Capstone & Infusions
+            expect(ARTIFICER_CLASS_FORMULAS.infuseItem?.options).toHaveLength(6);
+            expect(ARTIFICER_CLASS_FORMULAS.soulOfArtifice).toBeDefined();
+            expect(ARTIFICER_CLASS_FORMULAS.soulOfArtifice.activationType).toBe("reaction");
 
             // Cartographer
             expect(ARTIFICER_CLASS_FORMULAS.adventurerSAtlas).toBeDefined();
@@ -246,18 +257,59 @@ describe("All Sourcebooks Classes and Subclasses Registry", () => {
     });
 
     describe("Valda's Spire of Secrets: Player Pack 2", () => {
-        it("verifies VSSPP2 Gunslinger, Pistolero, and subclasses", () => {
+        it("verifies VSSPP2 Gunslinger Level 1-20 progression and Pistolero", () => {
+            expect(GUNSLINGER_CLASS_FORMULAS.quickDraw).toBeDefined();
             expect(GUNSLINGER_CLASS_FORMULAS.riskDice).toBeDefined();
+            expect(GUNSLINGER_CLASS_FORMULAS.extraAttack).toBeDefined();
+            expect(GUNSLINGER_CLASS_FORMULAS.gutShot).toBeDefined();
+            expect(GUNSLINGER_CLASS_FORMULAS.evasion).toBeDefined();
+            expect(GUNSLINGER_CLASS_FORMULAS.rapidReload).toBeDefined();
+            expect(GUNSLINGER_CLASS_FORMULAS.maverick).toBeDefined(); // Lv 20 Capstone
+
             expect(GUNSLINGER_CLASS_FORMULAS.closeQuartersShooting).toBeDefined();
             expect(GUNSLINGER_CLASS_FORMULAS.fanTheHammer).toBeDefined();
             expect(GUNSLINGER_CLASS_FORMULAS.bulletTime).toBeDefined();
+        });
 
-            expect(BARD_CLASS_FORMULAS.personaMasks).toBeDefined();
-            expect(CLERIC_CLASS_FORMULAS.chromaticAffinity).toBeDefined();
-            expect(DRUID_CLASS_FORMULAS.cityShape).toBeDefined();
-            expect(RANGER_CLASS_FORMULAS.bestialAspect).toBeDefined();
+        it("verifies VSSPP2 Heroic Sorcery complete Level 1-20 progression, riders, and options", () => {
+            expect(SORCERER_CLASS_FORMULAS.heroicSpells).toBeDefined();
             expect(SORCERER_CLASS_FORMULAS.heroicSoul).toBeDefined();
-            expect(WIZARD_CLASS_FORMULAS.magicMissileSavant).toBeDefined();
+            expect(SORCERER_CLASS_FORMULAS.innateBladework).toBeDefined();
+            expect(SORCERER_CLASS_FORMULAS.extraAttack).toBeDefined();
+            
+            // Mystical Maneuvers options & weapon rider
+            expect(SORCERER_CLASS_FORMULAS.mysticalManeuvers).toBeDefined();
+            expect(SORCERER_CLASS_FORMULAS.mysticalManeuvers.options).toHaveLength(3);
+            expect(SORCERER_CLASS_FORMULAS.mysticalManeuvers.weaponRider).toBeDefined();
+            expect(SORCERER_CLASS_FORMULAS.mysticalManeuvers.weaponRider?.dice).toBe("2d8");
+            expect(SORCERER_CLASS_FORMULAS.mysticalManeuvers.weaponRider?.frequency).toBe("first_hit_per_turn");
+
+            expect(SORCERER_CLASS_FORMULAS.sorcerousKindling).toBeDefined();
+            expect(SORCERER_CLASS_FORMULAS.heroicHaste).toBeDefined();
+        });
+
+        it("verifies VSSPP2 other subclasses (Masks, Dragon, City, Beastborne, Magic Missile Mage)", () => {
+            expect(BARD_CLASS_FORMULAS.personaMasks?.options).toHaveLength(9);
+            expect(CLERIC_CLASS_FORMULAS.legendaryAspect?.options).toHaveLength(3);
+            expect(DRUID_CLASS_FORMULAS.cityShape).toBeDefined();
+            expect(RANGER_CLASS_FORMULAS.bestialAspect?.options).toHaveLength(5);
+            expect(RANGER_CLASS_FORMULAS.bestialAspect?.weaponRider).toBeDefined();
+            expect(WIZARD_CLASS_FORMULAS.versatileMissiles?.options).toHaveLength(3);
+        });
+    });
+
+    describe("Grim Hollow: Monster Hunter Level 1-20", () => {
+        it("verifies Monster Hunter complete progression, weapon riders, and capstone", () => {
+            expect(MONSTER_HUNTER_CLASS_FORMULAS.monsterGrimoire).toBeDefined();
+            expect(MONSTER_HUNTER_CLASS_FORMULAS.weaponMastery).toBeDefined();
+            expect(MONSTER_HUNTER_CLASS_FORMULAS.studiedResponse).toBeDefined();
+            expect(MONSTER_HUNTER_CLASS_FORMULAS.expertStrike).toBeDefined();
+            expect(MONSTER_HUNTER_CLASS_FORMULAS.expertStrike.weaponRider).toBeDefined();
+            expect(MONSTER_HUNTER_CLASS_FORMULAS.knowledgeableDefense).toBeDefined();
+            expect(MONSTER_HUNTER_CLASS_FORMULAS.extraAttack).toBeDefined();
+            expect(MONSTER_HUNTER_CLASS_FORMULAS.lairSense).toBeDefined();
+            expect(MONSTER_HUNTER_CLASS_FORMULAS.slayersAid).toBeDefined();
+            expect(MONSTER_HUNTER_CLASS_FORMULAS.graveStrike).toBeDefined(); // Lv 20 Capstone
         });
     });
 });

@@ -62,4 +62,51 @@ export const OATH_OF_VENGEANCE_FORMULAS: Record<string, ManualActionFormula> = {
       "Pursue retreating adversaries without allowing them to break away.",
     source: "Player's Handbook (2024), Paladin: Oath of Vengeance",
   },
+
+  soulOfVengeance: {
+    id: "embers:paladin:vengeance:soul-of-vengeance",
+    name: "Soul of Vengeance",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["paladin"],
+    subclass: "oathOfVengeance",
+    activationType: "reaction",
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Enmity Counterstrike",
+        description:
+          "When a creature under your Vow of Enmity makes an attack, you can use your Reaction to make a melee weapon attack against that creature if it is within range.",
+      },
+    ],
+    description:
+      "Punish your sworn enemy immediately whenever it dares strike.",
+    source: "Player's Handbook (2024), Paladin: Oath of Vengeance",
+  },
+
+  avengingAngel: {
+    id: "embers:paladin:vengeance:avenging-angel",
+    name: "Avenging Angel",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["paladin"],
+    subclass: "oathOfVengeance",
+    activationType: "bonus",
+    resource: {
+      name: "Avenging Angel",
+      resetType: "Long Rest",
+    },
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Avenging Angel Form",
+        duration: "10 minutes",
+        description:
+          "As a Bonus Action, manifest angelic wings for 10 minutes: Fly speed 60 ft with hover; 30 ft Frightful Presence aura (enemies starting turn make WIS save or are Frightened, attack rolls against Frightened creatures have Advantage; 1/Long Rest or expend a level 5 spell slot).",
+      },
+    ],
+    description:
+      "Level 20 Capstone: Assume the terrifying visage of an avenging archangel.",
+    source: "Player's Handbook (2024), Paladin: Oath of Vengeance",
+  },
 };

@@ -28,6 +28,20 @@ export const MYSTICAL_MANEUVER_OPTIONS: FeatureActionOption[] = [
 ];
 
 export const HEROIC_SORCERY_FORMULAS: Record<string, ManualActionFormula> = {
+  heroicSpells: {
+    id: "embers:sorcerer:heroic-sorcery:heroic-spells",
+    name: "Heroic Spells",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["sorcerer"],
+    subclass: "heroicSorcery",
+    activationType: "special",
+    operations: [],
+    description:
+      "When you reach a Sorcerer level specified in the Heroic Spells table, you thereafter always have the listed spells prepared: Level 3: Arc Blade, Burning Blade, Frigid Blade, Heroism, Magic Weapon, Mirror Image, Shield; Level 5: Haste, Phantom Steed; Level 7: Death Ward, Stoneskin; Level 9: Legend Lore, Hold Monster.",
+    source: "Valda's Spire of Secrets: Player Pack 2, Sorcerer: Heroic Spells",
+  },
+
   heroicSoul: {
     id: "embers:sorcerer:heroic-sorcery:heroic-soul",
     name: "Heroic Soul",
@@ -107,9 +121,20 @@ export const HEROIC_SORCERY_FORMULAS: Record<string, ManualActionFormula> = {
     classes: ["sorcerer"],
     subclass: "heroicSorcery",
     activationType: "bonus",
+    options: MYSTICAL_MANEUVER_OPTIONS,
     resource: {
       name: "Sorcery Points",
       resetType: "Long Rest",
+    },
+    weaponRider: {
+      type: "weapon_damage_rider",
+      id: "embers:sorcerer:heroic-sorcery:mystical-maneuvers:rider",
+      name: "Mystical Maneuvers",
+      classId: "sorcerer",
+      subclassId: "heroicSorcery",
+      minLevel: 6,
+      dice: "2d8",
+      frequency: "first_hit_per_turn",
     },
     operations: [
       {
@@ -125,6 +150,27 @@ export const HEROIC_SORCERY_FORMULAS: Record<string, ManualActionFormula> = {
       },
     ],
     description: "Infuse striking blows with sorcerous devastation.",
+    source: "Valda's Spire of Secrets: Player Pack 2, Sorcerer: Heroic Sorcery",
+  },
+
+  sorcerousKindling: {
+    id: "embers:sorcerer:heroic-sorcery:sorcerous-kindling",
+    name: "Sorcerous Kindling",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["sorcerer"],
+    subclass: "heroicSorcery",
+    activationType: "special",
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Combat Sorcery Fuel",
+        description:
+          "Once per turn, when you score a critical hit with a weapon attack against a hostile creature or reduce a hostile creature to 0 hit points with a weapon attack, you regain 2 Sorcery Points.",
+      },
+    ],
+    description:
+      "The ebb and flow of battle hones your sorcery and fuels your magic.",
     source: "Valda's Spire of Secrets: Player Pack 2, Sorcerer: Heroic Sorcery",
   },
 
@@ -144,7 +190,7 @@ export const HEROIC_SORCERY_FORMULAS: Record<string, ManualActionFormula> = {
           "When casting Haste targeting yourself, the spell does not require Concentration, and you suffer no lethargy penalty when it ends.",
       },
     ],
-    description: "Transcend temporal limitations without fear of exhaustion.",
+    description: "Transcend temporal limitations without fear of exhaustion (Level 18).",
     source: "Valda's Spire of Secrets: Player Pack 2, Sorcerer: Heroic Sorcery",
   },
 };

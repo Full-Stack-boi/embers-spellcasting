@@ -43,6 +43,27 @@ export const OATH_OF_DEVOTION_FORMULAS: Record<string, ManualActionFormula> = {
     source: "Player's Handbook (2024), Paladin: Oath of Devotion",
   },
 
+  auraOfDevotion: {
+    id: "embers:paladin:devotion:aura-of-devotion",
+    name: "Aura of Devotion",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["paladin"],
+    subclass: "oathOfDevotion",
+    activationType: "special",
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Charm Immunity",
+        description:
+          "You and allies within your aura are immune to the Charmed condition.",
+      },
+    ],
+    description:
+      "Radiate protective clarity shielding your aura companions from charm enchantments.",
+    source: "Player's Handbook (2024), Paladin: Oath of Devotion",
+  },
+
   smiteOfProtection: {
     id: "embers:paladin:devotion:smite-of-protection",
     name: "Smite of Protection",
@@ -61,6 +82,32 @@ export const OATH_OF_DEVOTION_FORMULAS: Record<string, ManualActionFormula> = {
     ],
     description:
       "Discharge protective holy warding around your allies whenever striking with a smite.",
+    source: "Player's Handbook (2024), Paladin: Oath of Devotion",
+  },
+
+  holyNimbus: {
+    id: "embers:paladin:devotion:holy-nimbus",
+    name: "Holy Nimbus",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["paladin"],
+    subclass: "oathOfDevotion",
+    activationType: "bonus",
+    resource: {
+      name: "Holy Nimbus",
+      resetType: "Long Rest",
+    },
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Solar Avatar Form",
+        duration: "10 minutes",
+        description:
+          "As a Bonus Action, emanate an aura of sunlight for 10 minutes: enemies starting their turn in your aura take Radiant damage equal to your Proficiency Bonus + Charisma modifier, and you have Advantage on saves against spells cast by Fiends and Undead (1/Long Rest or expend a level 5 spell slot).",
+      },
+    ],
+    description:
+      "Level 20 Capstone: Become an avatar of solar radiance that scorches foes and wards allies.",
     source: "Player's Handbook (2024), Paladin: Oath of Devotion",
   },
 };

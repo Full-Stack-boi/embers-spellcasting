@@ -63,4 +63,25 @@ export const BEAST_MASTER_FORMULAS: Record<string, ManualActionFormula> = {
       "Unleash your companion in a ferocious frenzy of multiple strikes.",
     source: "Player's Handbook (2024), Ranger: Beast Master",
   },
+
+  shareSpells: {
+    id: "embers:ranger:beast-master:share-spells",
+    name: "Share Spells",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["ranger"],
+    subclass: "beastMaster",
+    activationType: "special",
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Symbiotic Spell Weaving",
+        description:
+          "When you cast a spell that targets yourself, that spell also affects your beast companion if the companion is within 30 feet of you.",
+      },
+    ],
+    description:
+      "Level 15 Capstone: Imbue your beast companion simultaneously with any spell targeting yourself.",
+    source: "Player's Handbook (2024), Ranger: Beast Master",
+  },
 };

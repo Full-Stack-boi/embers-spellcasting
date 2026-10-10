@@ -157,6 +157,21 @@ export const BATTLE_SMITH_FORMULAS: Record<string, ManualActionFormula> = {
       name: "Arcane Jolt",
       resetType: "Long Rest",
     },
+    weaponRider: {
+      type: "weapon_damage_rider",
+      id: "embers:artificer:battle-smith:arcane-jolt:rider",
+      name: "Arcane Jolt",
+      classId: "artificer",
+      subclassId: "battleSmith",
+      minLevel: 9,
+      dice: "2d6",
+      diceByClassLevel: [
+        { minLevel: 9, dice: "2d6" },
+        { minLevel: 15, dice: "4d6" },
+      ],
+      damageType: "force",
+      frequency: "first_hit_per_turn",
+    },
     operations: [
       {
         type: "resource_cost",

@@ -66,4 +66,23 @@ export const ARCHFEY_PATRON_FORMULAS: Record<string, ManualActionFormula> = {
       "Turn enemy enchantment magic directly back against the caster.",
     source: "Player's Handbook (2024), Warlock: Archfey Patron",
   },
+
+  bewitchingMagic: {
+    id: "embers:warlock:archfey:bewitching-magic",
+    name: "Bewitching Magic",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["warlock"],
+    subclass: "archfeyPatron",
+    activationType: "special",
+    description: "Whenever you cast an Enchantment or Illusion spell with a spell slot of level 1 or higher, you can cast Misty Step as part of the same action without expending a spell slot.",
+    source: "Player's Handbook (2024), Warlock: Archfey Patron",
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Free Illusion/Enchantment Teleport",
+        description: "Cast Misty Step as part of casting any 1st+ level Enchantment or Illusion spell without expending a spell slot.",
+      },
+    ],
+  },
 };

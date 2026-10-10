@@ -4,7 +4,29 @@ export type ManualActionKind = "action" | "class_feature" | "feat";
 
 export type ManualFormulaKind = "spell" | "cantrip" | ManualActionKind;
 
+export interface WeaponDamageRiderOperation {
+  type: "weapon_damage_rider";
+  id: string;
+  name?: string;
+  classId: string;
+  subclassId?: string;
+  minLevel?: number;
+  requiresBuff?: string;
+  requiresWeaponProperties?: string[];
+  flat?: {
+    byClassLevel: Array<{ minLevel: number; value: number }>;
+  };
+  dice?: string;
+  diceByClassLevel?: Array<{ minLevel: number; dice: string }>;
+  bonus?: "halfClassLevel";
+  damageType?: string;
+  damageTypeChoices?: string[];
+  defaultChoice?: string;
+  frequency?: "every_hit" | "first_hit_per_turn";
+}
+
 export type ManualActionOperation =
+  | WeaponDamageRiderOperation
   | {
       type: "convert_spell_slot_to_resource";
       actionType: "none";
@@ -50,9 +72,31 @@ export type ManualActionOperation =
 export interface FeatureActionOption {
   id: string;
   name: string;
-  cost: number;
-  desc: string;
-  actionType: "action" | "bonus" | "reaction" | "none";
+  cost?: number;
+  desc?: string;
+  description?: string;
+  actionType?: "action" | "bonus" | "reaction" | "none" | "special";
+  weaponDamageRider?: {
+    damageFormula: string;
+    damageType: string;
+    condition?: string;
+  };
+  weaponRider?: WeaponDamageRiderOperation;
+}
+
+export interface ActionResourceScaling {
+  type: "class_level" | "half_class_level" | "level_table" | "flat";
+  classId?: string;
+  multiplier?: number;
+  table?: Array<{ minLevel: number; value: number }>;
+}
+
+export interface ActionResourceConfig {
+  name: string;
+  maxPerClassLevel?: number;
+  canExceedMax?: boolean;
+  resetType?: string;
+  scaling?: ActionResourceScaling;
 }
 
 export interface ManualActionFormula {
@@ -64,13 +108,18 @@ export interface ManualActionFormula {
   classes: string[];
   subclass?: string;
   activationType: "action" | "bonus" | "reaction" | "special";
-  resource?: {
-    name: string;
-    maxPerClassLevel?: number;
-    canExceedMax?: boolean;
-    resetType?: string;
-  };
+  resource?: ActionResourceConfig;
+  flyoutType?: "options_grid" | "convert_slots" | "heal_pool" | "slot_recovery" | "custom";
   operations: ManualActionOperation[];
+  /** Sub-choices / options rendered on the flyout bar (e.g. Metamagic, Maneuvers, Ki) */
+  options?: FeatureActionOption[];
+  /** Executable weapon damage rider (e.g. Rage bonus, Divine Fury, Sneak Attack) */
+  weaponRider?: WeaponDamageRiderOperation;
+  weaponDamageRider?: {
+    damageFormula: string;
+    damageType: string;
+    condition?: string;
+  };
   description?: string;
   source?: string;
   notes?: string;

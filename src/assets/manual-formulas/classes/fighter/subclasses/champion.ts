@@ -83,4 +83,25 @@ export const CHAMPION_FORMULAS: Record<string, ManualActionFormula> = {
       "Master martial lethal precision with legendary critical strike potential.",
     source: "Player's Handbook (2024), Fighter: Champion",
   },
+
+  survivor: {
+    id: "embers:fighter:champion:survivor",
+    name: "Survivor",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["fighter"],
+    subclass: "champion",
+    activationType: "special",
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Unstoppable Vitality",
+        description:
+          "At the start of each of your turns in combat if you have half your Hit Points or fewer, you regain Hit Points equal to 5 + your Constitution modifier. You also have Advantage on Death Saving Throws.",
+      },
+    ],
+    description:
+      "Attain legendary endurance, constantly regenerating hit points when bloodied and defying death.",
+    source: "Player's Handbook (2024), Fighter: Champion",
+  },
 };

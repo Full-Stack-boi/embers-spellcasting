@@ -22,6 +22,27 @@ export const FEY_WANDERER_FORMULAS: Record<string, ManualActionFormula> = {
     source: "Player's Handbook (2024), Ranger: Fey Wanderer",
   },
 
+  otherworldlyGlamour: {
+    id: "embers:ranger:fey-wanderer:otherworldly-glamour",
+    name: "Otherworldly Glamour",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["ranger"],
+    subclass: "feyWanderer",
+    activationType: "special",
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Fey Allure",
+        description:
+          "Whenever you make a Charisma check, gain a bonus to the check equal to your Wisdom modifier (minimum of +1). Gain proficiency in Deception, Performance, or Persuasion.",
+      },
+    ],
+    description:
+      "A blessing of the Feywild grants charismatic magnetic presence bolstered by your Wisdom.",
+    source: "Player's Handbook (2024), Ranger: Fey Wanderer",
+  },
+
   beguilingTwist: {
     id: "embers:ranger:fey-wanderer:beguiling-twist",
     name: "Beguiling Twist",
@@ -40,6 +61,35 @@ export const FEY_WANDERER_FORMULAS: Record<string, ManualActionFormula> = {
     ],
     description:
       "Turn failed charm or fear magic into an offensive weapon against adversaries.",
+    source: "Player's Handbook (2024), Ranger: Fey Wanderer",
+  },
+
+  feyReinforcements: {
+    id: "embers:ranger:fey-wanderer:fey-reinforcements",
+    name: "Fey Reinforcements",
+    kind: "class_feature",
+    status: "verified",
+    classes: ["ranger"],
+    subclass: "feyWanderer",
+    activationType: "action",
+    resource: {
+      name: "Free Summon Fey",
+      resetType: "Long Rest",
+      scaling: {
+        type: "flat",
+        multiplier: 1,
+      },
+    },
+    operations: [
+      {
+        type: "apply_effect",
+        name: "Summon Fey Ally",
+        description:
+          "You know the Summon Fey spell and can cast it without material components (1 free cast per Long Rest without expending a spell slot, or by expending a level 3+ slot). You don't need concentration if cast this way, but its duration is 1 minute.",
+      },
+    ],
+    description:
+      "Call courtly spirits from the Feywild to fight alongside you without needing concentration.",
     source: "Player's Handbook (2024), Ranger: Fey Wanderer",
   },
 

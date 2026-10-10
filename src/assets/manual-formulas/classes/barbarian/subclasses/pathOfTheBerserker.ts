@@ -20,6 +20,20 @@ export const PATH_OF_THE_BERSERKER_FORMULAS: Record<
           "While raging, your first hit with a Strength-based weapon on your turn deals extra damage equal to 2d6 (increases to 3d6 at level 10 and 4d6 at level 14).",
       },
     ],
+    weaponRider: {
+      type: "weapon_damage_rider",
+      id: "frenzy",
+      name: "Frenzy",
+      classId: "barbarian",
+      subclassId: "pathOfTheBerserker",
+      requiresBuff: "rage",
+      diceByClassLevel: [
+        { minLevel: 3, dice: "2d6" },
+        { minLevel: 9, dice: "3d6" },
+        { minLevel: 16, dice: "4d6" },
+      ],
+      frequency: "first_hit_per_turn",
+    },
     description:
       "While raging, your first hit with a Strength weapon on each of your turns deals extra Frenzy damage.",
     source: "Player's Handbook (2024), Barbarian: Path of the Berserker",
