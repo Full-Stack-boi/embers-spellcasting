@@ -26,6 +26,7 @@ function createMockCharacter(overrides: Partial<DDBParsedCharacter> = {}): DDBPa
             {
                 id: "feat:arcane_recovery",
                 name: "Arcane Recovery",
+                source: "class",
                 limitedUse: { max: 1, used: 0, resetType: "Long Rest" },
             },
         ],
@@ -33,7 +34,7 @@ function createMockCharacter(overrides: Partial<DDBParsedCharacter> = {}): DDBPa
             { die: "d6", total: 5, used: 0 },
         ],
         ...overrides,
-    };
+    } as DDBParsedCharacter;
 }
 
 describe("resourceMerge", () => {
