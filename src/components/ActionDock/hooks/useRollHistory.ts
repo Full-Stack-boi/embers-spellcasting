@@ -3,7 +3,9 @@ import OBR from "@owlbear-rodeo/sdk";
 
 import {
     DDB_ROLL_CHANNEL,
+    ROLL_HISTORY_KEY,
     getStoredRollHistory,
+    saveStoredRollHistory,
     subscribeToDDBRolls
 } from "../../../services/rollLogService";
 import type { DDBRollCardData, DDBRollLogPayload } from "../../../types/ddbRollLog";
@@ -17,8 +19,13 @@ export function useRollHistory(isObrReady: boolean) {
 
         const handleNewCards = (newCards: DDBRollCardData[]) => {
             if (!newCards || newCards.length === 0) return;
-            setRollHistory(prev => [...newCards, ...prev].slice(0, 40));
-            setUnreadRolls(prev => prev + newCards.length);
+            setRollHistory(prev => {
+                const existingIds = new Set(prev.map(c => c.id));
+                const unique = newCards.filter(c => !existingIds.has(c.id));
+                if (unique.length === 0) return prev;
+                setUnreadRolls(prevUnread => prevUnread + unique.length);
+                return [...unique, ...prev].slice(0, 40);
+            });
         };
 
         const unsubscribeLocal = subscribeToDDBRolls(handleNewCards);
@@ -27,6 +34,7 @@ export function useRollHistory(isObrReady: boolean) {
             unsubscribeBroadcast = OBR.broadcast.onMessage(DDB_ROLL_CHANNEL, (event) => {
                 const payload = event.data as DDBRollLogPayload;
                 if (payload && Array.isArray(payload.cards) && payload.cards.length > 0) {
+                    saveStoredRollHistory(payload.cards);
                     handleNewCards(payload.cards);
                 }
             });
@@ -42,10 +50,25 @@ export function useRollHistory(isObrReady: boolean) {
         };
         window.addEventListener("embers:ddb-roll", handleWindowEvent);
 
+        const handleStorageEvent = (e: StorageEvent) => {
+            if (e.key === ROLL_HISTORY_KEY && e.newValue) {
+                try {
+                    const parsed = JSON.parse(e.newValue) as DDBRollCardData[];
+                    if (Array.isArray(parsed)) {
+                        setRollHistory(parsed.slice(0, 40));
+                    }
+                } catch {
+                    // Ignore
+                }
+            }
+        };
+        window.addEventListener("storage", handleStorageEvent);
+
         return () => {
             unsubscribeLocal();
             unsubscribeBroadcast?.();
             window.removeEventListener("embers:ddb-roll", handleWindowEvent);
+            window.removeEventListener("storage", handleStorageEvent);
         };
     }, [isObrReady]);
 

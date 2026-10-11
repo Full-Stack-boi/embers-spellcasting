@@ -29,11 +29,18 @@ export function Bg3SpellCard({ spell, index, selected, damageTypeOverride, onAct
     const meta = getSpellMetadata(spell.id, spell.name);
     const school = meta?.school || spell.school;
     const schoolStyle = getSchoolStyle(school);
-    const subtitle = spell.level === 0 ? "Cantrip" : `${getOrdinal(spell.level)} Level ${school || "Spell"}`;
+    const isHealing = (damageTypeOverride ?? spell.damageType ?? "").toLowerCase() === "healing";
+    const accent = isHealing ? "#4ade80" : (schoolStyle?.color || "#c9a66b");
+    const subtitle = spell.level === 0
+        ? (isHealing ? "Healing Cantrip" : "Cantrip")
+        : `${getOrdinal(spell.level)} Level ${isHealing ? "Healing " : ""}${school || "Spell"}`;
+    const damageDisplay = spell.damage && (
+        isHealing ? `${spell.damage} Healing` : `${spell.damage} ${damageTypeOverride ?? spell.damageType ?? ""}`
+    );
     const details = [
         spell.castingTime,
         spell.rangeText,
-        spell.damage && `${spell.damage} ${damageTypeOverride ?? spell.damageType ?? ""}`,
+        damageDisplay,
         spell.hitOrDc,
     ].filter(Boolean) as string[];
 
@@ -41,13 +48,15 @@ export function Bg3SpellCard({ spell, index, selected, damageTypeOverride, onAct
         <ActionGridTile
             key={spell.id}
             name={spell.name}
-            category={spell.level === 0 ? "Cantrip" : "Spell"}
+            category={isHealing ? (spell.level === 0 ? "Healing Cantrip" : "Healing Spell") : (spell.level === 0 ? "Cantrip" : "Spell")}
             subtitle={subtitle}
             details={details}
             description={spell.rawDdbSpell?.description || spell.notes}
-            accent={schoolStyle?.color || "#c9a66b"}
+            accent={accent}
             shortcut={index + 1}
             selected={selected}
+            badgeText={isHealing ? "HEAL" : undefined}
+            badgeClass={isHealing ? "heal-badge" : undefined}
             icon={schoolStyle?.iconUrl ? (
                 <img
                     src={schoolStyle.iconUrl}

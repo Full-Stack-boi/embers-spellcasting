@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import type { DDBFeatureAction, DDBWeaponAttack } from "../../../types/ddb";
 import type { ActionsFilter, DockSpell, MainTab, SpellsFilter } from "../domain/types";
-import { IconSearch } from "../shared/Bg3Icons";
+import { getWeaponIcon, IconSearch } from "../shared/Bg3Icons";
+import { ActionGridTile } from "./ActionGridTile";
 
 interface CombatAction {
     name: string;
@@ -26,7 +27,11 @@ interface Bg3GridContentProps {
     otherFeatures?: DDBFeatureAction[];
     combatActions: CombatAction[];
     spells: DockSpell[];
-    renderWeaponCard: (weapon: DDBWeaponAttack, index: number) => ReactNode;
+    hasTwoWeaponFighting?: boolean;
+    offhandWeapon?: DDBWeaponAttack;
+    onTwoWeaponFighting?: () => void;
+    onSwapWeaponHands?: () => void;
+    renderWeaponCard: (weapon: DDBWeaponAttack, index: number, mode?: "melee" | "thrown") => ReactNode;
     renderSpellCard: (spell: DockSpell, index: number) => ReactNode;
     renderFeatureCard: (feature: DDBFeatureAction, index: number) => ReactNode;
     renderCombatActionCard: (action: CombatAction, index: number) => ReactNode;
@@ -50,6 +55,10 @@ export function Bg3GridContent({
     otherFeatures,
     combatActions,
     spells,
+    hasTwoWeaponFighting,
+    offhandWeapon,
+    onTwoWeaponFighting,
+    onSwapWeaponHands,
     renderWeaponCard,
     renderSpellCard,
     renderFeatureCard,
@@ -75,7 +84,12 @@ export function Bg3GridContent({
 
         if (actionsFilter === "ALL" || actionsFilter === "ATTACK") {
             addSection("Attacks & Weapons", items => {
-                weapons.forEach(weapon => addUnique(items, `weapon:${weapon.id || weapon.name}`, () => renderWeaponCard(weapon, cardIndex++)));
+                weapons.forEach(weapon => {
+                    addUnique(items, `weapon:${weapon.id || weapon.name}`, () => renderWeaponCard(weapon, cardIndex++, "melee"));
+                    if (weapon.hasThrown) {
+                        addUnique(items, `weapon:${weapon.id || weapon.name}:thrown`, () => renderWeaponCard(weapon, cardIndex++, "thrown"));
+                    }
+                });
                 attackSpells.forEach(spell => addUnique(items, `spell:${spell.name}`, () => renderSpellCard(spell, cardIndex++)));
             });
         }
@@ -87,6 +101,38 @@ export function Bg3GridContent({
         }
         if (actionsFilter === "ALL" || actionsFilter === "BONUS ACTION") {
             addSection("Bonus Actions", items => {
+                if (hasTwoWeaponFighting && offhandWeapon) {
+                    addUnique(items, "twf:twf", () => (
+                        <ActionGridTile
+                            key="action_twf"
+                            name="Two-Weapon Fighting"
+                            category="Bonus Action"
+                            subtitle={`Offhand: ${offhandWeapon.name}`}
+                            description={`Make an off-hand attack with ${offhandWeapon.name} as a Bonus Action. Click to attack. Click the OH badge or right-click to swap Main Hand & Off Hand.`}
+                            details={[
+                                `Offhand: ${offhandWeapon.name}`,
+                                `+${offhandWeapon.toHit} to hit`,
+                                offhandWeapon.damage,
+                                offhandWeapon.damageType,
+                                offhandWeapon.rangeText,
+                                "⇄ Click badge or right-click to swap hands",
+                            ].filter(Boolean) as string[]}
+                            icon={getWeaponIcon(offhandWeapon.name, offhandWeapon.type, 24)}
+                            accent="#fbbf24"
+                            shortcut={cardIndex++}
+                            handBadge={{
+                                type: "offhand",
+                                label: "OH ⇄",
+                                onClick: onSwapWeaponHands,
+                            }}
+                            onActivate={() => onTwoWeaponFighting?.()}
+                            onContextMenu={event => {
+                                event.preventDefault();
+                                onSwapWeaponHands?.();
+                            }}
+                        />
+                    ));
+                }
                 bonusActionSpells.forEach(spell => addUnique(items, `spell:${spell.name}`, () => renderSpellCard(spell, cardIndex++)));
                 bonusActionFeatures.forEach(feature => addUnique(items, `feat:${feature.name}`, () => renderFeatureCard(feature, cardIndex++)));
             });

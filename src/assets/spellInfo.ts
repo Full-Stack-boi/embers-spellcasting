@@ -717,30 +717,65 @@ const dynamicSpellRegistry = new Map<string, SpellMetadata>();
 
 /**
  * Registers dynamically loaded spell metadata (e.g. from D&D Beyond character sync).
+ * If ownerCharacterId is provided, scopes the registration to that specific character
+ * while keeping global fallback, preventing multiple characters with the same spell
+ * from overwriting each other's custom damage, DC, or upcast rules.
  */
-export function registerDynamicSpell(meta: SpellMetadata): void {
+export function registerDynamicSpell(meta: SpellMetadata, ownerCharacterId?: number | string): void {
     const key = meta.id.toLowerCase().replace(/[^a-z0-9_]/g, "");
-    dynamicSpellRegistry.set(key, meta);
     const nameKey = meta.name.toLowerCase().replace(/[^a-z0-9_]/g, "");
-    dynamicSpellRegistry.set(nameKey, meta);
+
+    if (ownerCharacterId != null) {
+        const ownerPrefix = `${ownerCharacterId}:`;
+        dynamicSpellRegistry.set(ownerPrefix + key, meta);
+        if (nameKey) dynamicSpellRegistry.set(ownerPrefix + nameKey, meta);
+    }
+
+    dynamicSpellRegistry.set(key, meta);
+    if (nameKey) dynamicSpellRegistry.set(nameKey, meta);
 }
 
 /**
  * Registers a list of dynamically loaded spell metadata.
  */
-export function registerDynamicSpells(metas: SpellMetadata[]): void {
+export function registerDynamicSpells(metas: SpellMetadata[], ownerCharacterId?: number | string): void {
     for (const m of metas) {
-        registerDynamicSpell(m);
+        registerDynamicSpell(m, ownerCharacterId);
     }
 }
 
 /**
  * Resolves spell metadata by ID or fallback to standard values.
  * Dynamically resolves from D&D Beyond character sync, dynamic registry, or built-in library.
+ * Scoped by ownerCharacterId to prevent cross-character spell data collisions.
  */
-export function getSpellMetadata(spellID: string, spellName?: string): SpellMetadata {
+export function getSpellMetadata(
+    spellID: string,
+    spellNameOrOwnerId?: string | number,
+    ownerCharacterId?: number | string
+): SpellMetadata {
+    let spellName: string | undefined = undefined;
+    let effectiveOwnerId = ownerCharacterId;
+
+    if (typeof spellNameOrOwnerId === "number") {
+        effectiveOwnerId = spellNameOrOwnerId;
+    } else if (typeof spellNameOrOwnerId === "string") {
+        spellName = spellNameOrOwnerId;
+    }
+
     const key = spellID.toLowerCase().replace(/[^a-z0-9_]/g, "");
     const nameKey = spellName ? spellName.toLowerCase().replace(/[^a-z0-9_]/g, "") : "";
+
+    // 0. Character-Scoped Dynamic in-memory registry (highest priority for character-specific spells)
+    if (effectiveOwnerId != null) {
+        const ownerPrefix = `${effectiveOwnerId}:`;
+        if (dynamicSpellRegistry.has(ownerPrefix + key)) {
+            return dynamicSpellRegistry.get(ownerPrefix + key)!;
+        }
+        if (nameKey && dynamicSpellRegistry.has(ownerPrefix + nameKey)) {
+            return dynamicSpellRegistry.get(ownerPrefix + nameKey)!;
+        }
+    }
 
     // 1. Single Source of Truth: Manual Formula Catalog (569+ verified spells)
     const manual = ALL_MANUAL_OVERRIDES[spellID] ?? ALL_MANUAL_OVERRIDES[key] ?? (nameKey ? ALL_MANUAL_OVERRIDES[nameKey] : undefined);
@@ -781,12 +816,12 @@ export function getSpellMetadata(spellID: string, spellName?: string): SpellMeta
         return SPELL_INFO_MAP[spellID];
     }
     for (const [id, meta] of Object.entries(SPELL_INFO_MAP)) {
-        if (key === id || (key.length >= 4 && (key.includes(id) || id.includes(key)))) {
+        if (key === id || nameKey === id) {
             return meta;
         }
     }
 
-    // 2. Check dynamic in-memory registry
+    // 3. Global in-memory dynamic registry fallback
     if (dynamicSpellRegistry.has(key)) {
         return dynamicSpellRegistry.get(key)!;
     }
@@ -794,50 +829,65 @@ export function getSpellMetadata(spellID: string, spellName?: string): SpellMeta
         return dynamicSpellRegistry.get(nameKey)!;
     }
 
-    // 3. Dynamic lookup from cached D&D Beyond characters in localStorage
+    // 4. Dynamic lookup from cached D&D Beyond characters in localStorage
     if (typeof window !== "undefined" && window.localStorage) {
         try {
-            for (let i = 0; i < localStorage.length; i++) {
-                const storageKey = localStorage.key(i);
-                if (storageKey && (storageKey.includes("ddb-cache") || storageKey.startsWith("ddb_char_"))) {
-                    const raw = localStorage.getItem(storageKey);
-                    if (raw) {
-                        const char = JSON.parse(raw);
-                        if (char && Array.isArray(char.spells)) {
-                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                            const found = char.spells.find((s: any) => {
-                                if (!s) return false;
-                                const sKey = (s.id || "").toLowerCase().replace(/[^a-z0-9_]/g, "");
-                                const sNameKey = (s.name || "").toLowerCase().replace(/[^a-z0-9_]/g, "");
-                                return s.id === spellID
-                                    || sKey === key
-                                    || (nameKey && sNameKey === nameKey)
-                                    || sNameKey === key
-                                    || (key.length >= 4 && (sKey.includes(key) || key.includes(sKey)));
-                            });
-                            if (found) {
-                                const meta: SpellMetadata = {
-                                    id: found.id,
-                                    name: found.name,
-                                    level: typeof found.level === "number" ? found.level : 0,
-                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                    school: (found.school as any) || "Evocation",
-                                    castingTime: found.castingTime || "1 Action",
-                                    range: found.rangeText || (found.range ? `${found.range} ft` : "Self"),
-                                    aoe: found.aoe ? `${found.aoe.size} ft ${found.aoe.shape}` : undefined,
-                                    duration: found.duration || "Instantaneous",
-                                    components: found.components || "V, S",
-                                    concentration: Boolean(found.concentration),
-                                    ritual: Boolean(found.ritual),
-                                    damage: found.damage,
-                                    saveOrAttack: found.saveOrAttack,
-                                    description: found.description || "",
-                                    higherLevels: found.higherLevels,
-                                    canUpcast: found.canUpcast
-                                };
-                                registerDynamicSpell(meta);
-                                return meta;
-                            }
+            // If effectiveOwnerId is specified, search the owner's cache first!
+            const storageKeys: string[] = [];
+            if (effectiveOwnerId != null) {
+                for (let i = 0; i < localStorage.length; i++) {
+                    const storageKey = localStorage.key(i);
+                    if (storageKey && storageKey.includes(String(effectiveOwnerId))) {
+                        storageKeys.unshift(storageKey);
+                    }
+                }
+            }
+            if (storageKeys.length === 0) {
+                for (let i = 0; i < localStorage.length; i++) {
+                    const storageKey = localStorage.key(i);
+                    if (storageKey && (storageKey.includes("ddb-cache") || storageKey.startsWith("ddb_char_"))) {
+                        storageKeys.push(storageKey);
+                    }
+                }
+            }
+
+            for (const storageKey of storageKeys) {
+                const raw = localStorage.getItem(storageKey);
+                if (raw) {
+                    const char = JSON.parse(raw);
+                    if (char && Array.isArray(char.spells)) {
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const found = char.spells.find((s: any) => {
+                            if (!s) return false;
+                            const sKey = (s.id || "").toLowerCase().replace(/[^a-z0-9_]/g, "");
+                            const sNameKey = (s.name || "").toLowerCase().replace(/[^a-z0-9_]/g, "");
+                            return s.id === spellID
+                                || sKey === key
+                                || (nameKey && sNameKey === nameKey)
+                                || sNameKey === key;
+                        });
+                        if (found) {
+                            const meta: SpellMetadata = {
+                                id: found.id,
+                                name: found.name,
+                                level: typeof found.level === "number" ? found.level : 0,
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                school: (found.school as any) || "Evocation",
+                                castingTime: found.castingTime || "1 Action",
+                                range: found.rangeText || (found.range ? `${found.range} ft` : "Self"),
+                                aoe: found.aoe ? `${found.aoe.size} ft ${found.aoe.shape}` : undefined,
+                                duration: found.duration || "Instantaneous",
+                                components: found.components || "V, S",
+                                concentration: Boolean(found.concentration),
+                                ritual: Boolean(found.ritual),
+                                damage: found.damage,
+                                saveOrAttack: found.saveOrAttack,
+                                description: found.description || "",
+                                higherLevels: found.higherLevels,
+                                canUpcast: found.canUpcast
+                            };
+                            registerDynamicSpell(meta, char.id);
+                            return meta;
                         }
                     }
                 }

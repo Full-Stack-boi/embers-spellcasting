@@ -47,11 +47,17 @@ function getTokenPosition(item: Item): Vector2 {
  *    c. If no selection, return primary bound character.
  * 2. If no tokens owned yet, fallback to selection / single token.
  */
+export interface ResolveCasterOptions {
+    purpose?: "cast" | "view";
+}
+
 export async function resolveActiveCaster(
     playerRole: "GM" | "PLAYER",
-    playerID: string
+    playerID: string,
+    options?: ResolveCasterOptions
 ): Promise<ActiveCasterInfo | null> {
     const isDM = playerRole === "GM";
+    const purpose = options?.purpose ?? "view";
     const selection = await OBR.player.getSelection();
 
     const sceneItems = await OBR.scene.items.getItems();
@@ -127,7 +133,8 @@ export async function resolveActiveCaster(
             }
         }
 
-        if (characterItems.length > 0) {
+        // For casting purpose, never guess an arbitrary first token on the scene!
+        if (purpose !== "cast" && characterItems.length > 0) {
             const first = characterItems[0];
             const casterInfo: ActiveCasterInfo = {
                 item: first,
@@ -148,26 +155,29 @@ export async function resolveActiveCaster(
     // =========================================================================
     const ownedTokens = await getPlayerOwnedTokens(playerID, characterItems);
 
-    // A. If the player selected a single valid character token (own character, ally, or token to view):
-    // Resolve that token so the player can see its vision POV and perspective!
+    // A. If the player selected a single valid character token:
+    // - In "view" mode: resolve that token so the player can see its vision POV and perspective!
+    // - In "cast" mode: ONLY resolve if the player actually owns that token, preventing accidental
+    //   spellcasting on behalf of an enemy or ally being targeted.
     if (selection && selection.length === 1) {
         const selected = characterItems.find(item => item.id === selection[0]);
         if (selected) {
-            const casterInfo: ActiveCasterInfo = {
-                item: selected,
-                id: selected.id,
-                position: getTokenPosition(selected),
-                name: selected.name,
-                isDM: false
-            };
-            lastResolvedCaster = casterInfo;
-            return casterInfo;
+            const isOwned = ownedTokens.some(t => t.id === selected.id);
+            if (purpose === "view" || isOwned || ownedTokens.length === 0) {
+                const casterInfo: ActiveCasterInfo = {
+                    item: selected,
+                    id: selected.id,
+                    position: getTokenPosition(selected),
+                    name: selected.name,
+                    isDM: false
+                };
+                lastResolvedCaster = casterInfo;
+                return casterInfo;
+            }
         }
-        // If selection is NOT a valid character token (e.g. darkness zone, spell effect, prop),
-        // ignore it and fall through to player's own character token!
     }
 
-    // B. If no character token selected, fallback to player's primary or owned character:
+    // B. If no owned token selected or in cast mode targeting another, fallback to player's primary or owned character:
     if (ownedTokens.length > 0) {
         // Return primary bound character
         const primary = await getMyPrimaryCharacterToken(playerID, characterItems);

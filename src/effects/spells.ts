@@ -18,6 +18,7 @@ import { constants } from "../constants";
 import { resolveActiveCaster } from "../features/targeting/infrastructure/obr/activeCasterResolver";
 import { getLinkedDDBCharacterId } from "../services/ddbService";
 import { getSpellMetadata } from "../assets/spellInfo";
+import type { CastContext } from "../features/targeting/application/castContext";
 
 export const spells = spellsJSON as Spells;
 export const spellIDs = Object.keys(spells);
@@ -274,6 +275,7 @@ export function getSpellRange(spell?: Spell, spellID?: string): number {
         }
         const normalizedId = rawId.toLowerCase();
         if (normalizedId === "melee_weapon_attack" || normalizedId.includes("unarmed")) return 5;
+        if (normalizedId === "ranged_weapon_attack") return 60;
         const meta = getSpellMetadata(rawId);
         if (meta?.range) {
             const rangeLower = meta.range.toLowerCase();
@@ -466,7 +468,7 @@ function tokenMatchStrength(casterToken: SimplifiedItem, token: Image) {
     return strength;
 }
 
-async function setFirstTarget(firstTargetIsCasterBP: BlueprintValue<boolean> | undefined, targets: Target[], parameters: Record<string, unknown>, replicationType: ReplicationType, maxTargets?: number, playerID?: string, isGM: boolean = false) {
+async function setFirstTarget(firstTargetIsCasterBP: BlueprintValue<boolean> | undefined, targets: Target[], parameters: Record<string, unknown>, replicationType: ReplicationType, maxTargets?: number, playerID?: string, isGM: boolean = false, castContext?: CastContext | null) {
     const variables: Variables = {
         targets,
         ...parameters
@@ -481,6 +483,20 @@ async function setFirstTarget(firstTargetIsCasterBP: BlueprintValue<boolean> | u
         return;
     }
     if (maxTargets && targets.length >= maxTargets) {
+        return;
+    }
+
+    // 1. Direct explicit CastContext (immutable single source of truth for the cast)
+    if (castContext) {
+        if (targets.length > 0 && targets[0].id === castContext.casterTokenId) {
+            return;
+        }
+        targets.unshift({
+            id: castContext.casterTokenId,
+            count: 1,
+            position: castContext.position,
+            size: getItemSize(castContext.casterItem)
+        });
         return;
     }
 
@@ -530,7 +546,7 @@ async function setFirstTarget(firstTargetIsCasterBP: BlueprintValue<boolean> | u
 
     // Auto-resolve active caster if no default caster set or matched
     if (playerID) {
-        const activeCaster = await resolveActiveCaster(isGM ? "GM" : "PLAYER", playerID);
+        const activeCaster = await resolveActiveCaster(isGM ? "GM" : "PLAYER", playerID, { purpose: "cast" });
         if (activeCaster) {
             // If target 0 is already the active caster, do nothing
             if (targets.length > 0 && targets[0].id === activeCaster.id) {
@@ -546,7 +562,7 @@ async function setFirstTarget(firstTargetIsCasterBP: BlueprintValue<boolean> | u
     }
 }
 
-export async function doSpell(spellID: string, playerID: string, isGM: boolean) {
+export async function doSpell(spellID: string, playerID: string, isGM: boolean, castContext?: CastContext | null) {
     const spell = getSpell(spellID, isGM);
     if (spell == undefined) {
         log_error(`Unknown spell "${spellID}"`);
@@ -558,7 +574,8 @@ export async function doSpell(spellID: string, playerID: string, isGM: boolean) 
 
     const replicationType = spell.replicate ?? "no";
     const copyDelay = spell.copy ?? 150;
-    const parameterValuesString = localStorage.getItem(`${APP_KEY}/spell-parameters/${spellID}`);
+    const charScopedParamKey = castContext?.ddbCharacterId ? `${APP_KEY}/spell-parameters/${castContext.ddbCharacterId}/${spellID}` : null;
+    const parameterValuesString = (charScopedParamKey && localStorage.getItem(charScopedParamKey)) || localStorage.getItem(`${APP_KEY}/spell-parameters/${spellID}`);
 
     const parameterValues = parameterValuesString ? JSON.parse(parameterValuesString) : {};
     const normId = spellID.toLowerCase().replace(/[^a-z0-9_]/g, "");
@@ -605,18 +622,28 @@ export async function doSpell(spellID: string, playerID: string, isGM: boolean) 
     const spellAoE = getSpellAoE(spell, spellID);
     const spellMaxRange = getSpellRange(spell, spellID);
     if (spellAoE?.shape === "Sphere" && spellMaxRange === 0) {
-        const activeCaster = await resolveActiveCaster(isGM ? "GM" : "PLAYER", playerID);
-        if (activeCaster) {
+        if (castContext) {
             targetObjects.length = 0;
             targetObjects.push({
-                id: activeCaster.id,
-                position: activeCaster.position,
-                size: getItemSize(activeCaster.item),
+                id: castContext.casterTokenId,
+                position: castContext.position,
+                size: getItemSize(castContext.casterItem),
                 count: 1
             });
+        } else {
+            const activeCaster = await resolveActiveCaster(isGM ? "GM" : "PLAYER", playerID, { purpose: "cast" });
+            if (activeCaster) {
+                targetObjects.length = 0;
+                targetObjects.push({
+                    id: activeCaster.id,
+                    position: activeCaster.position,
+                    size: getItemSize(activeCaster.item),
+                    count: 1
+                });
+            }
         }
     } else {
-        await setFirstTarget(spell.firstTargetIsCaster, targetObjects, parameterValues, replicationType, spell.maxTargets, playerID, isGM);
+        await setFirstTarget(spell.firstTargetIsCaster, targetObjects, parameterValues, replicationType, spell.maxTargets, playerID, isGM, castContext);
     }
     replicateSpell(variables, targetObjects, parameterValues, replicationType);
     copySpellVariables(variables, copyDelay);
@@ -651,8 +678,15 @@ export async function doSpell(spellID: string, playerID: string, isGM: boolean) 
 
     copySpellInstructions(instructions, copyDelay);
 
-    const activeCaster = await resolveActiveCaster(isGM ? "GM" : "PLAYER", playerID);
-    const characterId = activeCaster?.item ? getLinkedDDBCharacterId(activeCaster.item) ?? undefined : undefined;
+    let casterTokenId: string | undefined = castContext?.casterTokenId;
+    let characterId: string | undefined = castContext?.ddbCharacterId != null ? String(castContext.ddbCharacterId) : undefined;
+
+    if (!casterTokenId) {
+        const activeCaster = await resolveActiveCaster(isGM ? "GM" : "PLAYER", playerID, { purpose: "cast" });
+        casterTokenId = activeCaster?.id;
+        const resolvedCharId = activeCaster?.item ? getLinkedDDBCharacterId(activeCaster.item) ?? undefined : undefined;
+        if (resolvedCharId) characterId = String(resolvedCharId);
+    }
 
     const message: MessageType = {
         instructions,
@@ -663,8 +697,8 @@ export async function doSpell(spellID: string, playerID: string, isGM: boolean) 
         spellData: {
             name: spellID,
             caster: playerID,
-            casterTokenId: activeCaster?.id,
-            characterId: characterId ? String(characterId) : undefined
+            casterTokenId,
+            characterId
         }
     };
     OBR.broadcast.sendMessage(MESSAGE_CHANNEL, message, { destination: "ALL" });

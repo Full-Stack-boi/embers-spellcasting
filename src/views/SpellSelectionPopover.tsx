@@ -6,18 +6,20 @@ import { getSpell, spellIDs } from "../effects/spells";
 import { getSpellMetadata, getSchoolStyle } from "../assets/spellInfo";
 import { useEffect, useMemo, useState } from "react";
 
-import OBR from "@owlbear-rodeo/sdk";
+import OBR, { Item } from "@owlbear-rodeo/sdk";
 import { setSelectedSpell, toolID } from "../effectsTool";
 import { useOBR } from "../platform/obr/react/providers";
 import { constants } from "../constants";
 import SpellDetailViewer from "../components/SpellDetailViewer/SpellDetailViewer";
+import { resolveActiveCaster } from "../features/targeting/infrastructure/obr/activeCasterResolver";
+import { isCharacterToken } from "../features/player/playerCharacterService";
 
 export const spellPopoverId = `${APP_KEY}/spell-popover`;
 export const mostRecentEffectsMetadataKey = `${APP_KEY}/most-recent-effects`;
 
 type TabType = "ALL" | "CANTRIP" | "LV1" | "LV2" | "LV3+";
 
-async function selectSpell(spellName: string) {
+async function selectSpell(spellName: string, casterId?: string) {
     // Update recent spells list
     const mostRecentSpellsList = (await getMostRecentSpells()).filter(
         name => name !== spellName
@@ -28,7 +30,7 @@ async function selectSpell(spellName: string) {
     }
     await OBR.player.setMetadata({ [mostRecentEffectsMetadataKey]: mostRecentSpellsList });
 
-    setSelectedSpell(spellName);
+    setSelectedSpell(spellName, casterId);
     await OBR.tool.activateTool(toolID);
 
     // Close this popover
@@ -152,6 +154,8 @@ export default function SpellSelectionPopover() {
     const [sortedSpellsList, setSortedSpellsList] = useState<string[]>([]);
     const [previewSpell, setPreviewSpell] = useState<string>("");
     const [isGM, setIsGM] = useState(false);
+    const [characterTokens, setCharacterTokens] = useState<Item[]>([]);
+    const [selectedCasterId, setSelectedCasterId] = useState<string>("");
 
     useEffect(() => {
         if (!obr.ready || !obr.player?.role) return;
@@ -166,7 +170,16 @@ export default function SpellSelectionPopover() {
                 setPreviewSpell(list[0]);
             }
         });
-    }, [obr.ready, obr.sceneReady]);
+        OBR.scene.items.getItems().then(items => {
+            const chars = items.filter(isCharacterToken);
+            setCharacterTokens(chars);
+        });
+        resolveActiveCaster(isGM ? "GM" : "PLAYER", obr.player?.id || "").then(active => {
+            if (active?.id) {
+                setSelectedCasterId(active.id);
+            }
+        });
+    }, [obr.ready, obr.sceneReady, isGM, obr.player?.id]);
 
     // Filter spells by search text and tab
     const filteredSpells = useMemo(() => {
@@ -215,7 +228,7 @@ export default function SpellSelectionPopover() {
         } else if (event.code === "Enter") {
             event.preventDefault();
             if (previewSpell) {
-                selectSpell(previewSpell);
+                selectSpell(previewSpell, selectedCasterId || undefined);
             }
         }
     };
@@ -229,6 +242,23 @@ export default function SpellSelectionPopover() {
             <div className="spell-popover">
                 {/* Left Pane: Search & Filtered List */}
                 <div className="spell-list-pane">
+                    {isGM && characterTokens.length > 0 && (
+                        <div style={{ padding: "6px 10px", background: "#1c1e22", borderRadius: 4, marginBottom: 8, display: "flex", alignItems: "center", gap: 8, fontSize: "0.82rem", border: "1px solid #2e323b" }}>
+                            <span style={{ color: "#a0a5b5", whiteSpace: "nowrap", fontWeight: 600 }}>Casting As:</span>
+                            <select
+                                value={selectedCasterId}
+                                onChange={e => setSelectedCasterId(e.target.value)}
+                                style={{ flex: 1, background: "#262930", color: "#f0f2f5", border: "1px solid #3c414e", borderRadius: 4, padding: "3px 6px", fontSize: "0.82rem", cursor: "pointer" }}
+                            >
+                                <option value="">-- Auto Resolve --</option>
+                                {characterTokens.map(tok => (
+                                    <option key={tok.id} value={tok.id}>
+                                        {tok.name || "Unnamed Token"}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
                     <div className="spell-search-box">
                         <input
                             type="text"
@@ -284,7 +314,7 @@ export default function SpellSelectionPopover() {
                                     spellName={spellName}
                                     isGM={isGM}
                                     isPreviewed={spellName === previewSpell}
-                                    onSelect={() => selectSpell(spellName)}
+                                    onSelect={() => selectSpell(spellName, selectedCasterId || undefined)}
                                     onHover={() => setPreviewSpell(spellName)}
                                 />
                             ))
@@ -297,7 +327,7 @@ export default function SpellSelectionPopover() {
                     {previewSpell ? (
                         <SpellDetailViewer
                             spellID={previewSpell}
-                            onCast={() => selectSpell(previewSpell)}
+                            onCast={() => selectSpell(previewSpell, selectedCasterId || undefined)}
                             castButtonLabel="⚡ Cast Spell"
                             style={{
                                 border: "none",

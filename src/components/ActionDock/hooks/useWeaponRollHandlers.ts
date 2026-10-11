@@ -15,6 +15,7 @@ interface UseWeaponRollHandlersOptions {
     casterId?: string;
     character: DDBParsedCharacter | null;
     hasAttackAdvantage: boolean;
+    attackBonus?: number;
     damageBonus?: number;
     isRaging?: boolean;
     activeBuffs?: string[];
@@ -30,6 +31,7 @@ export function useWeaponRollHandlers({
     casterId,
     character,
     hasAttackAdvantage,
+    attackBonus = 0,
     damageBonus,
     isRaging,
     activeBuffs,
@@ -43,18 +45,29 @@ export function useWeaponRollHandlers({
     const handleWeaponAttackRoll = (weapon: DDBWeaponAttack) => {
         if (casterId) checkAndFireActionTriggers(casterId, "attack").catch(() => {});
         const mode: "normal" | "advantage" | "disadvantage" = hasAttackAdvantage ? "advantage" : "normal";
-        const roll = rollAttack(weapon.toHit, "", mode);
+        const effectiveToHit = weapon.toHit + (attackBonus || 0);
+        const roll = rollAttack(effectiveToHit, "", mode);
         const casterName = character?.name || "Character";
         const isHexActive = concentrationSpell?.id?.toLowerCase() === "hex" || concentrationSpell?.name?.toLowerCase() === "hex";
+        const subtitle = roll.isCrit
+            ? "Critical Hit!"
+            : roll.isMiss
+                ? "Critical Miss!"
+                : `${weapon.name} Attack Roll${attackBonus > 0 ? ` • Channeled Attack (+${attackBonus})` : ""}`;
         const cards: DDBRollCardData[] = [{
             id: `${Date.now()}-dock-atk`, casterName, targetName: "TARGET", actionName: weapon.name.toUpperCase(),
             actionType: "TO HIT", dieType: 20,
             diceBreakdown: `${roll.d20} ${roll.bonus >= 0 ? `+ ${roll.bonus}` : `- ${Math.abs(roll.bonus)}`}`,
             formula: `1d20${roll.bonus >= 0 ? `+${roll.bonus}` : `${roll.bonus}`}${roll.mode === "advantage" ? " (ADV)" : roll.mode === "disadvantage" ? " (DIS)" : ""}`,
-            total: roll.total, subtitle: roll.isCrit ? "Critical Hit!" : roll.isMiss ? "Critical Miss!" : "Weapon Attack Roll",
+            total: roll.total, subtitle,
             isCrit: roll.isCrit, isMiss: roll.isMiss, rollMode: roll.mode,
             isAdvantage: roll.mode === "advantage", isDisadvantage: roll.mode === "disadvantage", timestamp: Date.now()
         }];
+        if (attackBonus > 0 && casterId) {
+            import("../../../services/buffService").then(({ removeTokenBuff }) => {
+                removeTokenBuff(casterId, "channeled_attack").catch(() => {});
+            });
+        }
         if (!roll.isMiss && isHexActive) {
             const hexDice = roll.isCrit ? "2d6" : "1d6";
             const hexDmg = rollDamageDDB("1d6", "Necrotic", "", roll.isCrit);

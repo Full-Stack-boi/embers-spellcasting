@@ -12,6 +12,7 @@ import { setupMessageListener } from "./effects/messageListener";
 import {
   DDB_ROLL_CHANNEL,
   openDDBRollLogPopover,
+  saveStoredRollHistory,
 } from "./services/rollLogService";
 import { checkAndFireMovementTriggers } from "./services/conditionalTriggerService";
 import { setupDarknessVisionHandler } from "./features/targeting/infrastructure/obr/darknessVisionHandler";
@@ -169,6 +170,9 @@ function setup() {
     const myId = await OBR.player.getId().catch(() => null);
     if (payload?.senderId && myId && payload.senderId === myId) {
       return;
+    }
+    if (payload?.cards && Array.isArray(payload.cards) && payload.cards.length > 0) {
+      saveStoredRollHistory(payload.cards);
     }
     openDDBRollLogPopover();
   });

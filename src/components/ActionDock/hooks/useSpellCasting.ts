@@ -3,6 +3,7 @@ import OBR from "@owlbear-rodeo/sdk";
 import { getOrdinal, getSpellMetadata } from "../../../assets/spellInfo";
 import { setSelectedSpell, toolID, hexChosenAbilityMetadataKey, selectedSpellSlotLevelMetadataKey, selectedSpellDamageTypeMetadataKey } from "../../../effectsTool";
 import { doSpell } from "../../../effects/spells";
+import { captureCastContext } from "../../../features/targeting/application/castContext";
 import { saveCombatState } from "../../../services/combatStateService";
 import { cacheDDBCharacter } from "../../../services/ddbService";
 import { getSortedTargets, stopAiming } from "../../../effectsTool";
@@ -61,13 +62,13 @@ export function useSpellCasting({
 
         if (damageType) {
             await OBR.player.setMetadata({
-                [selectedSpellDamageTypeMetadataKey]: { spellId: targetId, damageType },
+                [selectedSpellDamageTypeMetadataKey]: { spellId: targetId, casterId, damageType },
             });
         }
 
         const role = player?.role || "PLAYER";
         const playerId = player?.id || "";
-        const metadata = getSpellMetadata(targetId);
+        const metadata = getSpellMetadata(targetId, undefined, character?.id);
         const matchedSpell = character?.spells.find(spell => spell.id === targetId || spell.name.toLowerCase() === targetId.toLowerCase());
         if (matchedSpell && !matchedSpell.isPrepared && matchedSpell.level > 0 && matchedSpell.usesSpellSlot !== false) {
             OBR.notification.show(`${matchedSpell.name} is not prepared!`, "WARNING");
@@ -76,7 +77,7 @@ export function useSpellCasting({
 
         const baseSpellLevel = matchedSpell ? matchedSpell.level : (metadata?.level ?? 0);
         const targetLevel = levelToUse !== undefined ? levelToUse : (castLevel !== undefined ? castLevel : baseSpellLevel);
-        await OBR.player.setMetadata({ [selectedSpellSlotLevelMetadataKey]: { spellId: targetId, slotLevel: targetLevel } });
+        await OBR.player.setMetadata({ [selectedSpellSlotLevelMetadataKey]: { spellId: targetId, casterId, slotLevel: targetLevel } });
         const spellDisplayName = metadata?.name || matchedSpell?.name || targetId;
         const upcastMessage = baseSpellLevel > 0 && targetLevel > baseSpellLevel ? ` at ${getOrdinal(targetLevel)} Level` : "";
         const isHexSpell = targetId.toLowerCase() === "hex" || matchedSpell?.name?.toLowerCase() === "hex";
@@ -161,7 +162,8 @@ export function useSpellCasting({
         };
         broadcastDDBRoll([spellCard]);
 
-        await doSpell(targetId, playerId, role === "GM");
+        const castContext = await captureCastContext(role === "GM" ? "GM" : "PLAYER", playerId, casterId);
+        await doSpell(targetId, playerId, role === "GM", castContext);
         setSelected(null);
         setUpcastPickerSpellId(null);
         await stopAiming();

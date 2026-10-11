@@ -6,17 +6,19 @@ import { rollAttack, rollFormula } from "../../../utils/dice";
 interface UseCombatActionHandlersOptions {
     character: DDBParsedCharacter | null;
     weapons: DDBWeaponAttack[];
+    offhandWeapon?: DDBWeaponAttack;
     setHeroicInspiration: Dispatch<SetStateAction<boolean>>;
     onSelectWeapon: (weapon: DDBWeaponAttack, mode?: "melee" | "thrown", attackCount?: number) => void;
 }
 
-export function useCombatActionHandlers({ character, weapons, setHeroicInspiration, onSelectWeapon }: UseCombatActionHandlersOptions) {
+export function useCombatActionHandlers({ character, weapons, offhandWeapon, setHeroicInspiration, onSelectWeapon }: UseCombatActionHandlersOptions) {
     const handleTwoWeaponFighting = () => {
-        if (character?.offhandWeapon) {
-            onSelectWeapon(character.offhandWeapon, "melee");
-            const attack = rollAttack(character.offhandWeapon.toHit, "Two-Weapon Fighting (Offhand)");
-            const damage = rollFormula(character.offhandWeapon.damage);
-            OBR.notification.show(`${attack.message} | Dmg: ${damage.breakdown} ${character.offhandWeapon.damageType}`, "INFO");
+        const effectiveOffhand = offhandWeapon || character?.offhandWeapon;
+        if (effectiveOffhand) {
+            onSelectWeapon(effectiveOffhand, "melee");
+            const attack = rollAttack(effectiveOffhand.toHit, "Two-Weapon Fighting (Offhand)");
+            const damage = rollFormula(effectiveOffhand.damage);
+            OBR.notification.show(`${attack.message} | Dmg: ${damage.breakdown} ${effectiveOffhand.damageType}`, "INFO");
         } else {
             OBR.notification.show("Two-Weapon Fighting: Attack with second Light weapon as a Bonus Action", "INFO");
         }

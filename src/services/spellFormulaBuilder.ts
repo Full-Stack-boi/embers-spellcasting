@@ -20,6 +20,7 @@ import type {
     CantripScale,
 } from "../types/spellFormula";
 import { ALL_MANUAL_OVERRIDES } from "../assets/manual-formulas/index";
+import { combineDamageBonus } from "../utils/dice";
 
 // ─── School Normalizer ─────────────────────────────────────────────────────────
 
@@ -159,6 +160,54 @@ export function resolveFormulaDamageDice(formula: SpellFormula, characterLevel: 
     const extraMatch = perSlot.dice.match(/^(\d+)d(\d+)$/i);
     const extra = extraMatch ? `${Number(extraMatch[1]) * slotLevels}d${extraMatch[2]}` : perSlot.dice;
     return addDiceNotation(base, extra);
+}
+
+/**
+ * Resolves the full damage formula (dice + ability modifier/bonus) for a spell.
+ * Takes into account:
+ * 1. Cantrip scaling or slot upcasting via resolveFormulaDamageDice
+ * 2. addSpellcastingModifier flag on the base damage entry
+ * 3. usePrimaryStat flag on ddbSpell
+ * 4. Flat bonus modifiers from ddbSpell (e.g. Agonizing Blast, magic items)
+ */
+export function resolveFormulaFullDamage(
+    formula: SpellFormula,
+    characterLevel: number,
+    castSlotLevel = formula.category.level,
+    options?: {
+        spellcastingModifier?: number;
+        ddbSpell?: DDBParsedSpell | null;
+    }
+): string | undefined {
+    const dice = resolveFormulaDamageDice(formula, characterLevel, castSlotLevel) ?? options?.ddbSpell?.damage;
+    if (!dice) return undefined;
+
+    const baseDamage = formula.damage.find(entry => entry.isBase);
+    const shouldAddMod = Boolean(baseDamage?.addSpellcastingModifier || options?.ddbSpell?.usePrimaryStat);
+
+    // If the dice string already contains a modifier (+N or -N), return it as is
+    if (/[+-]\s*\d+/.test(dice)) {
+        return dice;
+    }
+
+    // If ddbSpell has an explicit modifier bonus (e.g. from an invocation or class feature like Agonizing Blast), preserve it
+    const ddbMatch = options?.ddbSpell?.damage?.match(/([+-]\s*\d+)/);
+    if (ddbMatch) {
+        const ddbMod = parseInt(ddbMatch[1].replace(/\s+/g, ""), 10);
+        if (ddbMod !== 0) {
+            return combineDamageBonus(dice, ddbMod);
+        }
+    }
+
+    // If the formula or DDB spell specifies adding the spellcasting modifier
+    if (shouldAddMod) {
+        const mod = options?.spellcastingModifier ?? 0;
+        if (mod !== 0) {
+            return combineDamageBonus(dice, mod);
+        }
+    }
+
+    return dice;
 }
 
 // ─── Main Builder ──────────────────────────────────────────────────────────────

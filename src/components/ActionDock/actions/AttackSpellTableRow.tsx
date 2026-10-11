@@ -1,6 +1,6 @@
 import React from "react";
 import { getSchoolStyle, getSpellInitials, getSpellMetadata, isSpellUpcastable } from "../../../assets/spellInfo";
-import { IconCastLightning, IconFire } from "../shared/Bg3Icons";
+import { IconCastLightning, IconFire, IconHeart } from "../shared/Bg3Icons";
 import type { DockSpell } from "../domain/types";
 
 export interface AttackSpellTableRowProps {
@@ -70,13 +70,21 @@ export const AttackSpellTableRow: React.FC<AttackSpellTableRowProps> = ({
                     ) : <span className="ddb-na-dash">—</span>}
                 </td>
                 <td className="td-damage">
-                    {spell.damage ? (
-                        <button type="button" className="ddb-roll-pill dmg-pill" onClick={event => { event.stopPropagation(); onDamageRoll(spell); }} title={`Roll Damage: ${spell.damage} ${damageType || ""}`}>
-                            <IconFire size={11} />
-                            <span>{spell.damage}</span>
-                            {damageType && <span className="ddb-type-text">{damageType}</span>}
-                        </button>
-                    ) : <span className="ddb-na-dash">—</span>}
+                    {spell.damage ? (() => {
+                        const isHealing = damageType?.toLowerCase() === "healing";
+                        return (
+                            <button
+                                type="button"
+                                className={`ddb-roll-pill ${isHealing ? "heal-pill" : "dmg-pill"}`}
+                                onClick={event => { event.stopPropagation(); onDamageRoll(spell); }}
+                                title={`${isHealing ? "Roll Healing" : "Roll Damage"}: ${spell.damage} ${damageType || ""}`}
+                            >
+                                {isHealing ? <IconHeart size={11} /> : <IconFire size={11} />}
+                                <span>{spell.damage}</span>
+                                {damageType && <span className="ddb-type-text">{damageType}</span>}
+                            </button>
+                        );
+                    })() : <span className="ddb-na-dash">—</span>}
                 </td>
                 <td className="td-notes">
                     <div className="ddb-notes-cell">

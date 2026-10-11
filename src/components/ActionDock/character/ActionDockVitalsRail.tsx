@@ -21,6 +21,8 @@ interface ActionDockVitalsRailProps {
     avatarUrl: string;
     casterName: string;
     classSummary: string;
+    characterTokens?: Array<{ id: string; name?: string }>;
+    onSelectCaster?: (tokenId: string) => void;
     isReadOnlyInspection: boolean;
     isOwnedByMe: boolean;
     otherOwnerName?: string;
@@ -60,7 +62,7 @@ interface ActionDockVitalsRailProps {
 }
 
 export function ActionDockVitalsRail({
-    character, caster, player, avatarUrl, casterName, classSummary, isReadOnlyInspection, isOwnedByMe,
+    character, caster, player, avatarUrl, casterName, classSummary, characterTokens, onSelectCaster, isReadOnlyInspection, isOwnedByMe,
     otherOwnerName, currentHp, maxHp, temporaryHp, customTemporaryHp, deathSaves, setDeathSaves,
     heroicInspiration, drawerItem, setDrawerItem, isDiceRollerOpen, setIsDiceRollerOpen,
     isConditionsMenuOpen, conditions, exhaustionLevel, setExhaustionLevel,
@@ -97,6 +99,8 @@ export function ActionDockVitalsRail({
                 isOwnedByMe={isOwnedByMe}
                 otherOwnerName={otherOwnerName}
                 tokenId={caster?.id}
+                characterTokens={characterTokens}
+                onSelectCaster={onSelectCaster}
                 onOpenSync={() => openDDBSyncModal(caster?.id)}
                 onRelease={handleRelease}
                 onClaim={handleClaim}

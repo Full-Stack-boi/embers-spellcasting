@@ -200,4 +200,45 @@ describe("rollLogService", () => {
         expect(found?.subRolls?.[1].unitLabel).toBe("BEAM 2");
         expect(found?.subRolls?.[1].targetName).toBe("Goblin Boss");
     });
+
+    it("deduplicates cards by id when saving to history", () => {
+        clearStoredRollHistory();
+        const cardA: DDBRollCardData = {
+            id: "card-dup-1",
+            casterName: "Caster A",
+            actionName: "Fireball",
+            actionType: "SPELL",
+            dieType: 6,
+            diceBreakdown: "28",
+            formula: "8d6",
+            total: 28,
+            timestamp: 1000,
+        };
+        const cardB: DDBRollCardData = {
+            id: "card-dup-2",
+            casterName: "Caster B",
+            actionName: "Magic Missile",
+            actionType: "SPELL",
+            dieType: 4,
+            diceBreakdown: "10",
+            formula: "3d4+3",
+            total: 10,
+            timestamp: 1001,
+        };
+
+        // First save cardA
+        saveStoredRollHistory([cardA]);
+        expect(getStoredRollHistory().length).toBe(1);
+
+        // Save cardA again along with cardB
+        saveStoredRollHistory([cardA, cardB]);
+        const history = getStoredRollHistory();
+        expect(history.length).toBe(2);
+        expect(history.map(c => c.id)).toEqual(["card-dup-2", "card-dup-1"]);
+
+        // Saving duplicate cards only should not grow list
+        saveStoredRollHistory([cardA, cardB]);
+        expect(getStoredRollHistory().length).toBe(2);
+    });
 });
+

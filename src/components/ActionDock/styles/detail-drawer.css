@@ -427,6 +427,19 @@
     color: #ffffff;
 }
 
+.ddb-drawer-action-btn.thrown-btn {
+    background: rgba(245, 158, 11, 0.15);
+    border-color: rgba(245, 158, 11, 0.7);
+    color: #fbbf24;
+}
+
+.ddb-drawer-action-btn.thrown-btn:hover {
+    background: rgba(245, 158, 11, 0.3);
+    border-color: #f59e0b;
+    color: #ffffff;
+    box-shadow: 0 0 6px rgba(245, 158, 11, 0.4);
+}
+
 @media (prefers-reduced-motion: reduce) {
     .ddb-detail-drawer {
         animation: none;

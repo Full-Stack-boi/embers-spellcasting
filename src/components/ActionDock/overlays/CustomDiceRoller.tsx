@@ -165,7 +165,7 @@ export const CustomDiceRoller: React.FC<CustomDiceRollerProps> = ({ onClose, cas
     // Quick roll a single die immediately
     const handleQuickRoll = (die: number) => {
         const singlePool = { [die]: 1 };
-        executeRoll(singlePool, 0, die === 20 ? d20Mode : "normal");
+        executeRoll(singlePool, 0, d20Mode);
     };
 
     // Execute the roll
@@ -180,19 +180,29 @@ export const CustomDiceRoller: React.FC<CustomDiceRollerProps> = ({ onClose, cas
         let result: CustomDicePoolResult;
 
         if (isTextMode && customFormulaText.trim()) {
-            // Roll using raw text formula
-            const rawRes = rollFormula(customFormulaText.trim());
-            result = {
-                total: rawRes.total,
-                formula: customFormulaText.trim(),
-                breakdown: rawRes.breakdown,
-                diceGroups: [],
-                modifier: 0,
-                d20Mode: "normal",
-                isNat20: rawRes.isNat20,
-                isNat1: rawRes.isNat1,
-                timestamp: Date.now()
-            };
+            const trimmed = customFormulaText.trim();
+            const simpleMatch = trimmed.match(/^(\d*)d(\d+)(?:\s*([+-])\s*(\d+))?$/i);
+            if (simpleMatch) {
+                const c = simpleMatch[1] ? parseInt(simpleMatch[1], 10) : 1;
+                const d = parseInt(simpleMatch[2], 10);
+                const sign = simpleMatch[3] === "-" ? -1 : 1;
+                const m = simpleMatch[4] ? sign * parseInt(simpleMatch[4], 10) : 0;
+                result = rollCustomDicePool({ [d]: c }, m, modeToRoll);
+            } else {
+                // Roll using raw text formula
+                const rawRes = rollFormula(trimmed);
+                result = {
+                    total: rawRes.total,
+                    formula: trimmed,
+                    breakdown: rawRes.breakdown,
+                    diceGroups: [],
+                    modifier: 0,
+                    d20Mode: modeToRoll,
+                    isNat20: rawRes.isNat20,
+                    isNat1: rawRes.isNat1,
+                    timestamp: Date.now()
+                };
+            }
         } else {
             result = rollCustomDicePool(poolToRoll, modToRoll, modeToRoll);
         }
@@ -209,12 +219,21 @@ export const CustomDiceRoller: React.FC<CustomDiceRollerProps> = ({ onClose, cas
                 actionName: "CUSTOM ROLL",
                 actionType: "CHECK",
                 dieType: result.diceGroups[0]?.die || 20,
-                diceBreakdown: result.breakdown.replace(/ = \d+$/, "").replace(/\[|\]/g, ""),
-                formula: result.formula,
+                diceBreakdown: result.breakdown.replace(/ = -?\d+$/, ""),
+                formula: modeToRoll !== "normal" ? `${result.formula} (${modeToRoll === "advantage" ? "ADV" : "DIS"})` : result.formula,
                 total: result.total,
-                subtitle: result.isNat20 ? "Natural 20!" : result.isNat1 ? "Natural 1!" : "Rolled with Elder Flame",
+                subtitle: result.isNat20
+                    ? "Natural 20!"
+                    : result.isNat1
+                        ? "Natural 1!"
+                        : modeToRoll !== "normal"
+                            ? (modeToRoll === "advantage" ? "Advantage Roll" : "Disadvantage Roll")
+                            : "Rolled with Elder Flame",
                 isCrit: result.isNat20,
                 isMiss: result.isNat1,
+                rollMode: modeToRoll,
+                isAdvantage: modeToRoll === "advantage",
+                isDisadvantage: modeToRoll === "disadvantage",
                 timestamp: Date.now()
             }
         ]);
@@ -290,8 +309,8 @@ export const CustomDiceRoller: React.FC<CustomDiceRollerProps> = ({ onClose, cas
 
             {/* 3. Controls Bar: d20 Mode (ADV/DIS/NORM) & Modifier (+/-) */}
             <div className="ddb-dice-controls-bar">
-                {/* d20 Mode Selector */}
-                <div className="ddb-d20-mode-pills" title="Roll mode for d20">
+                {/* Roll Mode Selector */}
+                <div className="ddb-d20-mode-pills" title="Roll mode (Normal / Advantage / Disadvantage)">
                     <button
                         type="button"
                         className={`ddb-mode-pill ${d20Mode === "normal" ? "active" : ""}`}
@@ -303,7 +322,7 @@ export const CustomDiceRoller: React.FC<CustomDiceRollerProps> = ({ onClose, cas
                         type="button"
                         className={`ddb-mode-pill adv ${d20Mode === "advantage" ? "active" : ""}`}
                         onClick={() => setD20Mode("advantage")}
-                        title="Roll 2d20 and take the higher roll"
+                        title="Roll with Advantage (roll twice and take the higher roll)"
                     >
                         ADV
                     </button>
@@ -311,7 +330,7 @@ export const CustomDiceRoller: React.FC<CustomDiceRollerProps> = ({ onClose, cas
                         type="button"
                         className={`ddb-mode-pill dis ${d20Mode === "disadvantage" ? "active" : ""}`}
                         onClick={() => setD20Mode("disadvantage")}
-                        title="Roll 2d20 and take the lower roll"
+                        title="Roll with Disadvantage (roll twice and take the lower roll)"
                     >
                         DIS
                     </button>

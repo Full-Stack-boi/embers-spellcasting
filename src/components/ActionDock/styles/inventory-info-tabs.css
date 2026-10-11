@@ -142,6 +142,75 @@
     gap: 3px;
 }
 
+.ddb-equip-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1px 6px;
+    font-size: 0.54rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-radius: 3px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.06);
+    color: #94a3b8;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.ddb-equip-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #f1f5f9;
+}
+
+.ddb-equip-toggle-btn.is-equipped {
+    background: rgba(16, 185, 129, 0.18);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.45);
+}
+
+.ddb-equip-toggle-btn.is-equipped:hover {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+    border-color: rgba(239, 68, 68, 0.5);
+}
+
+.ddb-hand-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 1px 5px;
+    font-size: 0.52rem;
+    font-weight: 800;
+    border-radius: 3px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.ddb-hand-badge.main {
+    background: rgba(56, 189, 248, 0.15);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.4);
+}
+
+.ddb-hand-badge.main:hover {
+    background: rgba(56, 189, 248, 0.3);
+}
+
+.ddb-hand-badge.offhand {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.ddb-hand-badge.offhand:hover {
+    background: rgba(245, 158, 11, 0.3);
+}
+
 .ddb-attuned-badge {
     font-size: 0.54rem;
     font-weight: 800;

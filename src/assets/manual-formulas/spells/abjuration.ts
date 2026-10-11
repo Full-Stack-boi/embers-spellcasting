@@ -107,7 +107,7 @@ export const abjurationSpellOverrides: Record<string, SpellFormula> = {
       duration: "Instantaneous",
     },
     interaction: { type: "utility" },
-    damage: [{ dice: "2d8", type: "healing", isBase: true }],
+    damage: [{ dice: "2d8", type: "healing", isBase: true, addSpellcastingModifier: true }],
     upcasting: {
       notes: "+2d8 healing per spell slot level above 1st",
       perSlotLevel: { dice: "2d8", type: "healing" },
@@ -140,7 +140,7 @@ export const abjurationSpellOverrides: Record<string, SpellFormula> = {
       duration: "Instantaneous",
     },
     interaction: { type: "utility" },
-    damage: [{ dice: "2d4", type: "healing", isBase: true }],
+    damage: [{ dice: "2d4", type: "healing", isBase: true, addSpellcastingModifier: true }],
     upcasting: {
       notes: "+2d4 healing per spell slot level above 1st",
       perSlotLevel: { dice: "2d4", type: "healing" },
@@ -1042,7 +1042,7 @@ export const abjurationSpellOverrides: Record<string, SpellFormula> = {
       duration: "Instantaneous",
     },
     interaction: { type: "utility" },
-    damage: [{ dice: "2d4", type: "healing", isBase: true }],
+    damage: [{ dice: "2d4", type: "healing", isBase: true, addSpellcastingModifier: true }],
     upcasting: {
       notes: "+1d4 healing per spell slot level above 3rd",
       perSlotLevel: { dice: "1d4", type: "healing" },
@@ -1764,7 +1764,7 @@ export const abjurationSpellOverrides: Record<string, SpellFormula> = {
     },
     interaction: { type: "utility" },
     area: { shape: "Sphere", sizeFeet: 30 },
-    damage: [{ dice: "5d8", type: "healing", isBase: true }],
+    damage: [{ dice: "5d8", type: "healing", isBase: true, addSpellcastingModifier: true }],
     upcasting: {
       notes: "+1d8 healing per spell slot level above 5th",
       perSlotLevel: { dice: "1d8", type: "healing" },

@@ -12,6 +12,9 @@ export interface WeaponTableRowProps {
     weapon: DDBWeaponAttack;
     activeRider?: string | null;
     resolvedRiders?: ResolvedWeaponRiders;
+    isMainHand?: boolean;
+    isOffHand?: boolean;
+    onSwapHands?: () => void;
     selectedRiderChoice?: string;
     effectiveBonusDamage?: number;
     onSelectRiderChoice?: (choice: string) => void;
@@ -24,6 +27,9 @@ export interface WeaponTableRowProps {
 
 export const WeaponTableRow: React.FC<WeaponTableRowProps> = ({
     weapon,
+    isMainHand,
+    isOffHand,
+    onSwapHands,
     activeRider,
     resolvedRiders,
     selectedRiderChoice,
@@ -60,7 +66,27 @@ export const WeaponTableRow: React.FC<WeaponTableRowProps> = ({
                 <div className="ddb-weapon-cell">
                     <span className="ddb-mini-weapon-badge">{getWeaponIcon(weapon.name, weapon.type, 13)}</span>
                     <span className="ddb-weapon-name">{weapon.name}</span>
-                    {weapon.type && <span className="ddb-weapon-tag">{weapon.type}</span>}
+                    {isMainHand && (
+                        <button
+                            type="button"
+                            className="ddb-hand-badge main"
+                            onClick={(e) => { e.stopPropagation(); onSwapHands?.(); }}
+                            title="Main Hand (Click to swap with Off Hand)"
+                        >
+                            Main Hand ⇄
+                        </button>
+                    )}
+                    {isOffHand && (
+                        <button
+                            type="button"
+                            className="ddb-hand-badge offhand"
+                            onClick={(e) => { e.stopPropagation(); onSwapHands?.(); }}
+                            title="Off Hand (Click to swap with Main Hand)"
+                        >
+                            Off Hand ⇄
+                        </button>
+                    )}
+                    {weapon.type && !isMainHand && !isOffHand && <span className="ddb-weapon-tag">{weapon.type}</span>}
                 </div>
             </td>
             <td className="td-range" onClick={event => event.stopPropagation()}>
@@ -74,7 +100,7 @@ export const WeaponTableRow: React.FC<WeaponTableRowProps> = ({
                         </button>
                     </div>
                 ) : (
-                    <span className="ddb-range-clickable" onClick={() => onSelectWeapon(weapon, "melee")} title="Melee Reach (5 ft.) - Click to Aim">
+                    <span className="ddb-range-clickable" onClick={() => onSelectWeapon(weapon, "melee")} title={weapon.type === "ranged" ? `${weapon.rangeText} - Click to Aim` : "Melee Reach (5 ft.) - Click to Aim"}>
                         {weapon.rangeText}
                     </span>
                 )}

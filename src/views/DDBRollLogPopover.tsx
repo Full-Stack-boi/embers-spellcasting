@@ -5,9 +5,11 @@ import { DDBRollCardData, DDBRollLogPayload } from "../types/ddbRollLog";
 import { DDBRollCard } from "../components/DDBRollLog/DDBRollCard";
 import {
     DDB_ROLL_CHANNEL,
+    ROLL_HISTORY_KEY,
     closeDDBRollLogPopover,
     setPopoverOpenState,
     getStoredRollHistory,
+    saveStoredRollHistory,
     clearStoredRollHistory,
     subscribeToDDBRolls,
 } from "../services/rollLogService";
@@ -57,7 +59,13 @@ export const DDBRollLogPopover: React.FC = () => {
                 unsubscribeBroadcast = OBR.broadcast.onMessage(DDB_ROLL_CHANNEL, (event) => {
                     const payload = event.data as DDBRollLogPayload;
                     if (payload && Array.isArray(payload.cards) && payload.cards.length > 0) {
-                        setCards(prev => [...payload.cards, ...prev].slice(0, 20));
+                        saveStoredRollHistory(payload.cards);
+                        setCards(prev => {
+                            const existingIds = new Set(prev.map(c => c.id));
+                            const unique = payload.cards.filter(c => !existingIds.has(c.id));
+                            if (unique.length === 0) return prev;
+                            return [...unique, ...prev].slice(0, 20);
+                        });
                     }
                 });
             } catch (err) {
@@ -67,17 +75,42 @@ export const DDBRollLogPopover: React.FC = () => {
 
         // 2. In-memory local listener
         const unsubscribeLocal = subscribeToDDBRolls((newCards) => {
-            setCards(prev => [...newCards, ...prev].slice(0, 20));
+            setCards(prev => {
+                const existingIds = new Set(prev.map(c => c.id));
+                const unique = newCards.filter(c => !existingIds.has(c.id));
+                if (unique.length === 0) return prev;
+                return [...unique, ...prev].slice(0, 20);
+            });
         });
 
         // 3. Custom window event listener
         const handleWindowEvent = (e: Event) => {
             const custom = e as CustomEvent<DDBRollCardData[]>;
             if (custom.detail && Array.isArray(custom.detail)) {
-                setCards(prev => [...custom.detail, ...prev].slice(0, 20));
+                setCards(prev => {
+                    const existingIds = new Set(prev.map(c => c.id));
+                    const unique = custom.detail.filter(c => !existingIds.has(c.id));
+                    if (unique.length === 0) return prev;
+                    return [...unique, ...prev].slice(0, 20);
+                });
             }
         };
         window.addEventListener("embers:ddb-roll", handleWindowEvent);
+
+        // 4. Cross-window storage listener
+        const handleStorageEvent = (e: StorageEvent) => {
+            if (e.key === ROLL_HISTORY_KEY && e.newValue) {
+                try {
+                    const parsed = JSON.parse(e.newValue) as DDBRollCardData[];
+                    if (Array.isArray(parsed)) {
+                        setCards(parsed.slice(0, 20));
+                    }
+                } catch {
+                    // Ignore malformed storage payload
+                }
+            }
+        };
+        window.addEventListener("storage", handleStorageEvent);
 
         return () => {
             isMounted = false;
@@ -86,6 +119,7 @@ export const DDBRollLogPopover: React.FC = () => {
             unsubscribeBroadcast?.();
             unsubscribeLocal();
             window.removeEventListener("embers:ddb-roll", handleWindowEvent);
+            window.removeEventListener("storage", handleStorageEvent);
         };
     }, []);
 

@@ -4,7 +4,7 @@ import { DDBRollCardData, DDBRollLogPayload } from "../types/ddbRollLog";
 
 export const DDB_ROLL_CHANNEL = `${APP_KEY}/roll-log`;
 export const ddbRollLogPopoverId = `${APP_KEY}/ddb-roll-log`;
-const ROLL_HISTORY_KEY = `${APP_KEY}/roll-history`;
+export const ROLL_HISTORY_KEY = `${APP_KEY}/roll-history`;
 
 export function getStoredRollHistory(): DDBRollCardData[] {
     try {
@@ -17,9 +17,19 @@ export function getStoredRollHistory(): DDBRollCardData[] {
 }
 
 export function saveStoredRollHistory(cards: DDBRollCardData[]): void {
+    if (!cards || cards.length === 0) return;
     try {
         const existing = getStoredRollHistory();
-        const merged = [...cards, ...existing].slice(0, 30);
+        const existingIds = new Set(existing.map((c) => c.id));
+        const uniqueIncoming: DDBRollCardData[] = [];
+        for (const card of cards) {
+            if (card && card.id && !existingIds.has(card.id)) {
+                existingIds.add(card.id);
+                uniqueIncoming.push(card);
+            }
+        }
+        if (uniqueIncoming.length === 0) return;
+        const merged = [...uniqueIncoming, ...existing].slice(0, 30);
         localStorage.setItem(ROLL_HISTORY_KEY, JSON.stringify(merged));
     } catch {
         // Ignore storage errors

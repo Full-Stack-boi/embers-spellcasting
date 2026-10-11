@@ -479,36 +479,68 @@ export function rollCustomDicePool(
     // Check if pool is empty; if so, default to 1d20
     const hasAnyDice = Object.values(pool).some(count => count > 0);
     const effectivePool: Record<number, number> = hasAnyDice ? { ...pool } : { 20: 1 };
+    const isAdvOrDis = d20Mode === "advantage" || d20Mode === "disadvantage";
 
     // Standard polyhedral dice order
     const standardDice = [4, 6, 8, 10, 12, 20, 100];
+    const totalActiveTypes = standardDice.filter(d => (effectivePool[d] || 0) > 0).length;
+
     for (const die of standardDice) {
         const count = effectivePool[die] || 0;
         if (count <= 0) continue;
 
         formulaParts.push(`${count}d${die}`);
 
-        if (die === 20 && count === 1 && (d20Mode === "advantage" || d20Mode === "disadvantage")) {
-            const r1 = Math.floor(Math.random() * 20) + 1;
-            const r2 = Math.floor(Math.random() * 20) + 1;
-            const kept = d20Mode === "advantage" ? Math.max(r1, r2) : Math.min(r1, r2);
-            const dropped = d20Mode === "advantage" ? Math.min(r1, r2) : Math.max(r1, r2);
+        if (isAdvOrDis) {
+            // Per-die Advantage / Disadvantage: Each die in the group is rolled twice, keeping the higher (ADV) or lower (DIS)
+            const keptRolls: number[] = [];
+            const droppedRolls: number[] = [];
+            const dieBreakdownStrings: string[] = [];
 
-            if (kept === 20) isNat20 = true;
-            if (kept === 1) isNat1 = true;
+            for (let i = 0; i < count; i++) {
+                const r1 = Math.floor(Math.random() * die) + 1;
+                const r2 = Math.floor(Math.random() * die) + 1;
+                const kept = d20Mode === "advantage" ? Math.max(r1, r2) : Math.min(r1, r2);
+                const dropped = d20Mode === "advantage" ? Math.min(r1, r2) : Math.max(r1, r2);
 
-            diceTotal += kept;
+                keptRolls.push(kept);
+                droppedRolls.push(dropped);
+                dieBreakdownStrings.push(`[${kept}, (${dropped})]`);
+
+                if (die === 20) {
+                    if (kept === 20) isNat20 = true;
+                }
+            }
+
+            if (die === 20) {
+                if (!isNat20 && keptRolls.every(r => r === 1)) {
+                    isNat1 = true;
+                }
+            }
+
+            const subtotal = keptRolls.reduce((sum, r) => sum + r, 0);
+            diceTotal += subtotal;
+
             diceGroups.push({
-                die: 20,
-                count: 1,
-                rolls: [r1, r2],
-                keptRoll: kept,
-                droppedRoll: dropped,
-                subtotal: kept
+                die,
+                count,
+                rolls: count === 1 ? [Math.max(keptRolls[0], droppedRolls[0]), Math.min(keptRolls[0], droppedRolls[0])] : keptRolls,
+                keptRoll: keptRolls[0],
+                droppedRoll: droppedRolls[0],
+                subtotal
             });
-            const modeTag = d20Mode === "advantage" ? "ADV" : "DIS";
-            breakdownParts.push(`1d20 ${modeTag}[${kept}, (${dropped})]`);
+
+            if (totalActiveTypes > 1) {
+                if (count === 1) {
+                    breakdownParts.push(`1d${die} ${dieBreakdownStrings[0]}`);
+                } else {
+                    breakdownParts.push(`${count}d${die} (${dieBreakdownStrings.join(" + ")})`);
+                }
+            } else {
+                breakdownParts.push(dieBreakdownStrings.join(" + "));
+            }
         } else {
+            // Normal rolls
             const rolls: number[] = [];
             let subtotal = 0;
             for (let i = 0; i < count; i++) {
@@ -517,9 +549,9 @@ export function rollCustomDicePool(
                 subtotal += r;
             }
 
-            if (die === 20 && count === 1) {
-                if (rolls[0] === 20) isNat20 = true;
-                if (rolls[0] === 1) isNat1 = true;
+            if (die === 20) {
+                if (rolls.some(r => r === 20)) isNat20 = true;
+                if (count === 1 && rolls[0] === 1) isNat1 = true;
             }
 
             diceTotal += subtotal;
@@ -529,9 +561,16 @@ export function rollCustomDicePool(
                 rolls,
                 subtotal
             });
-            breakdownParts.push(`${count}d${die} [${rolls.join(", ")}]`);
+
+            if (totalActiveTypes > 1) {
+                breakdownParts.push(`${count}d${die} [${rolls.join(", ")}]`);
+            } else {
+                breakdownParts.push(`[${rolls.join(", ")}]`);
+            }
         }
     }
+
+    if (isNat20) isNat1 = false;
 
     const total = diceTotal + modifier;
     const modStr = modifier > 0 ? ` + ${modifier}` : modifier < 0 ? ` - ${Math.abs(modifier)}` : "";

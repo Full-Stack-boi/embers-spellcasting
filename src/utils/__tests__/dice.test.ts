@@ -120,18 +120,52 @@ describe("dice utility", () => {
         expect(res.diceGroups[1].rolls).toHaveLength(1);
     });
 
-    it("should handle advantage and disadvantage in custom dice pool", () => {
+    it("should handle advantage and disadvantage in custom dice pool for d20", () => {
         const advRes = rollCustomDicePool({ 20: 1 }, 4, "advantage");
         expect(advRes.diceGroups[0].rolls).toHaveLength(2);
         expect(advRes.diceGroups[0].keptRoll).toBeDefined();
         expect(advRes.diceGroups[0].droppedRoll).toBeDefined();
         expect(advRes.diceGroups[0].keptRoll!).toBeGreaterThanOrEqual(advRes.diceGroups[0].droppedRoll!);
-        expect(advRes.breakdown).toContain("ADV[");
+        expect(advRes.breakdown).toMatch(/\[\d+,\s*\(\d+\)\]\s*\+\s*4\s*=\s*\d+/);
 
         const disRes = rollCustomDicePool({ 20: 1 }, 2, "disadvantage");
         expect(disRes.diceGroups[0].rolls).toHaveLength(2);
         expect(disRes.diceGroups[0].keptRoll!).toBeLessThanOrEqual(disRes.diceGroups[0].droppedRoll!);
-        expect(disRes.breakdown).toContain("DIS[");
+        expect(disRes.breakdown).toMatch(/\[\d+,\s*\(\d+\)\]\s*\+\s*2\s*=\s*\d+/);
+    });
+
+    it("should handle per-die advantage and disadvantage for non-d20 and multi-dice pools", () => {
+        // d12 with Advantage
+        const d12Adv = rollCustomDicePool({ 12: 1 }, 2, "advantage");
+        expect(d12Adv.diceGroups[0].die).toBe(12);
+        expect(d12Adv.diceGroups[0].rolls).toHaveLength(2);
+        expect(d12Adv.diceGroups[0].keptRoll!).toBeGreaterThanOrEqual(d12Adv.diceGroups[0].droppedRoll!);
+        expect(d12Adv.breakdown).toMatch(/\[\d+,\s*\(\d+\)\]\s*\+\s*2/);
+
+        // d100 with Disadvantage
+        const d100Dis = rollCustomDicePool({ 100: 1 }, 0, "disadvantage");
+        expect(d100Dis.diceGroups[0].die).toBe(100);
+        expect(d100Dis.diceGroups[0].rolls).toHaveLength(2);
+        expect(d100Dis.diceGroups[0].keptRoll!).toBeLessThanOrEqual(d100Dis.diceGroups[0].droppedRoll!);
+        expect(d100Dis.breakdown).toMatch(/\[\d+,\s*\(\d+\)\]/);
+
+        // 3d10 with Advantage (Per-die ADV: each of the 3 dice rolls twice, keeping the higher)
+        const d10PoolAdv = rollCustomDicePool({ 10: 3 }, 0, "advantage");
+        expect(d10PoolAdv.diceGroups[0].die).toBe(10);
+        expect(d10PoolAdv.diceGroups[0].count).toBe(3);
+        expect(d10PoolAdv.diceGroups[0].rolls).toHaveLength(3);
+        expect(d10PoolAdv.breakdown).toMatch(/\[\d+,\s*\(\d+\)\] \+ \[\d+,\s*\(\d+\)\] \+ \[\d+,\s*\(\d+\)\] = \d+/);
+
+        // Mixed pool: 1d20 + 1d4 with Advantage applies per-die advantage to both
+        const mixedAdv = rollCustomDicePool({ 20: 1, 4: 1 }, 2, "advantage");
+        const d20Group = mixedAdv.diceGroups.find(g => g.die === 20);
+        const d4Group = mixedAdv.diceGroups.find(g => g.die === 4);
+        expect(d20Group?.rolls).toHaveLength(2);
+        expect(d20Group?.keptRoll!).toBeGreaterThanOrEqual(d20Group?.droppedRoll!);
+        expect(d4Group?.rolls).toHaveLength(2);
+        expect(d4Group?.keptRoll!).toBeGreaterThanOrEqual(d4Group?.droppedRoll!);
+        expect(mixedAdv.breakdown).toContain("1d20 [");
+        expect(mixedAdv.breakdown).toContain("1d4 [");
     });
 
     it("should default to 1d20 when pool is empty", () => {

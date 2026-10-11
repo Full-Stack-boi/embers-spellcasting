@@ -13,6 +13,8 @@ export interface CharacterIdentityProps {
     isOwnedByMe: boolean;
     otherOwnerName?: string;
     tokenId?: string;
+    characterTokens?: Array<{ id: string; name?: string }>;
+    onSelectCaster?: (tokenId: string) => void;
     onOpenSync: () => void;
     onRelease: () => void;
     onClaim: () => void;
@@ -31,6 +33,8 @@ export const CharacterIdentity: React.FC<CharacterIdentityProps> = ({
     isOwnedByMe,
     otherOwnerName,
     tokenId,
+    characterTokens,
+    onSelectCaster,
     onOpenSync,
     onRelease,
     onClaim,
@@ -55,7 +59,7 @@ export const CharacterIdentity: React.FC<CharacterIdentityProps> = ({
                                 Inspection
                             </span>
                         )}
-                        {isPlayer && (
+                        {isPlayer ? (
                             isOwnedByMe ? (
                                 <div className="ddb-owner-actions-wrap">
                                     <span className="ddb-owner-badge owned" title="Your bound character token">
@@ -73,6 +77,35 @@ export const CharacterIdentity: React.FC<CharacterIdentityProps> = ({
                                 <button type="button" className="ddb-claim-token-btn" onClick={event => { event.stopPropagation(); onClaim(); }} title="Claim this token as your character">
                                     Claim
                                 </button>
+                            )
+                        ) : (
+                            characterTokens && characterTokens.length > 0 && (
+                                <select
+                                    className="ddb-gm-caster-select"
+                                    value={tokenId || ""}
+                                    onChange={event => {
+                                        event.stopPropagation();
+                                        onSelectCaster?.(event.target.value);
+                                    }}
+                                    onClick={event => event.stopPropagation()}
+                                    title="DM: Switch active caster token"
+                                    style={{
+                                        fontSize: "0.72rem",
+                                        padding: "1px 4px",
+                                        background: "#1e2128",
+                                        color: "#cbd5e1",
+                                        border: "1px solid #3b4252",
+                                        borderRadius: 3,
+                                        cursor: "pointer",
+                                        maxWidth: 120,
+                                    }}
+                                >
+                                    {characterTokens.map(tok => (
+                                        <option key={tok.id} value={tok.id}>
+                                            {tok.name || "Token"}
+                                        </option>
+                                    ))}
+                                </select>
                             )
                         )}
                         <span className={`ddb-sync-badge ${isSynced ? "synced" : "unsynced"}`}>

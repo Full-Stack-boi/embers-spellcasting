@@ -12,7 +12,8 @@ import {
     DDB_RESET_TYPE_MAP,
     fetchDDBCharacter,
     hasPotentCantrip,
-    hasWeaponGraze
+    hasWeaponGraze,
+    buildWeaponAttackFromInventoryItem
 } from "../ddbService";
 import { getSpellMetadata, registerDynamicSpells } from "../../assets/spellInfo";
 
@@ -1052,6 +1053,159 @@ describe("ddbService", () => {
 
             expect(sacredFlame).toBeDefined();
             expect(sacredFlame?.isPrepared).toBe(true);
+        });
+
+        it("dynamically resolves usePrimaryStat modifiers for healing spells (e.g. 2d4+3 CHA)", () => {
+            const bardData = {
+                id: 167901273,
+                name: "Luca Arbanshi",
+                classes: [
+                    {
+                        level: 6,
+                        definition: { name: "Bard" },
+                    }
+                ],
+                stats: [
+                    { id: 1, value: 10 }, // STR +0
+                    { id: 2, value: 14 }, // DEX +2
+                    { id: 3, value: 12 }, // CON +1
+                    { id: 4, value: 12 }, // INT +1
+                    { id: 5, value: 10 }, // WIS +0
+                    { id: 6, value: 16 }  // CHA +3
+                ],
+                modifiers: {
+                    race: [],
+                    class: [],
+                    background: [],
+                    item: [],
+                    feat: []
+                },
+                classSpells: [
+                    {
+                        spells: [
+                            {
+                                prepared: true,
+                                definition: {
+                                    id: 501,
+                                    name: "Healing Word",
+                                    level: 1,
+                                    school: "Evocation",
+                                    modifiers: [
+                                        {
+                                            type: "bonus",
+                                            subType: "hit-points",
+                                            usePrimaryStat: true,
+                                            die: { diceString: "2d4" }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                ]
+            };
+
+            const char = parseDDBCharacterData(bardData);
+            const healingWord = char.spells.find(s => s.name === "Healing Word");
+            expect(healingWord).toBeDefined();
+            expect(healingWord?.damageType).toBe("healing");
+            // Since Bard's CHA mod is +3, damage should dynamically be 2d4+3
+            expect(healingWord?.damage).toBe("2d4+3");
+            expect(healingWord?.usePrimaryStat).toBe(true);
+        });
+
+        it("buildWeaponAttackFromInventoryItem converts items into playable attacks with range", () => {
+            const rawMusket = {
+                id: 1047950685,
+                equipped: true,
+                definition: {
+                    name: "Musket",
+                    filterType: "Weapon",
+                    attackType: 2, // Ranged
+                    range: 40,
+                    longRange: 120,
+                    damage: { diceString: "1d12" },
+                    damageType: "Piercing",
+                    properties: ["Loading", "Two-Handed", "Ammunition"]
+                }
+            };
+
+            const weaponAttack = buildWeaponAttackFromInventoryItem(
+                rawMusket,
+                { modifiers: { dex: 3, str: 0 }, proficiencyBonus: 3, level: 6 }
+            );
+
+            expect(weaponAttack).not.toBeNull();
+            expect(weaponAttack?.name).toBe("Musket");
+            expect(weaponAttack?.type).toBe("ranged");
+            expect(weaponAttack?.rangeFeet).toBe(40);
+            expect(weaponAttack?.longRangeFeet).toBe(120);
+            expect(weaponAttack?.rangeText).toBe("40 (120)");
+            expect(weaponAttack?.toHit).toBe(6); // 3 prof + 3 dex
+            expect(weaponAttack?.damage).toBe("1d12+3");
+        });
+
+        it("detects Two-Weapon Fighting fighting style from character modifiers and calculates offhand weapon damage accordingly", () => {
+            const twfCharacterData = {
+                id: 99999,
+                name: "TWF Fighter",
+                classes: [
+                    {
+                        level: 2,
+                        definition: { name: "Fighter" },
+                    }
+                ],
+                stats: [
+                    { id: 1, value: 16 }, // STR +3
+                    { id: 2, value: 14 }, // DEX +2
+                    { id: 3, value: 14 },
+                    { id: 4, value: 10 },
+                    { id: 5, value: 10 },
+                    { id: 6, value: 10 }
+                ],
+                modifiers: {
+                    race: [],
+                    class: [
+                        { type: "fighting-style", subType: "two-weapon-fighting", friendlySubtypeName: "Two-Weapon Fighting" }
+                    ],
+                    background: [],
+                    item: [],
+                    feat: []
+                },
+                inventory: [
+                    {
+                        id: 101,
+                        equipped: true,
+                        definition: {
+                            name: "Scimitar",
+                            filterType: "Weapon",
+                            attackType: 1,
+                            damage: { diceString: "1d6" },
+                            damageType: "Slashing",
+                            properties: [{ name: "Light" }, { name: "Finesse" }]
+                        }
+                    },
+                    {
+                        id: 102,
+                        equipped: true,
+                        definition: {
+                            name: "Shortsword",
+                            filterType: "Weapon",
+                            attackType: 1,
+                            damage: { diceString: "1d6" },
+                            damageType: "Piercing",
+                            properties: [{ name: "Light" }, { name: "Finesse" }]
+                        }
+                    }
+                ]
+            };
+
+            const char = parseDDBCharacterData(twfCharacterData);
+            expect(char.hasTwoWeaponFighting).toBe(true);
+            expect(char.hasTWFFightingStyle).toBe(true);
+            expect(char.offhandWeapon).toBeDefined();
+            // With TWF style, ability modifier (+3) is retained on offhand damage
+            expect(char.offhandWeapon?.damage).toBe("1d6+3");
         });
     });
 });

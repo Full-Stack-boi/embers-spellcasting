@@ -66,6 +66,8 @@ function getTagClass(actionType: DDBRollCardData["actionType"], isConditionTrigg
             return "tag-to-hit";
         case "DAMAGE":
             return "tag-damage";
+        case "HEAL":
+            return "tag-heal";
         case "SAVE":
             return "tag-save";
         case "SPELL":
@@ -124,6 +126,8 @@ export const DDBRollCard: React.FC<DDBRollCardProps> = ({ data }) => {
         data.subtitle?.toLowerCase().includes("advantage")
     );
 
+    const isHeal = Boolean(data.actionType === "HEAL" || data.subtitle?.toLowerCase().includes("healing"));
+
     const cardClasses = [
         "ddb-roll-card",
         isGrouped ? "is-grouped" : "",
@@ -132,6 +136,7 @@ export const DDBRollCard: React.FC<DDBRollCardProps> = ({ data }) => {
         isConditionTrigger ? "is-condition-trigger" : "",
         isDisadvantage ? "is-disadvantage" : "",
         isAdvantage ? "is-advantage" : "",
+        isHeal ? "is-heal" : "",
     ].filter(Boolean).join(" ");
 
     // Grouped Multi-Roll Card (Multi-Beam / Multi-Ray / Multi-Attack)

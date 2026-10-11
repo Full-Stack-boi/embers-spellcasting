@@ -47,6 +47,11 @@ export const IconUserCheck: React.FC<IconProps> = ({
   className,
 }) => <FaUserCheck size={size} className={className} aria-hidden="true" />;
 
+export const IconHeart: React.FC<IconProps> = ({
+  size = 12,
+  className,
+}) => <FaHeartPulse size={size} className={className} aria-hidden="true" />;
+
 type IconProps = { size?: number; className?: string };
 
 export const GemAction: React.FC<{ expended?: boolean }> = ({ expended }) => (

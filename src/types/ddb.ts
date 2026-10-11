@@ -40,6 +40,8 @@ export interface DDBParsedSpell {
   componentId?: number;
   source: "class" | "race" | "feat" | "item" | "custom";
   castingClass?: string;
+  usePrimaryStat?: boolean;
+  statId?: number;
 }
 
 export interface DDBCharacterClass {
@@ -64,6 +66,7 @@ export interface DDBWeaponAttack {
   subtype?: string;
   rangeText: string;
   rangeFeet: number;
+  longRangeFeet?: number;
   reachFeet?: number;
   hasThrown?: boolean;
   thrownRange?: number;
@@ -148,6 +151,7 @@ export interface DDBParsedCharacter {
   weapons?: DDBWeaponAttack[];
   actions?: DDBFeatureAction[];
   hasTwoWeaponFighting?: boolean;
+  hasTWFFightingStyle?: boolean;
   offhandWeapon?: DDBWeaponAttack;
   martialArtsDie?: string;
   hp?: DDBCharacterHP;
@@ -238,6 +242,10 @@ export interface DDBInventoryItem {
   rarity?: string;
   type?: string;
   description?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  definition?: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  rawItem?: any;
 }
 
 export interface DDBCurrencies {

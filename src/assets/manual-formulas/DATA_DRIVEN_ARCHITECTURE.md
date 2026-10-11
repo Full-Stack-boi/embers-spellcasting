@@ -138,3 +138,25 @@ Every class, subclass, weapon rider, and option set must be validated through au
 - `phb2024ClassesAndMechanics.test.ts`: Validates all 12 PHB 2024 classes.
 - `weaponDamageRiders.test.ts`: Verifies dynamic rider resolution, scaling tables, and conditions.
 - `npm run build`: Validates TypeScript typing and production bundle assembly.
+
+---
+
+## 6. Strict RAW 2024 (Rules As Written) Interpretation Principle
+
+To preserve consistency, eliminate subjective bias or arbitrary developer assumptions, and ensure 100% deterministic rule automation, the Embers engine strictly adheres to **Strict RAW 2024**:
+
+1. **Zero Artificial Lockouts**:
+   - Unless an official rule explicitly states *"once per turn across all features"* or *"cannot be combined with other features"*, the engine must **never** inject synthetic restrictions.
+   - Example: **Multi-Attack Cantrip Replacement Stacking**:
+     - Eldritch Knight *War Magic* replaces "one of the attacks" with a Wizard cantrip.
+     - Feat *Arcane Strike* (Spellblade) replaces "one of the attacks" with a Blade cantrip.
+     - If a character has Extra Attack and possesses both features, they may replace Attack A with a Wizard cantrip and Attack B with a Blade cantrip within the same Attack action according to RAW.
+2. **Deterministic Mechanics Grounding**:
+   - **Thrown Weapons (D&D 2024)**:
+     - Classified as `ranged_weapon_attack` (uses projectile tracers, projectile beam, and ranged attack logic).
+     - **Long Range Disadvantage**: Target distance between normal and long range triggers Disadvantage with breakdown `(Long Range)`.
+     - **Close Combat Disadvantage**: A hostile creature within 5 ft of the attacker triggers Disadvantage with breakdown `(Close Combat)`.
+     - **Versatile 1-Handed Clamping**: Versatile thrown weapons (Spear, Trident) clamp to their 1-handed damage die (e.g. `1d6`, not `1d8`).
+     - **Melee Rider Exclusion**: Melee-only riders (e.g., Barbarian Rage damage bonus, Booming Blade melee requirement) are excluded when thrown.
+   - **Data-Driven Attack Modifiers (e.g., Channeled Attack)**:
+     - Features that grant bonuses to attack rolls (such as Spellblade's *Channeled Attack* granting +INT/WIS/CHA mod to proficient STR/DEX weapon attacks, PB uses/Long Rest) must be data-driven, allowing the player to expend a resource use to augment `toHit` with verifiable log breakdown.

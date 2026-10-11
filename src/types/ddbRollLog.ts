@@ -42,6 +42,7 @@ export interface DDBRollCardData {
     | "TO HIT"
     | "ATTACK"
     | "DAMAGE"
+    | "HEAL"
     | "SAVE"
     | "SPELL"
     | "MULTI_ATTACK";

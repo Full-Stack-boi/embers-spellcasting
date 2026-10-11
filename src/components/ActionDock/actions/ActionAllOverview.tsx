@@ -29,6 +29,7 @@ interface ActionAllOverviewProps {
     search: string;
     renderFeatureCard: (feature: DDBFeatureAction) => ReactNode;
     onTwoWeaponFighting: () => void;
+    onSwapWeaponHands?: () => void;
     onOpportunityAttack: () => void;
     onSelectSpell: (spellId: string) => void;
     onOpenSpellDetails: (spellId: string) => void;
@@ -53,6 +54,7 @@ export function ActionAllOverview({
     search,
     renderFeatureCard,
     onTwoWeaponFighting,
+    onSwapWeaponHands,
     onOpportunityAttack,
     onSelectSpell,
     onOpenSpellDetails,
@@ -82,7 +84,7 @@ export function ActionAllOverview({
             {(hasTwoWeaponFighting || bonusActionFeatures.length > 0 || bonusActionSpells.length > 0) && (
                 <div className="ddb-action-category-block">
                     <div className="ddb-actions-category-header"><span className="ddb-category-title">BONUS ACTIONS</span></div>
-                    <TwoWeaponFightingAction enabled={hasTwoWeaponFighting} offhandWeapon={offhandWeapon} onActivate={onTwoWeaponFighting} />
+                    <TwoWeaponFightingAction enabled={hasTwoWeaponFighting} offhandWeapon={offhandWeapon} onActivate={onTwoWeaponFighting} onSwapHands={onSwapWeaponHands} />
                     {bonusActionFeatures.map(renderFeatureCard)}
                     {bonusActionSpells.length > 0 && <SpellLine spells={bonusActionSpells} onSelect={onSelectSpell} onOpenDetails={onOpenSpellDetails} />}
                 </div>

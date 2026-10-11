@@ -65,6 +65,20 @@ export function useFeatureActivation({
             };
         } else if (featLower.includes("bladesong")) {
             buffData = KNOWN_BUFFS.bladesong;
+        } else if (featLower.includes("channeled attack") || featLower.includes("channeled")) {
+            const intMod = character?.modifiers?.int ?? 0;
+            const wisMod = character?.modifiers?.wis ?? 0;
+            const chaMod = character?.modifiers?.cha ?? 0;
+            const bonus = Math.max(1, intMod, wisMod, chaMod);
+            buffData = {
+                id: "channeled_attack",
+                name: "Channeled Attack",
+                icon: "⚡",
+                source: "Spellblade",
+                durationText: "Next attack",
+                description: `+${bonus} bonus to attack roll (Int/Wis/Cha).`,
+                attackBonus: bonus,
+            };
         } else {
             const description = feat.description || feat.snippet || "";
             const parsedEffects = extractBuffEffects(description);

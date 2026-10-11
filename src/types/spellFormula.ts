@@ -65,6 +65,8 @@ export interface SpellDamageFormula {
   isBase: boolean;
   /** Human-readable trigger condition for non-base dice */
   condition?: string; // e.g. "on move", "end of turn", "on failed save"
+  /** Whether the spell adds the caster's spellcasting ability modifier to the roll */
+  addSpellcastingModifier?: boolean;
 }
 
 // ─── Special Mechanics ─────────────────────────────────────────────────────────

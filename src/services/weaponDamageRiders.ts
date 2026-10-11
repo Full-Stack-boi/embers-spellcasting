@@ -31,6 +31,7 @@ export interface ResolvedWeaponRiders {
 export interface ResolveWeaponRidersParams {
   character: DDBParsedCharacter | null;
   weapon: DDBWeaponAttack;
+  attackType?: "melee" | "ranged";
   activeBuffs?: Set<string> | string[];
   riderChoice?: string;
   usedRidersThisTurn?: Set<string>;
@@ -58,6 +59,7 @@ function normalizeBuffSet(activeBuffs?: Set<string> | string[]): Set<string> {
 export function resolveWeaponRiders({
   character,
   weapon,
+  attackType,
   activeBuffs,
   riderChoice,
   usedRidersThisTurn = new Set(),
@@ -104,17 +106,25 @@ export function resolveWeaponRiders({
     if (rider.requiresBuff) {
       const required = rider.requiresBuff.toLowerCase();
       if (!buffSet.has(required)) continue;
+      // Per 2024 RAW, Barbarian Rage damage requires a melee attack using Strength. Ranged attacks (including thrown) cannot benefit.
+      if (attackType === "ranged" && required === "rage") continue;
     }
 
     if (rider.requiresWeaponProperties && rider.requiresWeaponProperties.length > 0) {
       const weaponProps = (weapon.properties || []).map((p) => p.toLowerCase());
-      const isRangedWeapon = Boolean(
+      const isRanged = Boolean(
+        attackType === "ranged" ||
         weapon.type === "ranged" ||
         weaponProps.some((wp) => wp.includes("ranged"))
       );
+      const isMelee = Boolean(
+        attackType === "melee" ||
+        (attackType === undefined && weapon.type !== "ranged" && !weaponProps.some((wp) => wp.includes("ranged")))
+      );
       const matches = rider.requiresWeaponProperties.some((prop) => {
         const p = prop.toLowerCase();
-        if (p === "ranged") return isRangedWeapon;
+        if (p === "ranged") return isRanged;
+        if (p === "melee") return isMelee;
         return weaponProps.some((wp) => wp.includes(p));
       });
       if (!matches) continue;

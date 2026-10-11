@@ -24,6 +24,9 @@ interface ActionsTabData {
     weaponsList: DDBWeaponAttack[];
     hasTwoWeaponFighting: boolean;
     offhandWeapon?: DDBWeaponAttack;
+    mainHandWeaponId?: string;
+    offHandWeaponId?: string;
+    onSwapWeaponHands?: () => void;
     activeRiderMap: Record<string, string | null | undefined>;
     selectedSpellId: string | null;
     spellDamageTypeOverrides: Record<string, string>;
@@ -40,6 +43,7 @@ interface ActionsTabPanelProps {
     data: ActionsTabData;
     attackTableHandlers: Omit<AttackActionsTableProps,
         "weapons" | "spells" | "activeRiderMap" | "selectedSpellId" | "damageTypeOverrides" | "upcastPickerSpellId" |
+        "mainHandWeaponId" | "offHandWeaponId" | "onSwapWeaponHands" |
         "resolvedRiders" | "selectedRiderChoice" | "effectiveBonusDamage" | "onSelectRiderChoice">;
     onFilterChange: (filter: ActionsFilter) => void;
     onSearchChange: (search: string) => void;
@@ -70,6 +74,9 @@ export function ActionsTabPanel({
             {...attackTableHandlers}
             weapons={data.filteredWeapons}
             spells={data.attackSpells}
+            mainHandWeaponId={data.mainHandWeaponId}
+            offHandWeaponId={data.offHandWeaponId}
+            onSwapWeaponHands={data.onSwapWeaponHands}
             activeRiderMap={data.activeRiderMap}
             selectedSpellId={data.selectedSpellId}
             damageTypeOverrides={data.spellDamageTypeOverrides}
@@ -146,6 +153,7 @@ export function ActionsTabPanel({
                 limitedUseFeatures={data.limitedUseFeatures}
                 renderFeatureCard={renderFeatureCard}
                 onTwoWeaponFighting={onTwoWeaponFighting}
+                onSwapWeaponHands={data.onSwapWeaponHands}
                 onOpportunityAttack={onOpportunityAttack}
                 onSelectSpell={onSelectSpell}
                 onOpenSpellDetails={onOpenSpellDetails}
@@ -170,6 +178,7 @@ export function ActionsTabPanel({
                     search={search}
                     renderFeatureCard={renderFeatureCard}
                     onTwoWeaponFighting={onTwoWeaponFighting}
+                    onSwapWeaponHands={data.onSwapWeaponHands}
                     onOpportunityAttack={onOpportunityAttack}
                     onSelectSpell={onSelectSpell}
                     onOpenSpellDetails={onOpenSpellDetails}

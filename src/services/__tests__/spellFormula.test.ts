@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { buildSpellFormula, resolveFormulaDamageDice, resolveSpellFormula } from "../spellFormulaBuilder";
+import { buildSpellFormula, resolveFormulaDamageDice, resolveFormulaFullDamage, resolveSpellFormula } from "../spellFormulaBuilder";
 import { buildRegistry } from "../spellFormulaRegistry";
 import type { DDBParsedSpell } from "../../types/ddb";
 import { rollExplodingDice, rollFormulaWithExplosion } from "../../utils/dice";
@@ -13,6 +13,35 @@ describe("SpellFormula System", () => {
         expect(resolveFormulaDamageDice(vsspp2SpellOverrides.candy_blast, 11)).toBe("3d8");
         expect(resolveFormulaDamageDice(vsspp2SpellOverrides.cosmic_horror, 10, 5)).toBe("8d6");
         expect(resolveFormulaDamageDice(vsspp2SpellOverrides.rusting_grasp, 10, 5)).toBe("10d4");
+    });
+
+    it("resolves full damage formula with spellcasting modifier and upcasting (Healing Word, Cure Wounds)", async () => {
+        const { ALL_MANUAL_OVERRIDES } = await import("../../assets/manual-formulas");
+        const healingWord = ALL_MANUAL_OVERRIDES.healing_word;
+        const cureWounds = ALL_MANUAL_OVERRIDES.cure_wounds;
+        const fireball = ALL_MANUAL_OVERRIDES.fireball;
+
+        // Level 1 Healing Word with +3 spellcasting modifier
+        expect(resolveFormulaFullDamage(healingWord, 6, 1, { spellcastingModifier: 3 })).toBe("2d4+3");
+
+        // Level 2 Healing Word (Upcast: 2d4 + 2d4 = 4d4, modifier added once -> 4d4+3)
+        expect(resolveFormulaFullDamage(healingWord, 6, 2, { spellcastingModifier: 3 })).toBe("4d4+3");
+
+        // Cure Wounds with +4 modifier
+        expect(resolveFormulaFullDamage(cureWounds, 5, 1, { spellcastingModifier: 4 })).toBe("2d8+4");
+
+        // Fireball (standard spell, no spellcasting mod added to damage)
+        expect(resolveFormulaFullDamage(fireball, 5, 3, { spellcastingModifier: 3 })).toBe("8d6");
+
+        // Eldritch Blast with Agonizing Blast bonus from ddbSpell (+4)
+        const eldritchBlast = ALL_MANUAL_OVERRIDES.eldritch_blast;
+        const ddbSpellWithBonus = {
+            id: "eldritch_blast",
+            name: "Eldritch Blast",
+            damage: "1d10+4",
+            damageType: "Force",
+        } as DDBParsedSpell;
+        expect(resolveFormulaFullDamage(eldritchBlast, 5, 0, { spellcastingModifier: 4, ddbSpell: ddbSpellWithBonus })).toBe("2d10+4");
     });
 
     describe("Manual Overrides", () => {

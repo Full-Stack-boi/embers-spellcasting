@@ -1,7 +1,7 @@
 import OBR from "@owlbear-rodeo/sdk";
 import { broadcastDDBRoll } from "../../../services/rollLogService";
 import { rollDamageDDB, rollDamageExploding, rollDamageExplodingAnyDie } from "../../../utils/dice";
-import { resolveSpellFormula } from "../../../services/spellFormulaBuilder";
+import { resolveFormulaFullDamage, resolveSpellFormula } from "../../../services/spellFormulaBuilder";
 import type { SpellFormulaRegistry } from "../../../services/spellFormulaRegistry";
 import type { DDBParsedCharacter } from "../../../types/ddb";
 
@@ -53,16 +53,17 @@ export function useSpellDamageRoll({
 
         const formula = spellRegistry?.get(spell.id) ?? resolveSpellFormula(spell);
         const charLevel = character?.level ?? 1;
-        let effectiveDice: string | undefined;
-        if (formula?.cantripScale) {
-            const scaled = spellRegistry?.getCantripDice(spell.id, charLevel);
-            effectiveDice = scaled && scaled !== "—" ? scaled : undefined;
-        }
+        const statKey = (character?.spellCastingAbility?.toLowerCase() || "cha") as "int" | "wis" | "cha";
+        const spellcastingMod = character?.modifiers?.[statKey] ?? 0;
+
+        let effectiveDice: string | undefined = formula
+            ? resolveFormulaFullDamage(formula, charLevel, spell.level, {
+                spellcastingModifier: spellcastingMod,
+                ddbSpell: spell.rawDdbSpell ?? (spell as any),
+            })
+            : undefined;
+
         if (!effectiveDice) effectiveDice = (spell.damage as string | undefined) || undefined;
-        if (!effectiveDice) {
-            const formulaBase = formula?.damage.find(d => d.isBase);
-            if (formulaBase?.dice && formulaBase.dice !== "weapon") effectiveDice = formulaBase.dice;
-        }
         if (!effectiveDice) {
             OBR.notification.show(`Selected ${spell.name}`, "INFO");
             return;
@@ -73,22 +74,23 @@ export function useSpellDamageRoll({
             (baseDmg?.type === "choice" && baseDmg.typeChoices ? baseDmg.typeChoices[0] : (spell.damageType || ""));
         const damageTypeLabel = chosenType ? chosenType.charAt(0).toUpperCase() + chosenType.slice(1) : "";
         const casterName = character?.name || "Character";
+        const isHealing = chosenType.toLowerCase() === "healing" || spell.damageType?.toLowerCase() === "healing";
+
         const dieFaces = Number(effectiveDice.match(/d(\d+)/i)?.[1] ?? 8);
         const explodingMechanic = formula?.mechanics?.find(m => m.kind === "exploding");
         const explodingAnyDie = formula?.mechanics?.find(m => m.kind === "exploding_any_die");
-        const statKey = (character?.spellCastingAbility?.toLowerCase() || "cha") as "int" | "wis" | "cha";
-        const spellcastingMod = Math.max(1, character?.modifiers?.[statKey] ?? 3);
+        const explosionModCap = Math.max(1, spellcastingMod || 3);
 
         let dmgResult: ReturnType<typeof rollDamageDDB>;
         if (explodingMechanic) {
             const triggerValue = explodingMechanic.triggerValue ?? 8;
             const maxExplosions = explodingMechanic.maxExtra === "spellcastingMod"
-                ? spellcastingMod
+                ? explosionModCap
                 : (typeof explodingMechanic.maxExtra === "number" ? explodingMechanic.maxExtra : 0);
             dmgResult = rollDamageExploding(effectiveDice, chosenType, triggerValue, maxExplosions);
         } else if (explodingAnyDie) {
             const maxExplosions = explodingAnyDie.maxExtra === "spellcastingMod"
-                ? spellcastingMod
+                ? explosionModCap
                 : (typeof explodingAnyDie.maxExtra === "number" ? explodingAnyDie.maxExtra : 0);
             dmgResult = rollDamageExplodingAnyDie(effectiveDice, chosenType, maxExplosions);
         } else {
@@ -99,17 +101,19 @@ export function useSpellDamageRoll({
         const explosionCount = dmgResult.explosionCount ?? 0;
         broadcastDDBRoll([{
             id: `${Date.now()}-dock-spell-dmg`, casterName, targetName: "TARGET",
-            actionName: spell.name.toUpperCase(), actionType: "DAMAGE", dieType: dieFaces,
+            actionName: spell.name.toUpperCase(), actionType: isHealing ? "HEAL" : "DAMAGE", dieType: dieFaces,
             diceBreakdown: dmgResult.breakdown.replace(/\+/g, " + "),
             formula: isExploded
                 ? `${effectiveDice} ${damageTypeLabel} (+${explosionCount} Exploded)`.trim()
                 : `${effectiveDice} ${damageTypeLabel}`.trim(),
             total: dmgResult.total,
-            subtitle: isExploded
-                ? `Damage (${damageTypeLabel || "Spell"}) • ${explosionCount} Bonus ${explosionCount > 1 ? "Dice" : "Die"}`
-                : `Damage (${damageTypeLabel || "Spell"})`,
+            subtitle: isHealing
+                ? `Healing (${damageTypeLabel || "Spell"})`
+                : (isExploded
+                    ? `Damage (${damageTypeLabel || "Spell"}) • ${explosionCount} Bonus ${explosionCount > 1 ? "Dice" : "Die"}`
+                    : `Damage (${damageTypeLabel || "Spell"})`),
             timestamp: Date.now()
         }]);
-        OBR.notification.show(`${spell.name} Damage: ${dmgResult.formatted}`, "INFO");
+        OBR.notification.show(`${spell.name} ${isHealing ? "Healing" : "Damage"}: ${dmgResult.formatted}`, "INFO");
     };
 }

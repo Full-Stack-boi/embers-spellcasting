@@ -13,6 +13,9 @@ export interface AttackActionsTableProps {
     selectedSpellId: string | null;
     damageTypeOverrides: Record<string, string>;
     upcastPickerSpellId: string | null;
+    mainHandWeaponId?: string;
+    offHandWeaponId?: string;
+    onSwapWeaponHands?: () => void;
     resolvedRiders?: import("../../../services/weaponDamageRiders").ResolvedWeaponRiders;
     selectedRiderChoice?: string;
     effectiveBonusDamage?: number;
@@ -37,6 +40,9 @@ export const AttackActionsTable: React.FC<AttackActionsTableProps> = ({
     selectedSpellId,
     damageTypeOverrides,
     upcastPickerSpellId,
+    mainHandWeaponId,
+    offHandWeaponId,
+    onSwapWeaponHands,
     resolvedRiders,
     selectedRiderChoice,
     effectiveBonusDamage,
@@ -68,6 +74,9 @@ export const AttackActionsTable: React.FC<AttackActionsTableProps> = ({
                 <WeaponTableRow
                     key={weapon.id}
                     weapon={weapon}
+                    isMainHand={weapon.id === mainHandWeaponId}
+                    isOffHand={weapon.id === offHandWeaponId}
+                    onSwapHands={onSwapWeaponHands}
                     activeRider={activeRiderMap[weapon.id]}
                     resolvedRiders={resolvedRiders}
                     selectedRiderChoice={selectedRiderChoice}

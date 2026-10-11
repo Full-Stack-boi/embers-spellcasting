@@ -16,6 +16,8 @@ import {
 } from "../types/ddb";
 import { TokenVisionRules } from "../features/targeting/domain/vision";
 import { APP_KEY } from "../config";
+import type { Item } from "@owlbear-rodeo/sdk";
+import { ALL_MANUAL_OVERRIDES } from "../assets/manual-formulas/index";
 
 export const DDB_CHARACTER_METADATA_KEY = `${APP_KEY}/ddb-character-id`;
 // Bump CACHE_VERSION whenever the parsing output format changes significantly.
@@ -358,14 +360,39 @@ function parseDDBSpell(
     // Damage & Modifiers
     let damage: string | undefined = undefined;
     let damageType: string | undefined = undefined;
+    let usePrimaryStat = false;
+    let statId: number | undefined = undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let dmgMod: any = undefined;
     if (def.modifiers && Array.isArray(def.modifiers)) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        dmgMod = def.modifiers.find((m: any) => m.type === "damage");
+        dmgMod = def.modifiers.find((m: any) =>
+            m.type === "damage" ||
+            m.subType === "hit-points" ||
+            m.subType === "healing" ||
+            (m.type === "bonus" && m.subType === "hit-points")
+        );
         if (dmgMod) {
-            damage = dmgMod.die?.diceString || dmgMod.friendlySubtypeName;
-            damageType = dmgMod.friendlySubtypeName;
+            damage = dmgMod.die?.diceString || (typeof dmgMod.fixedValue === "number" ? `${dmgMod.fixedValue}` : dmgMod.friendlySubtypeName);
+            if (dmgMod.subType === "hit-points" || dmgMod.subType === "healing") {
+                damageType = "healing";
+            } else {
+                damageType = dmgMod.friendlySubtypeName;
+            }
+            usePrimaryStat = Boolean(dmgMod.usePrimaryStat);
+            if (typeof dmgMod.statId === "number") {
+                statId = dmgMod.statId;
+            }
+        }
+
+        // Additional check for usePrimaryStat or statId across any modifier
+        if (!usePrimaryStat) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const statMod = def.modifiers.find((m: any) => Boolean(m.usePrimaryStat) || typeof m.statId === "number");
+            if (statMod) {
+                usePrimaryStat = Boolean(statMod.usePrimaryStat);
+                if (typeof statMod.statId === "number") statId = statMod.statId;
+            }
         }
     }
     // Fallback: extract damage from description if not in modifiers
@@ -488,6 +515,8 @@ function parseDDBSpell(
         ritual: Boolean(def.ritual),
         damage,
         damageType,
+        usePrimaryStat,
+        statId,
         saveOrAttack,
         notes: finalNotes,
         beamCount: beamCount > 1 ? beamCount : undefined,
@@ -526,6 +555,132 @@ export function ddbSpellToMetadata(spell: DDBParsedSpell): SpellMetadata {
         description: spell.description,
         higherLevels: spell.higherLevels,
         canUpcast: spell.canUpcast
+    };
+}
+
+/**
+ * Converts a raw or parsed DDB inventory item into a full playable DDBWeaponAttack action.
+ * Can be used when equipping items dynamically from the inventory tab or drawer.
+ */
+export function buildWeaponAttackFromInventoryItem(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    inv: any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    char: { modifiers?: any; proficiencyBonus?: number; level?: number },
+    knownWeaponCantrips: Array<{ name: string; damage: string; damageType?: string }> = []
+): DDBWeaponAttack | null {
+    if (!inv) return null;
+    const def = inv.definition || inv.rawItem?.definition || inv;
+    if (!def) return null;
+
+    const isWeapon = def.filterType === "Weapon" || def.attackType === 1 || def.attackType === 2 || Boolean(def.damage);
+    if (!isWeapon) return null;
+
+    const weaponName = inv.customName || def.name || inv.name || "Weapon";
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const properties: string[] = (def.properties || []).map((p: any) => (typeof p === "string" ? p : p.name || p));
+    const isFinesse = properties.some(p => typeof p === "string" && p.toLowerCase() === "finesse");
+    const isLight = properties.some(p => typeof p === "string" && p.toLowerCase() === "light");
+    const isThrown = properties.some(p => typeof p === "string" && p.toLowerCase() === "thrown");
+    const isRanged = def.attackType === 2 || (typeof def.range === "number" && def.range > 5 && !isThrown);
+
+    const modifiers = char.modifiers || { str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0 };
+    const abilityMod = isRanged
+        ? (modifiers.dex ?? 0)
+        : isFinesse
+            ? Math.max(modifiers.str ?? 0, modifiers.dex ?? 0)
+            : (modifiers.str ?? 0);
+
+    let magicBonus = 0;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const itemModifiers: any[] = [
+        ...(def.grantedModifiers || []),
+        ...(inv.grantedModifiers || []),
+        ...(inv.rawItem?.grantedModifiers || [])
+    ];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    itemModifiers.forEach((m: any) => {
+        if (m.type === "bonus" && (m.subType === "magic" || m.subType === "weapon-attacks") && typeof m.value === "number") {
+            magicBonus = Math.max(magicBonus, m.value);
+        }
+    });
+    if (magicBonus === 0 && def.magic && typeof def.fixedValue === "number") {
+        magicBonus = def.fixedValue;
+    }
+    if (magicBonus === 0) {
+        if (weaponName.includes("+1")) magicBonus = 1;
+        else if (weaponName.includes("+2")) magicBonus = 2;
+        else if (weaponName.includes("+3")) magicBonus = 3;
+    }
+
+    const isProficient = inv.isProficient !== false;
+    const profBonus = isProficient ? (char.proficiencyBonus ?? 2) : 0;
+    const toHit = profBonus + abilityMod + magicBonus;
+
+    const baseDice = def.damage?.diceString || "1d4";
+    const totalDmgBonus = abilityMod + magicBonus;
+    const damageStr = totalDmgBonus > 0 ? `${baseDice}+${totalDmgBonus}` : (totalDmgBonus < 0 ? `${baseDice}${totalDmgBonus}` : baseDice);
+    const damageType = def.damageType || (def.type === "Dagger" || weaponName.toLowerCase().includes("dagger") ? "Piercing" : "Slashing");
+
+    let rangeText = "5 ft. Reach";
+    let rangeFeet = 5;
+    if (isThrown && def.range && def.longRange) {
+        rangeText = `${def.range} (${def.longRange})`;
+        rangeFeet = 5;
+    } else if (def.range && def.longRange) {
+        rangeText = `${def.range} (${def.longRange})`;
+        rangeFeet = def.range;
+    } else if (def.range) {
+        rangeText = `${def.range} ft.`;
+        rangeFeet = def.range;
+    } else if (isRanged) {
+        rangeText = "60 ft.";
+        rangeFeet = 60;
+    }
+
+    const totalLevel = char.level || 1;
+    const riders: string[] = [];
+    if (!isRanged) {
+        knownWeaponCantrips.forEach(c => {
+            if (c.name === "Booming Blade") {
+                const moveDmg = totalLevel >= 17 ? "4d8" : totalLevel >= 11 ? "3d8" : totalLevel >= 5 ? "2d8" : "1d8";
+                riders.push(`Booming Blade: ${c.damage} 🌧️, ${moveDmg} 🌧️ (if moves)`);
+            } else if (c.name === "Burning Blade") {
+                riders.push(`Burning Blade: ${c.damage} 🔥`);
+            } else if (c.name === "Arc Blade") {
+                riders.push(`Arc Blade: ${c.damage} ⚡`);
+            } else if (c.name === "Frigid Blade") {
+                riders.push(`Frigid Blade: ${c.damage} ❄️`);
+            } else if (c.name === "Vengeful Blade") {
+                riders.push(`Vengeful Blade: ${c.damage} 💀`);
+            } else {
+                riders.push(`${c.name}: ${c.damage}`);
+            }
+        });
+    }
+
+    const itemId = inv.id != null ? inv.id : def.id;
+    return {
+        id: `weapon_${itemId != null ? itemId : weaponName.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`,
+        name: weaponName,
+        isCustom: Boolean(inv.customName),
+        type: isRanged ? "ranged" : "melee",
+        rangeText,
+        rangeFeet,
+        longRangeFeet: def.longRange || (isThrown ? def.longRange : undefined),
+        reachFeet: !isRanged ? 5 : undefined,
+        hasThrown: isThrown,
+        thrownRange: isThrown ? (def.range || 20) : undefined,
+        thrownLongRange: isThrown ? (def.longRange || 60) : undefined,
+        isLight,
+        toHit,
+        damage: damageStr,
+        baseDamageDice: baseDice,
+        magicDamageBonus: magicBonus,
+        isProficient,
+        damageType,
+        properties,
+        cantripRiders: riders
     };
 }
 
@@ -924,6 +1079,33 @@ export function parseDDBCharacterData(raw: any): DDBParsedCharacter {
                 spell.damage = `${baseDice}${total >= 0 ? `+${total}` : `${total}`}${typeStr}`.trim();
             }
         }
+
+        // Data-driven usePrimaryStat / statId / addSpellcastingModifier resolution (e.g. Healing Word, Mass Healing Word)
+        const manualFormula = ALL_MANUAL_OVERRIDES[spell.id] || ALL_MANUAL_OVERRIDES[key];
+        const manualHasMod = Boolean(manualFormula?.damage.find(d => d.isBase)?.addSpellcastingModifier);
+        if (spell.usePrimaryStat || spell.statId || manualHasMod) {
+            let abilityKey: "str" | "dex" | "con" | "int" | "wis" | "cha" | undefined;
+            if (spell.statId && ABILITY_ID_MAP[spell.statId]) {
+                abilityKey = ABILITY_ID_MAP[spell.statId];
+            } else {
+                // Match spell's casting class to classSpellStats (e.g. Bard -> CHA, Wizard -> INT)
+                const classStat = classSpellStats.find(cs =>
+                    cs.className.toLowerCase() === spell.castingClass?.toLowerCase()
+                );
+                const abilityStr = classStat?.ability || (spellCastingAbility !== "NONE" ? spellCastingAbility : undefined) || "CHA";
+                abilityKey = abilityStr.toLowerCase() as "int" | "wis" | "cha";
+            }
+
+            const abilityMod = abilityKey && modifiers[abilityKey] != null ? modifiers[abilityKey] : 0;
+            if (abilityMod !== 0 && spell.damage) {
+                const match = spell.damage.match(/^(\d+d\d+)(?:\s*([+-]\s*\d+))?\s*(.*)$/);
+                if (match && !match[2]) {
+                    const sign = abilityMod >= 0 ? `+${abilityMod}` : `${abilityMod}`;
+                    const trailing = match[3] ? ` ${match[3]}` : "";
+                    spell.damage = `${match[1]}${sign}${trailing}`.trim();
+                }
+            }
+        }
     });
 
     // Parse Senses
@@ -1062,106 +1244,8 @@ export function parseDDBCharacterData(raw: any): DDBParsedCharacter {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         data.inventory.forEach((inv: any) => {
             if (!inv.equipped) return;
-            const def = inv.definition;
-            if (!def || def.filterType !== "Weapon") return;
-
-            const weaponName = inv.customName || def.name;
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const properties: string[] = (def.properties || []).map((p: any) => p.name || p);
-            const isFinesse = properties.some(p => typeof p === "string" && p.toLowerCase() === "finesse");
-            const isLight = properties.some(p => typeof p === "string" && p.toLowerCase() === "light");
-            const isThrown = properties.some(p => typeof p === "string" && p.toLowerCase() === "thrown");
-            const isRanged = def.attackType === 2;
-
-            // Ability mod: Finesse = max(STR, DEX), Ranged = DEX, Melee = STR
-            const abilityMod = isRanged
-                ? modifiers.dex
-                : isFinesse
-                    ? Math.max(modifiers.str, modifiers.dex)
-                    : modifiers.str;
-
-            // Magic item bonus — read from DDB's own grantedModifiers on the item
-            // This handles +1/+2/+3 weapons, Sword of Sharpness, etc. correctly
-            let magicBonus = 0;
-            const itemModifiers: any[] = [
-                ...(inv.definition?.grantedModifiers || []),
-                ...(inv.grantedModifiers || [])
-            ];
-            itemModifiers.forEach((m: any) => {
-                if (m.type === "bonus" && (m.subType === "magic" || m.subType === "weapon-attacks") && typeof m.value === "number") {
-                    magicBonus = Math.max(magicBonus, m.value);
-                }
-            });
-            // Fallback: read magic bonus from item's own fixedValue enchantment field
-            if (magicBonus === 0 && def.magic && typeof def.fixedValue === "number") {
-                magicBonus = def.fixedValue;
-            }
-
-            // Proficiency: DDB sends isProficient on the inventory item
-            const isProficient = inv.isProficient !== false; // true by default if equipped
-            const profBonus = isProficient ? proficiencyBonus : 0;
-
-            const toHit = profBonus + abilityMod + magicBonus;
-            const baseDice = def.damage?.diceString || "1d4";
-            const totalDmgBonus = abilityMod + magicBonus;
-            const damageStr = totalDmgBonus > 0 ? `${baseDice}+${totalDmgBonus}` : (totalDmgBonus < 0 ? `${baseDice}${totalDmgBonus}` : baseDice);
-            const damageType = def.damageType || (def.type === "Dagger" ? "Piercing" : "Slashing");
-
-            let rangeText = "5 ft. Reach";
-            let rangeFeet = 5;
-            if (isThrown && def.range && def.longRange) {
-                rangeText = `${def.range} (${def.longRange})`;
-                rangeFeet = 5;
-            } else if (def.range && def.longRange) {
-                rangeText = `${def.range} (${def.longRange})`;
-                rangeFeet = def.range;
-            } else if (def.range) {
-                rangeText = `${def.range} ft.`;
-                rangeFeet = def.range;
-            }
-
-            // Cantrip riders formatting
-            const riders: string[] = [];
-            if (!isRanged) {
-                knownWeaponCantrips.forEach(c => {
-                    if (c.name === "Booming Blade") {
-                        const moveDmg = totalLevel >= 17 ? "4d8" : totalLevel >= 11 ? "3d8" : totalLevel >= 5 ? "2d8" : "1d8";
-                        riders.push(`Booming Blade: ${c.damage} 🌧️, ${moveDmg} 🌧️ (if moves)`);
-                    } else if (c.name === "Burning Blade") {
-                        riders.push(`Burning Blade: ${c.damage} 🔥`);
-                    } else if (c.name === "Arc Blade") {
-                        riders.push(`Arc Blade: ${c.damage} ⚡`);
-                    } else if (c.name === "Frigid Blade") {
-                        riders.push(`Frigid Blade: ${c.damage} ❄️`);
-                    } else if (c.name === "Vengeful Blade") {
-                        riders.push(`Vengeful Blade: ${c.damage} 💀`);
-                    } else {
-                        riders.push(`${c.name}: ${c.damage}`);
-                    }
-                });
-            }
-
-            weapons.push({
-                id: `weapon_${inv.id || def.id}`,
-                name: weaponName,
-                isCustom: Boolean(inv.customName),
-                type: isRanged ? "ranged" : "melee",
-                rangeText,
-                rangeFeet,
-                reachFeet: !isRanged ? 5 : undefined,
-                hasThrown: isThrown,
-                thrownRange: isThrown ? (def.range || 20) : undefined,
-                thrownLongRange: isThrown ? (def.longRange || 60) : undefined,
-                isLight,
-                toHit,
-                damage: damageStr,
-                baseDamageDice: baseDice,
-                magicDamageBonus: magicBonus,
-                isProficient,
-                damageType,
-                properties,
-                cantripRiders: riders
-            });
+            const w = buildWeaponAttackFromInventoryItem(inv, { modifiers, proficiencyBonus, level: totalLevel }, knownWeaponCantrips);
+            if (w) weapons.push(w);
         });
     }
 
@@ -1205,6 +1289,13 @@ export function parseDDBCharacterData(raw: any): DDBParsedCharacter {
         properties: ["Melee Attack"]
     });
 
+    // Detect Two-Weapon Fighting fighting style from character modifiers or feats
+    const hasTWFFightingStyle = allModifiers.some(
+        (m: any) => m.subType?.includes("two-weapon-fighting") || m.friendlySubtypeName?.toLowerCase().includes("two-weapon fighting")
+    ) || (data.feats || []).some(
+        (f: any) => f.definition?.name?.toLowerCase().includes("two-weapon fighting")
+    );
+
     // Detect Two-Weapon Fighting eligibility (2+ equipped Light weapons)
     const equippedLightWeapons = weapons.filter(w => w.isLight && w.name !== "Unarmed Strike");
     const hasTwoWeaponFighting = equippedLightWeapons.length >= 2;
@@ -1212,10 +1303,10 @@ export function parseDDBCharacterData(raw: any): DDBParsedCharacter {
 
     if (hasTwoWeaponFighting && equippedLightWeapons.length >= 2) {
         const offhand = equippedLightWeapons[1];
-        let magicBonus = 0;
+        let magicBonus = offhand.magicDamageBonus || 0;
 
         // Try reading magic bonus from grantedModifiers on matching inventory item
-        if (Array.isArray(data.inventory)) {
+        if (magicBonus === 0 && Array.isArray(data.inventory)) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const matchingInv = data.inventory.find((inv: any) => {
                 const def = inv.definition || {};
@@ -1248,8 +1339,10 @@ export function parseDDBCharacterData(raw: any): DDBParsedCharacter {
             else if (offhand.name.includes("+3")) magicBonus = 3;
         }
 
-        const baseDice = offhand.damage.split("+")[0].split("-")[0] || "1d4";
-        const offhandDmg = magicBonus > 0 ? `${baseDice}+${magicBonus}` : baseDice;
+        const baseDice = offhand.baseDamageDice || offhand.damage.split("+")[0].split("-")[0] || "1d4";
+        const offhandDmg = hasTWFFightingStyle
+            ? offhand.damage
+            : (magicBonus > 0 ? `${baseDice}+${magicBonus}` : baseDice);
 
         offhandWeapon = {
             ...offhand,
@@ -1903,7 +1996,9 @@ export function parseDDBCharacterData(raw: any): DDBParsedCharacter {
             cost: typeof def.cost === "number" ? def.cost : null,
             rarity: def.rarity || "Common",
             type: def.filterType || def.type || "Other Gear",
-            description: stripHtml(def.description || "")
+            description: stripHtml(def.description || ""),
+            definition: def,
+            rawItem: i
         };
     });
 
@@ -1976,6 +2071,7 @@ export function parseDDBCharacterData(raw: any): DDBParsedCharacter {
         weapons,
         actions: featureActions,
         hasTwoWeaponFighting,
+        hasTWFFightingStyle,
         offhandWeapon,
         hp,
         hitDice,
@@ -2088,6 +2184,31 @@ export function findCachedDDBCharacter(identifier: number | string): DDBParsedCh
     const all = getAllCachedDDBCharacters();
     const nameLower = identifier.toLowerCase().trim();
     return all.find(c => c.name.toLowerCase().trim() === nameLower) ?? null;
+}
+
+/**
+ * Safely resolves a D&D Beyond character for a token item:
+ * 1. Checks explicit linked character ID in metadata (single source of truth).
+ * 2. If unlinked, attempts fallback to character name ONLY if there is exactly 1 unique match
+ *    in cached characters to prevent cross-character slot and spell bleeding.
+ */
+export function resolveCasterCharacter(item: Item): DDBParsedCharacter | null {
+    if (!item) return null;
+    const linkedId = getLinkedDDBCharacterId(item);
+    if (linkedId) {
+        const cached = getCachedDDBCharacter(linkedId);
+        if (cached) return cached;
+    }
+    if (item.name) {
+        const nameLower = item.name.toLowerCase().trim();
+        const matches = getAllCachedDDBCharacters().filter(
+            c => c.name && c.name.toLowerCase().trim() === nameLower
+        );
+        if (matches.length === 1) {
+            return matches[0];
+        }
+    }
+    return null;
 }
 
 /**

@@ -51,6 +51,7 @@ export const BARBARIAN_CLASS_FORMULAS: Record<string, ManualActionFormula> = {
       name: "Rage Damage Bonus",
       classId: "barbarian",
       requiresBuff: "rage",
+      requiresWeaponProperties: ["melee"],
       flat: {
         byClassLevel: [
           { minLevel: 1, value: 2 },

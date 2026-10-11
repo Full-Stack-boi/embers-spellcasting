@@ -1,13 +1,13 @@
 import React, { useCallback, useEffect, useState, useMemo, useRef } from "react";
 import "./ActionDock.css";
-import OBR, { isImage } from "@owlbear-rodeo/sdk";
+import OBR, { isImage, Item } from "@owlbear-rodeo/sdk";
 import { spellIDs } from "../../effects/spells";
 import { getCharacterFeatures } from "../../features/characterFeatures/domain/characterFeatureCatalog";
 import {
     getSpellMetadata,
     registerDynamicSpells,
 } from "../../assets/spellInfo";
-import { setSelectedSpell, toolID, toolMetadataSelectedSpell, targetHighlightMetadataKey, stopAiming, hexChosenAbilityMetadataKey, selectedSpellDamageTypeMetadataKey, selectedSpellSlotLevelMetadataKey } from "../../effectsTool";
+import { setSelectedSpell, toolID, toolMetadataSelectedSpell, toolMetadataSelectedCaster, targetHighlightMetadataKey, stopAiming, hexChosenAbilityMetadataKey, selectedSpellDamageTypeMetadataKey, selectedSpellSlotLevelMetadataKey } from "../../effectsTool";
 import { openSpellDetailModal } from "../../views/SpellDetailModal";
 import { spellPopoverId } from "../../views/SpellSelectionPopover";
 import { useOBR } from "../../platform/obr/react/providers/BaseOBRProvider";
@@ -18,12 +18,13 @@ import {
     IconGrid,
     IconList,
 } from "./shared/Bg3Icons";
-import { focusCameraOnToken, isTokenOwnedByPlayer, getOtherClaimedPlayer, getMyPrimaryCharacterToken } from "../../features/player/playerCharacterService";
+import { focusCameraOnToken, isTokenOwnedByPlayer, getOtherClaimedPlayer, getMyPrimaryCharacterToken, isCharacterToken } from "../../features/player/playerCharacterService";
 import {
     cacheDDBCharacter,
-    ddbSpellToMetadata
+    ddbSpellToMetadata,
+    buildWeaponAttackFromInventoryItem
 } from "../../services/ddbService";
-import { DDBParsedCharacter, DDBWeaponAttack, DDBFeatureAction, DDBParsedSpell } from "../../types/ddb";
+import { DDBParsedCharacter, DDBWeaponAttack, DDBFeatureAction, DDBParsedSpell, DDBInventoryItem } from "../../types/ddb";
 import { openDDBSyncModal } from "../../views/DDBSyncModal";
 import { clearStoredRollHistory, broadcastDDBRoll } from "../../services/rollLogService";
 import type { DDBRollCardData } from "../../types/ddbRollLog";
@@ -248,6 +249,29 @@ export const ActionDock: React.FC = () => {
     } = useActiveCaster(applyDdbSlots);
     const buffMods = useMemo(() => getComputedBuffModifiers(activeBuffs), [activeBuffs]);
 
+    const [characterTokens, setCharacterTokens] = useState<Item[]>([]);
+    const isGM = obr.player?.role === "GM";
+
+    useEffect(() => {
+        if (!obr.ready || !obr.sceneReady || !isGM) return;
+        OBR.scene.items.getItems().then(items => {
+            setCharacterTokens(items.filter(isCharacterToken));
+        });
+        return OBR.scene.items.onChange(items => {
+            setCharacterTokens(items.filter(isCharacterToken));
+        });
+    }, [obr.ready, obr.sceneReady, isGM]);
+
+    const handleSelectCaster = useCallback(async (tokenId: string) => {
+        if (!tokenId) return;
+        await OBR.player.select([tokenId], true);
+        if (selectedSpell) {
+            setSelectedSpell(selectedSpell, tokenId);
+        } else {
+            await OBR.player.setMetadata({ [toolMetadataSelectedCaster]: undefined });
+        }
+    }, [selectedSpell]);
+
     const [riderChoice, setRiderChoice] = useState<string | undefined>(undefined);
     const [aimingWeapon, setAimingWeapon] = useState<DDBWeaponAttack | null>(null);
 
@@ -398,7 +422,7 @@ export const ActionDock: React.FC = () => {
 
         // 1. Add character spells first
         if (syncedDdbChar && Array.isArray(syncedDdbChar.spells)) {
-            registerDynamicSpells(syncedDdbChar.spells.map(ddbSpellToMetadata));
+            registerDynamicSpells(syncedDdbChar.spells.map(ddbSpellToMetadata), syncedDdbChar.id);
             syncedDdbChar.spells.forEach(s => {
                 const normId = s.id.toLowerCase().replace(/[^a-z0-9_]/g, "");
                 let finalId = s.id;
@@ -462,16 +486,16 @@ export const ActionDock: React.FC = () => {
     const spellRegistry = useMemo(() => {
         if (!syncedDdbChar?.spells) return null;
         const reg = buildRegistry(syncedDdbChar.spells);
-        setActiveRegistry(reg);
+        setActiveRegistry(reg, syncedDdbChar.id);
         return reg;
-    }, [syncedDdbChar?.spells]);
+    }, [syncedDdbChar?.spells, syncedDdbChar?.id]);
 
     // Active spell selection
     const handleSelectSpell = (spellID: string) => {
-        const meta = getSpellMetadata(spellID);
+        const meta = getSpellMetadata(spellID, syncedDdbChar?.id);
         const matchedDdbSpell = syncedDdbChar?.spells.find(s => s.id === spellID || s.name.toLowerCase() === spellID.toLowerCase());
         const effectiveLevel = matchedDdbSpell ? matchedDdbSpell.level : (meta.level ?? 0);
-        setSelectedSpell(spellID);
+        setSelectedSpell(spellID, caster?.id);
         setSelected(spellID);
         setCastLevel(effectiveLevel);
         OBR.tool.activateTool(toolID);
@@ -655,6 +679,7 @@ export const ActionDock: React.FC = () => {
         casterId: caster?.id,
         character: syncedDdbChar,
         hasAttackAdvantage: buffMods.hasAttackAdvantage,
+        attackBonus: buffMods.attackBonus,
         damageBonus: buffMods.damageBonus,
         activeBuffs: activeBuffNames,
         riderChoice,
@@ -819,14 +844,21 @@ export const ActionDock: React.FC = () => {
 
     // Weapon selection & aiming
     const handleSelectWeapon = (weapon: DDBWeaponAttack, mode: "melee" | "thrown" = "melee", attackCount = 1) => {
-        const spellId = mode === "thrown" ? "ranged_weapon_attack" : "melee_weapon_attack";
-        setSelectedSpell(spellId, caster?.id, weapon.id, attackCount, riderChoice !== "none" ? riderChoice : undefined);
+        const isRanged = weapon.type === "ranged" || mode === "thrown";
+        const spellId = isRanged ? "ranged_weapon_attack" : "melee_weapon_attack";
+        const effectiveRange = isRanged
+            ? (mode === "thrown" ? (weapon.thrownLongRange || weapon.thrownRange || 20) : (weapon.longRangeFeet || weapon.rangeFeet || 60))
+            : (weapon.reachFeet || 5);
+        setSelectedSpell(spellId, caster?.id, weapon.id, attackCount, riderChoice !== "none" ? riderChoice : undefined, effectiveRange);
         setSelected(spellId);
         setUpcastPickerSpellId(null);
         setActiveFlyoutFeatureId(null);
         setAimingWeapon(weapon);
         OBR.tool.activateTool(toolID);
-        OBR.notification.show(`Aiming ${weapon.name} (${mode === "thrown" ? `${weapon.thrownRange || 20}/${weapon.thrownLongRange || 60} ft Thrown` : "5 ft Reach"}${attackCount > 1 ? ` - ${attackCount} Attacks` : ""})`, "INFO");
+        const rangeDisplay = isRanged
+            ? (mode === "thrown" ? `${weapon.thrownRange || 20}/${weapon.thrownLongRange || 60} ft Thrown` : `${weapon.rangeFeet || 60}${weapon.longRangeFeet ? `/${weapon.longRangeFeet}` : ""} ft Range`)
+            : `${weapon.reachFeet || 5} ft Reach`;
+        OBR.notification.show(`Aiming ${weapon.name} (${rangeDisplay}${attackCount > 1 ? ` - ${attackCount} Attacks` : ""})`, "INFO");
     };
 
     // Monk Flurry of Blows (2 Unarmed Strikes, 1 Focus Point, Bonus Action)
@@ -904,6 +936,58 @@ export const ActionDock: React.FC = () => {
         onBonusStrike: handleBonusUnarmedStrikeClick,
     });
 
+    // Two-Weapon Fighting state & designated offhand hand-swapping
+    const [designatedOffhandId, setDesignatedOffhandId] = useState<string | null>(null);
+
+    const lightWeapons = useMemo(() => {
+        return weaponsList.filter(w => w.isLight && w.name !== "Unarmed Strike");
+    }, [weaponsList]);
+
+    const hasTWF = lightWeapons.length >= 2;
+
+    const effectiveOffhandId = useMemo(() => {
+        if (lightWeapons.length < 2) return null;
+        if (designatedOffhandId && lightWeapons.some(w => w.id === designatedOffhandId)) {
+            return designatedOffhandId;
+        }
+        return lightWeapons[1].id;
+    }, [lightWeapons, designatedOffhandId]);
+
+    const effectiveMainHandId = useMemo(() => {
+        if (lightWeapons.length < 2) return null;
+        return lightWeapons.find(w => w.id !== effectiveOffhandId)?.id || lightWeapons[0].id;
+    }, [lightWeapons, effectiveOffhandId]);
+
+    const effectiveOffhandWeapon = useMemo(() => {
+        if (!hasTWF || !effectiveOffhandId) return undefined;
+        const offhand = lightWeapons.find(w => w.id === effectiveOffhandId) || lightWeapons[1];
+        if (!offhand) return undefined;
+
+        const hasTWFFightingStyle = Boolean(syncedDdbChar?.hasTWFFightingStyle);
+        const magicBonus = offhand.magicDamageBonus || 0;
+        const baseDice = offhand.baseDamageDice || offhand.damage.split("+")[0].split("-")[0] || "1d4";
+        const offhandDmg = hasTWFFightingStyle
+            ? offhand.damage
+            : (magicBonus > 0 ? `${baseDice}+${magicBonus}` : baseDice);
+
+        return {
+            ...offhand,
+            id: `${offhand.id}_offhand`,
+            name: `${offhand.name} (Offhand)`,
+            damage: offhandDmg
+        };
+    }, [hasTWF, effectiveOffhandId, lightWeapons, syncedDdbChar?.hasTWFFightingStyle]);
+
+    const handleSwapWeaponHands = useCallback(() => {
+        if (lightWeapons.length < 2 || !effectiveOffhandId) return;
+        const newOffhand = lightWeapons.find(w => w.id !== effectiveOffhandId);
+        if (newOffhand) {
+            setDesignatedOffhandId(newOffhand.id);
+            const mainHandName = lightWeapons.find(w => w.id === effectiveOffhandId)?.name;
+            OBR.notification.show(`Swapped weapons: Main Hand is now ${mainHandName}, Off Hand is ${newOffhand.name}`, "INFO");
+        }
+    }, [lightWeapons, effectiveOffhandId]);
+
     const {
         handleTwoWeaponFighting: handleTwoWeaponFightingClick,
         handleOpportunityAttack: handleOpportunityAttackClick,
@@ -912,6 +996,7 @@ export const ActionDock: React.FC = () => {
     } = useCombatActionHandlers({
         character: syncedDdbChar,
         weapons: weaponsList,
+        offhandWeapon: effectiveOffhandWeapon,
         setHeroicInspiration,
         onSelectWeapon: handleSelectWeapon,
     });
@@ -996,6 +1081,65 @@ export const ActionDock: React.FC = () => {
         drawerItem,
         setDrawerItem,
     });
+
+    const handleToggleEquipItem = useCallback((item: DDBInventoryItem) => {
+        if (!syncedDdbChar) return;
+        const newEquipped = !item.equipped;
+
+        // 1. Update item in inventory
+        const updatedInventory = (syncedDdbChar.inventory || []).map(invItem => {
+            if (invItem === item || (invItem.id != null && invItem.id === item.id)) {
+                return { ...invItem, equipped: newEquipped };
+            }
+            return invItem;
+        });
+
+        // 2. Add or remove weapon attack from character weapons
+        let updatedWeapons = [...(syncedDdbChar.weapons || [])];
+        const itemId = item.id != null ? item.id : item.definition?.id;
+        const weaponId = `weapon_${itemId != null ? itemId : item.name.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`;
+
+        if (newEquipped) {
+            const weaponAttack = buildWeaponAttackFromInventoryItem(
+                { ...item, equipped: true },
+                {
+                    modifiers: syncedDdbChar.modifiers,
+                    proficiencyBonus: syncedDdbChar.proficiencyBonus,
+                    level: syncedDdbChar.level,
+                }
+            );
+            if (weaponAttack) {
+                if (!updatedWeapons.some(w => w.id === weaponAttack.id)) {
+                    const unarmedIndex = updatedWeapons.findIndex(w => w.id === "weapon_unarmed_strike");
+                    if (unarmedIndex !== -1) {
+                        updatedWeapons.splice(unarmedIndex, 0, weaponAttack);
+                    } else {
+                        updatedWeapons.push(weaponAttack);
+                    }
+                }
+            }
+        } else {
+            updatedWeapons = updatedWeapons.filter(w => w.id !== weaponId);
+        }
+
+        const updatedChar: DDBParsedCharacter = {
+            ...syncedDdbChar,
+            inventory: updatedInventory,
+            weapons: updatedWeapons,
+        };
+
+        setSyncedDdbChar(updatedChar);
+        cacheDDBCharacter(updatedChar);
+
+        if (drawerItem?.type === "item" && (drawerItem.item === item || (drawerItem.item.id != null && drawerItem.item.id === item.id))) {
+            setDrawerItem({
+                ...drawerItem,
+                item: { ...drawerItem.item, equipped: newEquipped },
+            });
+        }
+
+        OBR.notification.show(`${item.name} ${newEquipped ? "equipped" : "unequipped"}.`, "INFO");
+    }, [syncedDdbChar, setSyncedDdbChar, drawerItem]);
     const characterResources = useMemo(() => {
         if (!syncedDdbChar) return [];
         const seenKeys = new Set<string>();
@@ -1131,11 +1275,15 @@ export const ActionDock: React.FC = () => {
         />
     );
 
-    const renderBg3WeaponCard = (weapon: DDBWeaponAttack, index: number) => (
+    const renderBg3WeaponCard = (weapon: DDBWeaponAttack, index: number, mode?: "melee" | "thrown") => (
         <Bg3WeaponCard
             weapon={weapon}
             index={index}
-            onActivate={selectedWeapon => handleSelectWeapon(selectedWeapon, "melee")}
+            mode={mode}
+            isMainHand={Boolean(hasTWF && weapon.id === effectiveMainHandId)}
+            isOffHand={Boolean(hasTWF && weapon.id === effectiveOffhandId)}
+            onSwapHands={handleSwapWeaponHands}
+            onActivate={(selectedWeapon, chosenMode) => handleSelectWeapon(selectedWeapon, chosenMode ?? mode ?? "melee")}
             onOpenDetails={selectedWeapon => setDrawerItem({ type: "weapon", weapon: selectedWeapon })}
         />
     );
@@ -1227,6 +1375,8 @@ export const ActionDock: React.FC = () => {
                 <ActionDockVitalsRail
                     character={syncedDdbChar}
                     caster={caster}
+                    characterTokens={isGM ? characterTokens : undefined}
+                    onSelectCaster={handleSelectCaster}
                     isSyncing={isSyncing}
                     onResync={() => resyncCharacter(true)}
                     player={obr.player ? { id: obr.player.id, name: obr.player.name, role: obr.player.role } : undefined}
@@ -1499,6 +1649,10 @@ export const ActionDock: React.FC = () => {
                                         otherFeatures={otherFeatures}
                                         combatActions={filteredCombatActions}
                                         spells={dockSpells}
+                                        hasTwoWeaponFighting={hasTWF}
+                                        offhandWeapon={effectiveOffhandWeapon}
+                                        onTwoWeaponFighting={handleTwoWeaponFightingClick}
+                                        onSwapWeaponHands={handleSwapWeaponHands}
                                         renderWeaponCard={renderBg3WeaponCard}
                                         renderSpellCard={renderBg3SpellCard}
                                         renderFeatureCard={renderBg3FeatureCard}
@@ -1525,8 +1679,11 @@ export const ActionDock: React.FC = () => {
                                             limitedUseFeatures,
                                             filteredCombatActions,
                                             weaponsList,
-                                            hasTwoWeaponFighting: Boolean(syncedDdbChar?.hasTwoWeaponFighting),
-                                            offhandWeapon: syncedDdbChar?.offhandWeapon,
+                                            hasTwoWeaponFighting: hasTWF,
+                                            offhandWeapon: effectiveOffhandWeapon,
+                                            mainHandWeaponId: effectiveMainHandId ?? undefined,
+                                            offHandWeaponId: effectiveOffhandId ?? undefined,
+                                            onSwapWeaponHands: handleSwapWeaponHands,
                                             activeRiderMap,
                                             selectedSpellId: selectedSpell,
                                             spellDamageTypeOverrides,
@@ -1645,6 +1802,7 @@ export const ActionDock: React.FC = () => {
                     onSearchChange={setInventorySearch}
                     items={filteredInventory}
                     onSelectItem={item => setDrawerItem({ type: "item", item })}
+                    onToggleEquip={handleToggleEquipItem}
                 />
             )}
 
@@ -1724,6 +1882,7 @@ export const ActionDock: React.FC = () => {
                             onBonusUnarmedStrike: handleBonusUnarmedStrikeClick,
                             onOpenUpcastPicker: handleOpenUpcastPicker,
                             onToggleItemAttunement: handleToggleItemAttunement,
+                            onToggleEquipItem: handleToggleEquipItem,
                             onClearHistory: () => { setRollHistory([]); clearStoredRollHistory(); },
                             onClose: () => setDrawerItem(null),
                             onFeatureOptionClick: (feature, optionId) => handleFeatureOptionRoll(feature, optionId),

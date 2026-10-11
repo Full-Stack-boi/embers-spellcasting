@@ -494,3 +494,104 @@
     border-color: #f59e0b !important;
     box-shadow: 0 0 8px rgba(245, 158, 11, 0.4) !important;
 }
+
+/* BG3 Tile Badges: Hand Swapping & Spell Pills */
+.ddb-bg3-tile-hand-badge {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    font-size: 0.52rem;
+    font-weight: 800;
+    line-height: 1;
+    padding: 1.5px 3.5px;
+    border-radius: 3px;
+    cursor: pointer;
+    z-index: 2;
+    transition: all 0.15s ease;
+    user-select: none;
+    letter-spacing: 0.2px;
+}
+
+.ddb-bg3-tile-hand-badge.main {
+    background: rgba(56, 189, 248, 0.25);
+    border: 1px solid rgba(56, 189, 248, 0.7);
+    color: #38bdf8;
+}
+
+.ddb-bg3-tile-hand-badge.main:hover {
+    background: rgba(56, 189, 248, 0.5);
+    border-color: #38bdf8;
+    color: #ffffff;
+    box-shadow: 0 0 6px rgba(56, 189, 248, 0.6);
+}
+
+.ddb-bg3-tile-hand-badge.offhand {
+    background: rgba(245, 158, 11, 0.25);
+    border: 1px solid rgba(245, 158, 11, 0.7);
+    color: #fbbf24;
+}
+
+.ddb-bg3-tile-hand-badge.offhand:hover {
+    background: rgba(245, 158, 11, 0.5);
+    border-color: #fbbf24;
+    color: #ffffff;
+    box-shadow: 0 0 6px rgba(245, 158, 11, 0.6);
+}
+
+.ddb-bg3-tile-pill-badge {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    font-size: 0.5rem;
+    font-weight: 800;
+    line-height: 1;
+    padding: 1.5px 3.5px;
+    border-radius: 3px;
+    z-index: 2;
+    pointer-events: none;
+    letter-spacing: 0.3px;
+}
+
+.ddb-bg3-tile-pill-badge.heal-badge {
+    background: rgba(74, 222, 128, 0.25);
+    border: 1px solid rgba(74, 222, 128, 0.7);
+    color: #4ade80;
+}
+
+.ddb-bg3-tile-action-badge {
+    position: absolute;
+    bottom: 2px;
+    left: 2px;
+    font-size: 0.48rem;
+    font-weight: 800;
+    line-height: 1;
+    padding: 1.5px 3.5px;
+    border-radius: 3px;
+    z-index: 2;
+    transition: all 0.15s ease;
+    user-select: none;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+
+.ddb-bg3-tile-action-badge.throw {
+    background: rgba(245, 158, 11, 0.22);
+    border: 1px solid rgba(245, 158, 11, 0.75);
+    color: #fbbf24;
+    cursor: pointer;
+}
+
+.ddb-bg3-tile-action-badge.throw:hover {
+    background: rgba(245, 158, 11, 0.5);
+    border-color: #f59e0b;
+    color: #ffffff;
+    box-shadow: 0 0 6px rgba(245, 158, 11, 0.6);
+}
+
+.ddb-bg3-tile-action-badge.thrown-indicator {
+    background: rgba(245, 158, 11, 0.22);
+    border: 1px solid rgba(245, 158, 11, 0.75);
+    color: #fbbf24;
+    pointer-events: none;
+}
+

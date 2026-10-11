@@ -19,6 +19,7 @@ interface ActionSubfilterPanelsProps {
     limitedUseFeatures: DDBFeatureAction[];
     renderFeatureCard: (feature: DDBFeatureAction) => ReactNode;
     onTwoWeaponFighting: () => void;
+    onSwapWeaponHands?: () => void;
     onOpportunityAttack: () => void;
     onSelectSpell: (spellId: string) => void;
     onOpenSpellDetails: (spellId: string) => void;
@@ -38,6 +39,7 @@ export function ActionSubfilterPanels({
     limitedUseFeatures,
     renderFeatureCard,
     onTwoWeaponFighting,
+    onSwapWeaponHands,
     onOpportunityAttack,
     onSelectSpell,
     onOpenSpellDetails,
@@ -52,6 +54,7 @@ export function ActionSubfilterPanels({
                         enabled={hasTwoWeaponFighting}
                         offhandWeapon={offhandWeapon}
                         onActivate={onTwoWeaponFighting}
+                        onSwapHands={onSwapWeaponHands}
                         showUnavailable
                         detailedTitle
                     />

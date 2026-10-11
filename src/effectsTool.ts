@@ -26,6 +26,7 @@ import { getItemSize } from "./utils";
 import { log_error } from "./logging";
 import { spellPopoverId } from "./views/SpellSelectionPopover";
 import { resolveActiveCaster } from "./features/targeting/infrastructure/obr/activeCasterResolver";
+import { captureCastContext } from "./features/targeting/application/castContext";
 import {
   clearAimingOverlay,
   renderAimingOverlay,
@@ -35,7 +36,10 @@ import {
   renderAoePreview,
 } from "./features/targeting/infrastructure/obr/aoePreviewRenderer";
 import {
+  AoETemplate,
   GridInfo,
+  getAffectedGridCells,
+  isTokenInAffectedCells,
   isWithinRange,
   snapAoECenter,
   snapToCellCenter,
@@ -59,6 +63,7 @@ import {
 import {
   getTokenBuffs,
   getComputedBuffModifiers,
+  removeTokenBuff,
 } from "./services/buffService";
 import {
   rollAttack,
@@ -76,13 +81,11 @@ import {
 } from "./services/weaponDamageRiders";
 import {
   getLinkedDDBCharacterId,
-  getCachedDDBCharacter,
-  findCachedDDBCharacter,
   hasPotentCantrip,
   hasWeaponGraze,
 } from "./services/ddbService";
 import {
-  resolveFormulaDamageDice,
+  resolveFormulaFullDamage,
   resolveSpellFormula,
 } from "./services/spellFormulaBuilder";
 import { buildWeaponStepDamage } from "./services/weaponSpellDamage";
@@ -107,13 +110,15 @@ import {
   checkAndFireActionTriggers,
 } from "./services/conditionalTriggerService";
 import { resolveSpellConditionalTrigger } from "./services/spellTriggerResolver";
-import type { DDBParsedCharacter } from "./types/ddb";
+import type { DDBParsedCharacter, DDBParsedSpell } from "./types/ddb";
+import type { SpellFormula } from "./types/spellFormula";
 
 export const toolID = `${APP_KEY}/effect-tool`;
 export const toolMetadataSelectedSpell = `${APP_KEY}/selected-spell`;
 export const toolMetadataSelectedCaster = `${APP_KEY}/selected-caster`;
 export const toolMetadataSelectedWeapon = `${APP_KEY}/selected-weapon-id`;
 export const toolMetadataAttackCount = `${APP_KEY}/attack-count`;
+export const toolMetadataWeaponRange = `${APP_KEY}/selected-weapon-range`;
 export const selectedRiderChoiceMetadataKey = `${APP_KEY}/selected-rider-choice`;
 export const hexChosenAbilityMetadataKey = `${APP_KEY}/hex-chosen-ability`;
 export const selectedSpellDamageTypeMetadataKey = `${APP_KEY}/selected-spell-damage-type`;
@@ -171,6 +176,93 @@ export async function deductSpellSlotIfLeveled(
   }
 }
 
+export function resolveSpellcastingModifier(
+  ddbChar: DDBParsedCharacter | undefined | null,
+  spellFormula: SpellFormula,
+  ddbSpell?: DDBParsedSpell,
+  defaultSpellAttackBonus: number = 5,
+): number {
+  const spellCastingClassName = ddbSpell?.castingClass;
+  const classStatByName = spellCastingClassName
+    ? ddbChar?.classSpellStats?.find(
+        (stat) =>
+          stat.className.toLowerCase() ===
+          spellCastingClassName.toLowerCase(),
+      )
+    : undefined;
+  const applicableClass =
+    classStatByName ??
+    spellFormula.category.classes
+      .map((className) =>
+        ddbChar?.classSpellStats?.find(
+          (stat) =>
+            stat.className.toLowerCase() === className.toLowerCase(),
+        ),
+      )
+      .find((stat): stat is NonNullable<typeof stat> =>
+        Boolean(stat),
+      );
+  const statKey = (ddbChar?.spellCastingAbility?.toLowerCase() ||
+    "cha") as "int" | "wis" | "cha";
+  return (
+    applicableClass?.modifier ??
+    ddbChar?.modifiers?.[statKey] ??
+    Math.max(
+      1,
+      (ddbChar?.spellAttackBonus ?? defaultSpellAttackBonus) -
+        (ddbChar?.proficiencyBonus ?? 2),
+    )
+  );
+}
+
+export function rollSpellDamageWithMechanics(
+  spellFormula: SpellFormula,
+  dice: string,
+  dmgType: string,
+  spellcastingModifier: number,
+  isCrit: boolean = false,
+): DDBDamageResult {
+  const exploding = spellFormula.mechanics?.find(
+    (m) => m.kind === "exploding",
+  );
+  const explodingAnyDie = spellFormula.mechanics?.find(
+    (m) => m.kind === "exploding_any_die",
+  );
+
+  if (exploding) {
+    const triggerValue = exploding.triggerValue ?? 8;
+    const maxExplosions =
+      exploding.maxExtra === "spellcastingMod"
+        ? Math.max(1, spellcastingModifier)
+        : typeof exploding.maxExtra === "number"
+          ? exploding.maxExtra
+          : 0;
+    return rollDamageExploding(
+      dice,
+      dmgType,
+      triggerValue,
+      maxExplosions,
+      "",
+      isCrit,
+    );
+  }
+  if (explodingAnyDie) {
+    const maxExplosions =
+      explodingAnyDie.maxExtra === "spellcastingMod"
+        ? Math.max(1, spellcastingModifier)
+        : typeof explodingAnyDie.maxExtra === "number"
+          ? explodingAnyDie.maxExtra
+          : 0;
+    return rollDamageExplodingAnyDie(
+      dice,
+      dmgType,
+      maxExplosions,
+      isCrit,
+    );
+  }
+  return rollDamageDDB(dice, dmgType, "", isCrit);
+}
+
 function deactivateTool() {
   clearAimingOverlay();
   clearAoePreview();
@@ -200,6 +292,7 @@ export async function stopAiming(): Promise<void> {
     [toolMetadataSelectedWeapon]: undefined,
     [toolMetadataAttackCount]: undefined,
     [selectedRiderChoiceMetadataKey]: undefined,
+    [toolMetadataWeaponRange]: undefined,
     [playerSelectedTargetsMetadataKey]: [],
   });
   await OBR.tool.setMetadata(toolID, {
@@ -208,6 +301,7 @@ export async function stopAiming(): Promise<void> {
     [toolMetadataSelectedWeapon]: undefined,
     [toolMetadataAttackCount]: undefined,
     [selectedRiderChoiceMetadataKey]: undefined,
+    [toolMetadataWeaponRange]: undefined,
   });
   try {
     const metadata = await OBR.player.getMetadata();
@@ -293,6 +387,7 @@ export function setSelectedSpell(
   weaponId?: string,
   attackCount?: number,
   riderChoice?: string,
+  weaponRange?: number,
 ) {
   OBR.player.setMetadata({
     [toolMetadataSelectedSpell]: spellName || undefined,
@@ -300,6 +395,7 @@ export function setSelectedSpell(
     [toolMetadataSelectedWeapon]: weaponId || undefined,
     [toolMetadataAttackCount]: attackCount || undefined,
     [selectedRiderChoiceMetadataKey]: riderChoice || undefined,
+    [toolMetadataWeaponRange]: weaponRange || undefined,
   });
   OBR.tool.setMetadata(toolID, {
     [toolMetadataSelectedSpell]: spellName || undefined,
@@ -307,6 +403,7 @@ export function setSelectedSpell(
     [toolMetadataSelectedWeapon]: weaponId || undefined,
     [toolMetadataAttackCount]: attackCount || undefined,
     [selectedRiderChoiceMetadataKey]: riderChoice || undefined,
+    [toolMetadataWeaponRange]: weaponRange || undefined,
   });
 }
 
@@ -480,15 +577,28 @@ async function setupToolActions(playerRole: "GM" | "PLAYER", playerID: string) {
           );
           return;
         }
-        doSpell(
-          metadata[toolMetadataSelectedSpell],
-          playerID,
-          playerRole === "GM",
-        ).then(() => {
-          if (!getSettingsValue(LOCAL_STORAGE_KEYS.KEEP_SELECTED_TARGETS)) {
-            clearAllTargets();
-          }
-        });
+        const preferredCaster =
+          typeof metadata[toolMetadataSelectedCaster] === "string"
+            ? (metadata[toolMetadataSelectedCaster] as string)
+            : undefined;
+        captureCastContext(playerRole, playerID, preferredCaster)
+          .then((castContext) =>
+            doSpell(
+              metadata[toolMetadataSelectedSpell] as string,
+              playerID,
+              playerRole === "GM",
+              castContext,
+            ),
+          )
+          .then(() => {
+            if (!getSettingsValue(LOCAL_STORAGE_KEYS.KEEP_SELECTED_TARGETS)) {
+              clearAllTargets();
+            }
+          })
+          .catch((e) => {
+            log_error("Cast failed", e);
+            OBR.notification.show("Embers: Failed to cast spell", "ERROR");
+          });
       });
     },
   });
@@ -725,7 +835,10 @@ async function setupTargetToolModes(
         });
       } else {
         clearAoePreview();
-        const maxRange = getSpellRange(spell, selectedSpell);
+        const customWeaponRange = (metadata?.[toolMetadataWeaponRange] as number | undefined);
+        const maxRange = (selectedSpell === "ranged_weapon_attack" || selectedSpell === "melee_weapon_attack") && typeof customWeaponRange === "number" && customWeaponRange > 0
+          ? customWeaponRange
+          : getSpellRange(spell, selectedSpell);
         const isTargetToken = !event.shiftKey && isValidCombatTargetToken(event.target);
         const targetPos = isTargetToken
           ? event.target!.position
@@ -834,31 +947,40 @@ async function setupTargetToolModes(
           ? damageChoice.damageType
           : undefined;
       const slotChoice = metadata?.[selectedSpellSlotLevelMetadataKey] as
-        | { spellId?: unknown; slotLevel?: unknown }
+        | { spellId?: unknown; casterId?: unknown; slotLevel?: unknown }
         | undefined;
+      const preferredCasterId =
+        typeof metadata?.[toolMetadataSelectedCaster] === "string"
+          ? (metadata[toolMetadataSelectedCaster] as string)
+          : undefined;
+      const activeCaster = await resolveActiveCaster(playerRole, playerID);
       if (selectedSpell) {
         const spell = getSpell(selectedSpell, playerRole === "GM");
         const aoe = getSpellAoE(spell, selectedSpell);
-        const activeCaster = await resolveActiveCaster(playerRole, playerID);
         const maxRange = getSpellRange(spell, selectedSpell);
-        const isSelfCentered = Boolean(
-          aoe && aoe.shape === "Sphere" && maxRange === 0 && activeCaster,
-        );
+        const isSelfCentered = Boolean(aoe && aoe.shape === "Sphere" && maxRange === 0);
 
-        if (isSelfCentered && activeCaster) {
+        if (isSelfCentered) {
+          const castContext = await captureCastContext(playerRole, playerID);
+          if (!castContext) {
+            if (playerRole === "GM") {
+              OBR.notification.show("Please select a character token on the map to cast as.", "WARNING");
+            }
+            return;
+          }
           clearAimingOverlay();
           clearAoePreview();
 
           const targetHighlight = buildTarget(
             1,
-            getItemSize(activeCaster.item) * 1.31,
-            activeCaster.position,
+            getItemSize(castContext.casterItem) * 1.31,
+            castContext.position,
             true,
-            activeCaster.id,
+            castContext.casterTokenId,
           );
           await OBR.scene.local.addItems([targetHighlight]);
 
-          await doSpell(selectedSpell, playerID, playerRole === "GM");
+          await doSpell(selectedSpell, playerID, playerRole === "GM", castContext);
 
           if (!getSettingsValue(LOCAL_STORAGE_KEYS.KEEP_SELECTED_TARGETS)) {
             await clearAllTargets();
@@ -867,16 +989,9 @@ async function setupTargetToolModes(
             clearAoePreview();
           }
 
-          const charId = activeCaster.item
-            ? getLinkedDDBCharacterId(activeCaster.item)
-            : null;
-          const ddbChar =
-            (charId ? getCachedDDBCharacter(charId) : null) ??
-            (activeCaster.item?.name
-              ? findCachedDDBCharacter(activeCaster.item.name)
-              : null);
-          const casterName =
-            ddbChar?.name || activeCaster.item?.name || "Caster";
+          const charId = castContext.ddbCharacterId;
+          const ddbChar = castContext.ddbCharacter;
+          const casterName = castContext.casterName;
           const spellName = spell?.name || selectedSpell;
 
           if (charId) {
@@ -887,6 +1002,7 @@ async function setupTargetToolModes(
             );
             const castSlotLevel =
               slotChoice?.spellId === selectedSpell &&
+              (!slotChoice.casterId || slotChoice.casterId === castContext.casterTokenId) &&
               typeof slotChoice.slotLevel === "number"
                 ? slotChoice.slotLevel
                 : (ddbSpell?.level ?? 0);
@@ -926,7 +1042,10 @@ async function setupTargetToolModes(
           }
         } else if (!aoe && activeCaster) {
           const grid = await getSceneGridInfo();
-          const maxRangeFeet = getSpellRange(spell, selectedSpell);
+          const customWeaponRange = (metadata?.[toolMetadataWeaponRange] as number | undefined);
+          const maxRangeFeet = (selectedSpell === "ranged_weapon_attack" || selectedSpell === "melee_weapon_attack") && typeof customWeaponRange === "number" && customWeaponRange > 0
+            ? customWeaponRange
+            : getSpellRange(spell, selectedSpell);
           const isTargetToken = Boolean(!event.shiftKey && isValidCombatTargetToken(event.target));
           const targetPos = isTargetToken
             ? event.target!.position
@@ -1041,11 +1160,26 @@ async function setupTargetToolModes(
         const smartActionEnabled =
           getSettingsValue(LOCAL_STORAGE_KEYS.SMART_ACTION_ON_TARGET) !== false;
 
-        if (selectedSpell && smartActionEnabled && canCast) {
-          const activeCaster = await resolveActiveCaster(playerRole, playerID);
-          const buffs = activeCaster?.item
-            ? getTokenBuffs(activeCaster.item)
-            : [];
+        const castContext =
+          selectedSpell && smartActionEnabled && canCast
+            ? await captureCastContext(playerRole, playerID, preferredCasterId)
+            : null;
+        if (selectedSpell && smartActionEnabled && canCast && !castContext) {
+          OBR.notification.show(
+            "Embers: Could not determine the caster. Select your character token first.",
+            "WARNING",
+          );
+        }
+
+        if (selectedSpell && smartActionEnabled && canCast && castContext) {
+          const activeCaster = {
+            item: castContext.casterItem,
+            id: castContext.casterTokenId,
+            position: castContext.position,
+            name: castContext.casterName,
+            isDM: castContext.isDM,
+          };
+          const buffs = getTokenBuffs(castContext.casterItem);
           const buffMods = getComputedBuffModifiers(buffs);
 
           let rollMode: "normal" | "advantage" | "disadvantage" = "normal";
@@ -1068,14 +1202,8 @@ async function setupTargetToolModes(
             }
           }
 
-          const charId = activeCaster?.item
-            ? getLinkedDDBCharacterId(activeCaster.item)
-            : null;
-          const ddbChar =
-            (charId ? getCachedDDBCharacter(charId) : null) ??
-            (activeCaster?.item?.name
-              ? findCachedDDBCharacter(activeCaster.item.name)
-              : null);
+          const charId = castContext.ddbCharacterId;
+          const ddbChar = castContext.ddbCharacter;
           const charLevel = ddbChar?.level ?? 1;
           const beamInfo = getSpellBeamInfo(
             selectedSpell,
@@ -1111,7 +1239,7 @@ async function setupTargetToolModes(
           if (currentAllocatedBeams >= beamInfo.totalBeams) {
             clearAimingOverlay();
             clearAoePreview();
-            await doSpell(selectedSpell, playerID, playerRole === "GM");
+            await doSpell(selectedSpell, playerID, playerRole === "GM", castContext);
 
             // Auto-cleanup canvas: delete lingering targets and clear tether
             if (!getSettingsValue(LOCAL_STORAGE_KEYS.KEEP_SELECTED_TARGETS)) {
@@ -1121,8 +1249,7 @@ async function setupTargetToolModes(
               clearAoePreview();
             }
 
-            const casterName =
-              ddbChar?.name || activeCaster?.item?.name || "Caster";
+            const casterName = castContext.casterName;
             const targetName = event.target?.name || "Target";
 
             const combatState = charId ? await loadCombatState(charId) : null;
@@ -1155,8 +1282,12 @@ async function setupTargetToolModes(
             });
             const isWeaponBasedSpell =
               spellFormula.interaction?.type === "weapon_based";
+            const slotChoice = metadata?.[selectedSpellSlotLevelMetadataKey] as
+              | { spellId?: unknown; casterId?: unknown; slotLevel?: unknown }
+              | undefined;
             const castSlotLevel =
               slotChoice?.spellId === selectedSpell &&
+              (!slotChoice.casterId || slotChoice.casterId === castContext.casterTokenId) &&
               typeof slotChoice.slotLevel === "number"
                 ? slotChoice.slotLevel
                 : (ddbSpell?.level ?? spellFormula.category.level);
@@ -1272,6 +1403,8 @@ async function setupTargetToolModes(
 
               if (weapon) {
                 const isFlurry = selectedSpell === "flurry_of_blows";
+                const isRangedAttack = selectedSpell === "ranged_weapon_attack";
+                const isThrown = isRangedAttack && Boolean(weapon.hasThrown || weapon.properties?.some((p) => p.toLowerCase().includes("thrown")));
                 const ddbCards: DDBRollCardData[] = [];
                 const reports: string[] = [];
                 const activeBuffNames = buffs.map((b) => b.name);
@@ -1279,13 +1412,63 @@ async function setupTargetToolModes(
                   (playerMeta[selectedRiderChoiceMetadataKey] as string) || undefined;
                 const usedRidersThisTurn = new Set<string>();
 
+                // 5.5e Ranged Attack Rules: Long Range & Close Combat Disadvantage
+                const disadvantageReasons: string[] = [];
+                if (isRangedAttack && event.target) {
+                  const grid = await getSceneGridInfo();
+                  const casterPos = castContext.position ?? activeCaster.position;
+                  const targetPos = event.target.position;
+                  const distFeet = (Math.hypot(targetPos.x - casterPos.x, targetPos.y - casterPos.y) / grid.dpi) * grid.scaleMultiplier;
+
+                  const normalRange = weapon.thrownRange || (weapon.type === "ranged" ? 60 : 20);
+                  const longRange = weapon.thrownLongRange || (weapon.type === "ranged" ? 120 : (weapon.thrownRange ? weapon.thrownRange * 3 : 60));
+
+                  if (distFeet > normalRange && distFeet <= longRange) {
+                    disadvantageReasons.push("Long Range");
+                  }
+
+                  // Close combat: check if any other combat token is within 5.5 ft of the attacker
+                  const sceneItems = await OBR.scene.items.getItems();
+                  const hasAdjacentEnemy = sceneItems.some((item) => {
+                    if (!isValidCombatTargetToken(item)) return false;
+                    if (item.id === castContext.casterTokenId || item.id === activeCaster.id) return false;
+                    const dEnemy = (Math.hypot(item.position.x - casterPos.x, item.position.y - casterPos.y) / grid.dpi) * grid.scaleMultiplier;
+                    return dEnemy <= 5.5;
+                  });
+                  if (hasAdjacentEnemy) {
+                    disadvantageReasons.push("Close Combat");
+                  }
+                }
+
+                let effectiveRollMode = rollMode;
+                if (disadvantageReasons.length > 0) {
+                  if (effectiveRollMode === "advantage") {
+                    effectiveRollMode = "normal";
+                  } else if (effectiveRollMode === "normal") {
+                    effectiveRollMode = "disadvantage";
+                  }
+                }
+
+                const attackBonus = buffMods.attackBonus || 0;
+                const effectiveToHit = weapon.toHit + attackBonus;
+
                 for (let i = 1; i <= attackCount; i++) {
                   const strikeSuffix = isFlurry || attackCount > 1 ? ` (Strike ${i})` : "";
                   const actionLabel = isFlurry
                     ? `FLURRY OF BLOWS${strikeSuffix}`
-                    : `${weapon.name.toUpperCase()}${strikeSuffix}`;
+                    : isThrown
+                      ? `${weapon.name.toUpperCase()} (THROWN)${strikeSuffix}`
+                      : `${weapon.name.toUpperCase()}${strikeSuffix}`;
 
-                  const roll = rollAttack(weapon.toHit, "", rollMode);
+                  const roll = rollAttack(effectiveToHit, "", effectiveRollMode);
+                  const reasonTag = disadvantageReasons.length > 0 ? ` (${disadvantageReasons.join(", ")})` : "";
+                  const channeledTag = attackBonus > 0 ? ` • Channeled Attack (+${attackBonus})` : "";
+                  const cardSubtitle = roll.isCrit
+                    ? `Critical Hit!${reasonTag}${channeledTag}`
+                    : roll.isMiss
+                      ? `Critical Miss!${reasonTag}${channeledTag}`
+                      : `${weapon.name}${isThrown ? " Thrown" : ""} Attack Roll${reasonTag}${channeledTag}`;
+
                   ddbCards.push({
                     id: `${Date.now()}-${i}-atk`,
                     casterName,
@@ -1296,11 +1479,7 @@ async function setupTargetToolModes(
                     diceBreakdown: `${roll.d20} ${roll.bonus >= 0 ? `+ ${roll.bonus}` : `- ${Math.abs(roll.bonus)}`}`,
                     formula: `1d20${roll.bonus >= 0 ? `+${roll.bonus}` : `${roll.bonus}`}${roll.mode === "advantage" ? " (ADV)" : roll.mode === "disadvantage" ? " (DIS)" : ""}`,
                     total: roll.total,
-                    subtitle: roll.isCrit
-                      ? "Critical Hit!"
-                      : roll.isMiss
-                        ? "Critical Miss!"
-                        : `${weapon.name} Attack Roll`,
+                    subtitle: cardSubtitle,
                     isCrit: roll.isCrit,
                     isMiss: roll.isMiss,
                     rollMode: roll.mode,
@@ -1313,16 +1492,23 @@ async function setupTargetToolModes(
                   let hexNotice = "";
 
                   if (!roll.isMiss) {
+                    const attackType = isRangedAttack ? "ranged" : "melee";
                     const riders = resolveWeaponRiders({
-                      character: ddbChar,
+                      character: ddbChar ?? null,
                       weapon,
+                      attackType,
                       activeBuffs: activeBuffNames,
                       riderChoice: savedRiderChoice,
                       usedRidersThisTurn,
                     });
 
+                    let baseWeaponDamage = weapon.damage;
+                    if (isThrown && weapon.properties?.some((p) => p.toLowerCase().includes("versatile"))) {
+                      baseWeaponDamage = baseWeaponDamage.replace(/\b1d8\b/, "1d6");
+                    }
+
                     const effectiveFormula = combineDamageBonus(
-                      weapon.damage,
+                      baseWeaponDamage,
                       riders.flatBonus,
                     );
                     const baseDmg = rollDamageBreakdown(
@@ -1483,6 +1669,9 @@ async function setupTargetToolModes(
                 }
 
                 broadcastDDBRoll(ddbCards);
+                if (attackBonus > 0 && castContext.casterTokenId) {
+                  removeTokenBuff(castContext.casterTokenId, "channeled_attack").catch(() => {});
+                }
               } else {
                 if (activeCaster?.id) {
                   await checkAndFireActionTriggers(
@@ -1570,71 +1759,25 @@ async function setupTargetToolModes(
                 broadcastDDBRoll(ddbCards);
               }
             } else {
-              const applicableClass = spellFormula.category.classes
-                .map((className) =>
-                  ddbChar?.classSpellStats?.find(
-                    (stat) =>
-                      stat.className.toLowerCase() === className.toLowerCase(),
-                  ),
-                )
-                .find((stat): stat is NonNullable<typeof stat> =>
-                  Boolean(stat),
-                );
-              const statKey = (ddbChar?.spellCastingAbility?.toLowerCase() ||
-                "cha") as "int" | "wis" | "cha";
-              const spellcastingModifier =
-                applicableClass?.modifier ??
-                ddbChar?.modifiers?.[statKey] ??
-                Math.max(
-                  1,
-                  (ddbChar?.spellAttackBonus ?? spellAttackBonus) -
-                    (ddbChar?.proficiencyBonus ?? 2),
-                );
+              const spellcastingModifier = resolveSpellcastingModifier(
+                ddbChar,
+                spellFormula,
+                ddbSpell,
+                spellAttackBonus,
+              );
 
               const rollSpellDamageFormula = (
                 dice: string,
                 dmgType: string,
                 isCrit: boolean = false,
               ): DDBDamageResult => {
-                const exploding = spellFormula.mechanics?.find(
-                  (m) => m.kind === "exploding",
+                return rollSpellDamageWithMechanics(
+                  spellFormula,
+                  dice,
+                  dmgType,
+                  spellcastingModifier,
+                  isCrit,
                 );
-                const explodingAnyDie = spellFormula.mechanics?.find(
-                  (m) => m.kind === "exploding_any_die",
-                );
-
-                if (exploding) {
-                  const triggerValue = exploding.triggerValue ?? 8;
-                  const maxExplosions =
-                    exploding.maxExtra === "spellcastingMod"
-                      ? Math.max(1, spellcastingModifier)
-                      : typeof exploding.maxExtra === "number"
-                        ? exploding.maxExtra
-                        : 0;
-                  return rollDamageExploding(
-                    dice,
-                    dmgType,
-                    triggerValue,
-                    maxExplosions,
-                    "",
-                    isCrit,
-                  );
-                }
-                if (explodingAnyDie) {
-                  const maxExplosions =
-                    explodingAnyDie.maxExtra === "spellcastingMod"
-                      ? Math.max(1, spellcastingModifier)
-                      : typeof explodingAnyDie.maxExtra === "number"
-                        ? explodingAnyDie.maxExtra
-                        : 0;
-                  return rollDamageExplodingAnyDie(
-                    dice,
-                    dmgType,
-                    maxExplosions,
-                    isCrit,
-                  );
-                }
-                return rollDamageDDB(dice, dmgType, "", isCrit);
               };
 
               if (isWeaponBasedSpell) {
@@ -2108,10 +2251,11 @@ async function setupTargetToolModes(
                   (entry) => entry.isBase,
                 );
                 const damageDice =
-                  resolveFormulaDamageDice(
+                  resolveFormulaFullDamage(
                     spellFormula,
                     charLevel,
                     castSlotLevel,
+                    { spellcastingModifier, ddbSpell },
                   ) ?? ddbSpell?.damage;
                 const damageType =
                   selectedDamageType ||
@@ -2250,10 +2394,11 @@ async function setupTargetToolModes(
                   (entry) => entry.isBase,
                 );
                 const damageDice =
-                  resolveFormulaDamageDice(
+                  resolveFormulaFullDamage(
                     spellFormula,
                     charLevel,
                     castSlotLevel,
+                    { spellcastingModifier, ddbSpell },
                   ) ?? ddbSpell?.damage;
                 const damageType =
                   selectedDamageType ||
@@ -2357,10 +2502,11 @@ async function setupTargetToolModes(
                     (entry) => entry.isBase,
                   );
                   const damageDice =
-                    resolveFormulaDamageDice(
+                    resolveFormulaFullDamage(
                       spellFormula,
                       charLevel,
                       castSlotLevel,
+                      { spellcastingModifier, ddbSpell },
                     ) ?? ddbSpell?.damage;
                   const damageType =
                     selectedDamageType ||
@@ -2378,22 +2524,25 @@ async function setupTargetToolModes(
                     const dieFaces = Number(
                       damageDice?.match(/d(\d+)/i)?.[1] ?? 8,
                     );
+                    const isHealing = damageType?.toLowerCase() === "healing";
                     broadcastDDBRoll([
                       {
                         id: `${Date.now()}-spell`,
                         casterName,
                         targetName,
                         actionName: spellName.toUpperCase(),
-                        actionType: "DAMAGE",
+                        actionType: isHealing ? "HEAL" : "DAMAGE",
                         dieType: dieFaces,
                         diceBreakdown: dmg.breakdown.replace(/\+/g, " + "),
                         formula: isExploded
                           ? `${damageDice || ""} ${damageType} (+${explosionCount} Exploded)`.trim()
                           : `${damageDice || ""} ${damageType}`.trim(),
                         total: dmg.total,
-                        subtitle: isExploded
-                          ? `${spellName} • ${explosionCount} Bonus ${explosionCount > 1 ? "Dice" : "Die"}`
-                          : `${spellName} Effect`,
+                        subtitle: isHealing
+                          ? `${spellName} • Healing`
+                          : (isExploded
+                            ? `${spellName} • ${explosionCount} Bonus ${explosionCount > 1 ? "Dice" : "Die"}`
+                            : `${spellName} Effect`),
                         timestamp: Date.now(),
                       },
                     ]);
@@ -2494,9 +2643,16 @@ async function setupTargetToolModes(
           canCast &&
           (isTeleportSpell(selectedSpell) || isAoESpell || isPointTargeted)
         ) {
+          const castContext = await captureCastContext(playerRole, playerID);
+          if (!castContext) {
+            if (playerRole === "GM") {
+              OBR.notification.show("Please select a character token on the map to cast as.", "WARNING");
+            }
+            return;
+          }
           clearAimingOverlay();
           clearAoePreview();
-          await doSpell(selectedSpell, playerID, playerRole === "GM");
+          await doSpell(selectedSpell, playerID, playerRole === "GM", castContext);
 
           if (!getSettingsValue(LOCAL_STORAGE_KEYS.KEEP_SELECTED_TARGETS)) {
             await clearAllTargets();
@@ -2505,17 +2661,9 @@ async function setupTargetToolModes(
             clearAoePreview();
           }
 
-          const activeCaster = await resolveActiveCaster(playerRole, playerID);
-          const charId = activeCaster?.item
-            ? getLinkedDDBCharacterId(activeCaster.item)
-            : null;
-          const ddbChar =
-            (charId ? getCachedDDBCharacter(charId) : null) ??
-            (activeCaster?.item?.name
-              ? findCachedDDBCharacter(activeCaster.item.name)
-              : null);
-          const casterName =
-            ddbChar?.name || activeCaster?.item?.name || "Caster";
+          const charId = castContext.ddbCharacterId;
+          const ddbChar = castContext.ddbCharacter;
+          const casterName = castContext.casterName;
           const spellName = spell?.name || selectedSpell;
 
           const ddbSpell = ddbChar?.spells?.find(
@@ -2523,14 +2671,25 @@ async function setupTargetToolModes(
               s.name.toLowerCase() === selectedSpell.toLowerCase() ||
               s.id === selectedSpell,
           );
+
+          const spellFormula = resolveSpellFormula({
+            id: ddbSpell?.id || selectedSpell,
+            name: spellName,
+            level: ddbSpell?.level ?? 0,
+            school: ddbSpell?.school ?? "",
+            damage: ddbSpell?.damage,
+            damageType: ddbSpell?.damageType,
+          });
+
           const slotChoice = metadata?.[selectedSpellSlotLevelMetadataKey] as
-            | { spellId?: unknown; slotLevel?: unknown }
+            | { spellId?: unknown; casterId?: unknown; slotLevel?: unknown }
             | undefined;
           const castSlotLevel =
             slotChoice?.spellId === selectedSpell &&
+            (!slotChoice.casterId || slotChoice.casterId === castContext.casterTokenId) &&
             typeof slotChoice.slotLevel === "number"
               ? slotChoice.slotLevel
-              : (ddbSpell?.level ?? 2);
+              : (ddbSpell?.level ?? spellFormula.category.level);
 
           if (charId) {
             if (castSlotLevel >= 1) {
@@ -2556,27 +2715,170 @@ async function setupTargetToolModes(
             }
           }
 
-          const spellCard: DDBRollCardData = {
-            id: `${Date.now()}-cast-${selectedSpell}`,
-            casterName: casterName || "Character",
-            targetName: "GROUND / AOE",
-            actionName: spellName.toUpperCase(),
-            actionType: "SPELL",
-            dieType: 20,
-            diceBreakdown:
-              castSlotLevel > 0 ? `Level ${castSlotLevel}` : "Cantrip",
-            formula: ddbSpell?.school
-              ? `${ddbSpell.school} • ${castSlotLevel > 0 ? `Level ${castSlotLevel}` : "Cantrip"}`
-              : castSlotLevel > 0
-                ? `Level ${castSlotLevel}`
-                : "Cantrip",
-            total: "CAST",
-            subtitle: ddbSpell?.concentration
-              ? "Concentration Active"
-              : "Spell Cast",
-            timestamp: Date.now(),
-          };
-          broadcastDDBRoll([spellCard]);
+          if (castContext.casterTokenId) {
+            await checkAndFireActionTriggers(
+              castContext.casterTokenId,
+              "spell",
+            ).catch(() => {});
+          }
+
+          const buffs = getTokenBuffs(castContext.casterItem);
+          const buffMods = getComputedBuffModifiers(buffs);
+          const charLevel = ddbChar?.level ?? 1;
+
+          const spellcastingModifier = resolveSpellcastingModifier(
+            ddbChar,
+            spellFormula,
+            ddbSpell,
+            ddbChar?.spellAttackBonus ?? 5,
+          );
+          const spellSaveDC =
+            (ddbChar?.spellSaveDC ?? 13) + buffMods.spellSaveDcBonus;
+
+          const damageChoice = metadata?.[selectedSpellDamageTypeMetadataKey] as
+            | { spellId?: unknown; damageType?: unknown }
+            | undefined;
+          const selectedDamageType =
+            damageChoice &&
+            damageChoice.spellId === selectedSpell &&
+            typeof damageChoice.damageType === "string"
+              ? damageChoice.damageType
+              : undefined;
+
+          // Detect affected tokens if AoE spell
+          let targetName = "GROUND / AOE";
+          if (aoe) {
+            const template: AoETemplate = {
+              shape: aoe.shape,
+              origin: castContext.position ?? position,
+              cursor: position,
+              sizeFeet: aoe.size,
+            };
+            const affectedCells = getAffectedGridCells(template, grid);
+            const sceneItems = await OBR.scene.items.getItems();
+            const validTokens = sceneItems.filter(
+              (item) => item.visible && isValidCombatTargetToken(item),
+            );
+            const affectedTokens = validTokens.filter((token) =>
+              isTokenInAffectedCells(token.position, affectedCells) ||
+              isTokenInAffectedCells(snapToCellCenter(token.position, grid), affectedCells),
+            );
+            if (affectedTokens.length === 1) {
+              targetName = affectedTokens[0].name || "Target";
+            } else if (affectedTokens.length === 2) {
+              targetName = `${affectedTokens[0].name || "Target 1"}, ${affectedTokens[1].name || "Target 2"} (2 IN AOE)`;
+            } else if (affectedTokens.length > 2) {
+              targetName = `${affectedTokens[0].name || "Target 1"}, ${affectedTokens[1].name || "Target 2"} +${affectedTokens.length - 2} (${affectedTokens.length} IN AOE)`;
+            }
+          }
+
+          const isSaveSpell =
+            spellFormula.interaction?.type === "save" ||
+            Boolean(ddbSpell?.saveOrAttack && ddbSpell.saveOrAttack.includes("Save"));
+          const saveType =
+            spellFormula.interaction?.saveAbility ||
+            ddbSpell?.saveOrAttack?.split(" ")[0] ||
+            "DEX";
+
+          const baseDamage = spellFormula.damage.find((entry) => entry.isBase);
+          const damageDice =
+            resolveFormulaFullDamage(
+              spellFormula,
+              charLevel,
+              castSlotLevel,
+              { spellcastingModifier, ddbSpell },
+            ) ?? ddbSpell?.damage;
+          const damageType =
+            selectedDamageType ||
+            baseDamage?.type ||
+            ddbSpell?.damageType ||
+            "";
+
+          const ddbCards: DDBRollCardData[] = [];
+
+          if (isSaveSpell) {
+            ddbCards.push({
+              id: `${Date.now()}-save`,
+              casterName: casterName || "Character",
+              targetName,
+              actionName: spellName.toUpperCase(),
+              actionType: "SAVE",
+              dieType: 20,
+              diceBreakdown: `DC ${spellSaveDC}`,
+              formula: `${saveType} Save`,
+              total: `DC ${spellSaveDC}`,
+              subtitle: `Target makes ${saveType} Save${ddbSpell?.concentration ? " • Concentration Active" : ""}`,
+              timestamp: Date.now(),
+            });
+          }
+
+          if (damageDice && !["weapon", "weapon+1step"].includes(damageDice)) {
+            const dmg = rollSpellDamageWithMechanics(
+              spellFormula,
+              damageDice,
+              damageType,
+              spellcastingModifier,
+              false,
+            );
+            if (dmg) {
+              const isExploded = Boolean(
+                dmg.explosionCount && dmg.explosionCount > 0,
+              );
+              const explosionCount = dmg.explosionCount ?? 0;
+              const dieFaces = Number(
+                damageDice?.match(/d(\d+)/i)?.[1] ?? 8,
+              );
+              const isHealing = damageType?.toLowerCase() === "healing";
+
+              ddbCards.push({
+                id: `${Date.now()}-dmg`,
+                casterName: casterName || "Character",
+                targetName,
+                actionName: spellName.toUpperCase(),
+                actionType: isHealing ? "HEAL" : "DAMAGE",
+                dieType: dieFaces,
+                diceBreakdown: dmg.breakdown.replace(/\+/g, " + "),
+                formula: isExploded
+                  ? `${damageDice || ""} ${damageType} (+${explosionCount} Exploded)`.trim()
+                  : `${damageDice || ""} ${damageType}`.trim(),
+                total: dmg.total,
+                subtitle: isSaveSpell
+                  ? `Damage (${damageType || "Spell"}) • Half on Save`
+                  : isHealing
+                    ? `${spellName} • Healing`
+                    : (isExploded
+                      ? `${spellName} • ${explosionCount} Bonus ${explosionCount > 1 ? "Dice" : "Die"}`
+                      : `${spellName} Damage`),
+                timestamp: Date.now() + 1,
+              });
+            }
+          }
+
+          if (ddbCards.length === 0) {
+            const spellCard: DDBRollCardData = {
+              id: `${Date.now()}-cast-${selectedSpell}`,
+              casterName: casterName || "Character",
+              targetName,
+              actionName: spellName.toUpperCase(),
+              actionType: "SPELL",
+              dieType: 20,
+              diceBreakdown:
+                castSlotLevel > 0 ? `Level ${castSlotLevel}` : "Cantrip",
+              formula: ddbSpell?.school
+                ? `${ddbSpell.school} • ${castSlotLevel > 0 ? `Level ${castSlotLevel}` : "Cantrip"}`
+                : castSlotLevel > 0
+                  ? `Level ${castSlotLevel}`
+                  : "Cantrip",
+              total: "CAST",
+              subtitle: ddbSpell?.concentration
+                ? "Concentration Active"
+                : "Spell Cast",
+              timestamp: Date.now(),
+            };
+            ddbCards.push(spellCard);
+          }
+
+          broadcastDDBRoll(ddbCards);
 
           await stopAiming();
         }

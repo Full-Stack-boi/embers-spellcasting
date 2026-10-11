@@ -22,6 +22,7 @@ export interface ActiveBuff {
     spellSaveDcBonus?: number;
     spellAttackAdvantage?: boolean;
     attackAdvantage?: boolean;
+    attackBonus?: number;
     damageBonus?: number;
     activatedAt: number;
 }
@@ -55,6 +56,15 @@ export const KNOWN_BUFFS: Record<string, Omit<ActiveBuff, "activatedAt">> = {
         durationText: "1 minute",
         description: "AC bonus equal to INT mod, +10 ft speed, Advantage on Acrobatics checks.",
     },
+    channeled_attack: {
+        id: "channeled_attack",
+        name: "Channeled Attack",
+        icon: "⚡",
+        source: "Spellblade",
+        durationText: "Next attack",
+        description: "Bonus to weapon attack roll equal to Intelligence, Wisdom, or Charisma modifier (minimum +1).",
+        attackBonus: 1,
+    },
 };
 
 /**
@@ -71,7 +81,8 @@ export function isActivatableBuffFeature(name?: string | null, description?: str
         lower.includes("rage") ||
         lower.includes("bladesong") ||
         lower.includes("frenzy") ||
-        lower.includes("starry form")
+        lower.includes("starry form") ||
+        lower.includes("channeled attack")
     );
 }
 
@@ -94,12 +105,14 @@ export function getComputedBuffModifiers(buffs: ActiveBuff[]) {
     let spellSaveDcBonus = 0;
     let hasSpellAdvantage = false;
     let hasAttackAdvantage = false;
+    let attackBonus = 0;
     let damageBonus = 0;
 
     for (const buff of buffs) {
         if (buff.spellSaveDcBonus) spellSaveDcBonus += buff.spellSaveDcBonus;
         if (buff.spellAttackAdvantage) hasSpellAdvantage = true;
         if (buff.attackAdvantage) hasAttackAdvantage = true;
+        if (buff.attackBonus) attackBonus += buff.attackBonus;
         if (buff.damageBonus) damageBonus += buff.damageBonus;
     }
 
@@ -107,6 +120,7 @@ export function getComputedBuffModifiers(buffs: ActiveBuff[]) {
         spellSaveDcBonus,
         hasSpellAdvantage,
         hasAttackAdvantage,
+        attackBonus,
         damageBonus
     };
 }

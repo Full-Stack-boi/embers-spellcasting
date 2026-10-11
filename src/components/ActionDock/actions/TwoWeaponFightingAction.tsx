@@ -4,6 +4,7 @@ interface TwoWeaponFightingActionProps {
     enabled: boolean;
     offhandWeapon?: DDBWeaponAttack;
     onActivate: () => void;
+    onSwapHands?: () => void;
     showUnavailable?: boolean;
     detailedTitle?: boolean;
 }
@@ -12,6 +13,7 @@ export function TwoWeaponFightingAction({
     enabled,
     offhandWeapon,
     onActivate,
+    onSwapHands,
     showUnavailable = false,
     detailedTitle = false,
 }: TwoWeaponFightingActionProps) {
@@ -34,7 +36,19 @@ export function TwoWeaponFightingAction({
         >
             <div className="ddb-card-accent-bar" />
             <div className="ddb-card-content">
-                <span className="ddb-card-name">Two-Weapon Fighting</span>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+                    <span className="ddb-card-name">Two-Weapon Fighting</span>
+                    {onSwapHands && (
+                        <button
+                            type="button"
+                            className="ddb-hand-badge offhand"
+                            onClick={(e) => { e.stopPropagation(); onSwapHands(); }}
+                            title="Click to Swap Main Hand & Off Hand"
+                        >
+                            ⇄ Swap Hands
+                        </button>
+                    )}
+                </div>
                 {offhandWeapon && (
                     <span className="ddb-card-meta">
                         ({offhandWeapon.name}: +{offhandWeapon.toHit} to hit, {offhandWeapon.damage} {offhandWeapon.damageType})

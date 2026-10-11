@@ -12,6 +12,19 @@ export type ActionGridTileProps = {
     shortcut: number;
     selected?: boolean;
     disabled?: boolean;
+    handBadge?: {
+        type: "main" | "offhand";
+        label: string;
+        onClick?: () => void;
+    };
+    actionBadge?: {
+        label: string;
+        title?: string;
+        onClick?: () => void;
+        className?: string;
+    };
+    badgeText?: string;
+    badgeClass?: string;
     onActivate: () => void;
     onContextMenu?: (event: React.MouseEvent<HTMLButtonElement>) => void;
 };
@@ -124,6 +137,10 @@ export const ActionGridTile: React.FC<ActionGridTileProps> = ({
     shortcut,
     selected = false,
     disabled = false,
+    handBadge,
+    actionBadge,
+    badgeText,
+    badgeClass,
     onActivate,
     onContextMenu,
 }) => {
@@ -150,6 +167,44 @@ export const ActionGridTile: React.FC<ActionGridTileProps> = ({
             <span className="ddb-bg3-icon-tile-shortcut" aria-hidden="true">{shortcut}</span>
             <span className="ddb-bg3-icon-tile-art" aria-hidden="true">{icon}</span>
             {selected && <span className="ddb-bg3-icon-tile-selected" aria-hidden="true">✓</span>}
+            {handBadge && (
+                <span
+                    className={`ddb-bg3-tile-hand-badge ${handBadge.type}`}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        handBadge.onClick?.();
+                    }}
+                    onContextMenu={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        handBadge.onClick?.();
+                    }}
+                    title={`${handBadge.type === "main" ? "Main Hand" : "Off Hand"} - Click or Right-click to Swap Hands`}
+                >
+                    {handBadge.label}
+                </span>
+            )}
+            {actionBadge && (
+                <span
+                    className={`ddb-bg3-tile-action-badge ${actionBadge.className || ""}`}
+                    onClick={(e) => {
+                        if (actionBadge.onClick) {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            actionBadge.onClick();
+                        }
+                    }}
+                    title={actionBadge.title || actionBadge.label}
+                >
+                    {actionBadge.label}
+                </span>
+            )}
+            {badgeText && !handBadge && (
+                <span className={`ddb-bg3-tile-pill-badge ${badgeClass || ""}`}>
+                    {badgeText}
+                </span>
+            )}
         </button>
     );
 };

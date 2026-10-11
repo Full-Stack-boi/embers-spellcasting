@@ -1,5 +1,5 @@
 import React from "react";
-import { IconCastLightning, IconDiceD20, IconDragon, IconFire } from "../shared/Bg3Icons";
+import { IconCastLightning, IconDiceD20, IconDragon, IconFire, IconHeart } from "../shared/Bg3Icons";
 import type { ActiveBuff } from "../../../services/buffService";
 import { isActivatableBuffFeature } from "../../../services/buffService";
 import { findMatchingActionFormula } from "../../../assets/manual-formulas/index";
@@ -33,6 +33,7 @@ interface DetailDrawerActionsProps {
     onBonusUnarmedStrike: () => void;
     onOpenUpcastPicker: (spell: DockSpell) => void;
     onToggleItemAttunement: (item: DDBInventoryItem) => void;
+    onToggleEquipItem?: (item: DDBInventoryItem) => void;
     onClearHistory: () => void;
     onClose: () => void;
     onFeatureOptionClick?: (feature: FeatureItem, optionId: string) => void;
@@ -61,6 +62,7 @@ export const DetailDrawerActions: React.FC<DetailDrawerActionsProps> = ({
     onBonusUnarmedStrike,
     onOpenUpcastPicker,
     onToggleItemAttunement,
+    onToggleEquipItem,
     onClearHistory,
     onClose,
     onFeatureOptionClick,
@@ -81,7 +83,20 @@ export const DetailDrawerActions: React.FC<DetailDrawerActionsProps> = ({
                     <button type="button" className="ddb-drawer-action-btn" onClick={() => onWeaponDamageRoll(item.weapon, activeRider)}>
                         <IconFire size={12} /><span>Roll Damage ({item.weapon.damage})</span>
                     </button>
-                    <button type="button" className="ddb-drawer-action-btn" onClick={() => onSelectWeapon(item.weapon, "melee")}><span>Aim</span></button>
+                    {item.weapon.hasThrown ? (
+                        <>
+                            <button type="button" className="ddb-drawer-action-btn" onClick={() => onSelectWeapon(item.weapon, "melee")}>
+                                <span>Aim Melee (5 ft.)</span>
+                            </button>
+                            <button type="button" className="ddb-drawer-action-btn thrown-btn" onClick={() => onSelectWeapon(item.weapon, "thrown")} title={`Throw ${item.weapon.name} (${item.weapon.thrownRange || 20}/${item.weapon.thrownLongRange || 60} ft.)`}>
+                                <span>Aim Thrown ({item.weapon.thrownRange || 20}/{item.weapon.thrownLongRange || 60} ft.)</span>
+                            </button>
+                        </>
+                    ) : (
+                        <button type="button" className="ddb-drawer-action-btn" onClick={() => onSelectWeapon(item.weapon, "melee")}>
+                            <span>Aim</span>
+                        </button>
+                    )}
                 </>
             )}
 
@@ -119,11 +134,21 @@ export const DetailDrawerActions: React.FC<DetailDrawerActionsProps> = ({
                                 <IconDiceD20 size={12} /><span>Attack ({item.spell.hitOrDc})</span>
                             </button>
                         )}
-                        {item.spell.damage && (
-                            <button type="button" className={`ddb-drawer-action-btn ${item.spell.level > 0 && !item.spell.isPrepared ? "disabled" : ""}`} disabled={item.spell.level > 0 && !item.spell.isPrepared} onClick={() => onSpellDamageRoll(item.spell)} title={item.spell.level > 0 && !item.spell.isPrepared ? "Spell is not prepared" : undefined}>
-                                <IconFire size={12} /><span>Damage ({item.spell.damage})</span>
-                            </button>
-                        )}
+                        {item.spell.damage && (() => {
+                            const isHealing = item.spell.damageType?.toLowerCase() === "healing";
+                            return (
+                                <button
+                                    type="button"
+                                    className={`ddb-drawer-action-btn ${isHealing ? "heal-btn" : ""} ${item.spell.level > 0 && !item.spell.isPrepared ? "disabled" : ""}`}
+                                    disabled={item.spell.level > 0 && !item.spell.isPrepared}
+                                    onClick={() => onSpellDamageRoll(item.spell)}
+                                    title={item.spell.level > 0 && !item.spell.isPrepared ? "Spell is not prepared" : undefined}
+                                >
+                                    {isHealing ? <IconHeart size={12} /> : <IconFire size={12} />}
+                                    <span>{isHealing ? "Heal" : "Damage"} ({item.spell.damage})</span>
+                                </button>
+                            );
+                        })()}
                         <button
                             type="button"
                             className={`ddb-drawer-action-btn primary ${item.spell.level > 0 && !item.spell.isPrepared ? "disabled" : ""}`}
@@ -179,6 +204,15 @@ export const DetailDrawerActions: React.FC<DetailDrawerActionsProps> = ({
                         </button>
                     ))}
                 </div>
+            )}
+            {item.type === "item" && onToggleEquipItem && (
+                <button
+                    type="button"
+                    className={`ddb-drawer-action-btn ${item.item.equipped ? "secondary" : "primary"}`}
+                    onClick={() => onToggleEquipItem(item.item)}
+                >
+                    <span>{item.item.equipped ? "Unequip Item" : "Equip Item"}</span>
+                </button>
             )}
             {item.type === "item" && (item.item.canAttune || item.item.requiresAttunement || item.item.isAttuned) && (
                 <button type="button" className={`ddb-drawer-action-btn ${item.item.isAttuned ? "secondary" : "primary"}`} onClick={() => onToggleItemAttunement(item.item)}>

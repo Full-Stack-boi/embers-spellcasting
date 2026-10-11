@@ -16,6 +16,7 @@ export interface InventoryTabProps {
     onSearchChange: (search: string) => void;
     items: DDBInventoryItem[];
     onSelectItem: (item: DDBInventoryItem) => void;
+    onToggleEquip: (item: DDBInventoryItem) => void;
 }
 
 export const InventoryTab: React.FC<InventoryTabProps> = ({
@@ -29,6 +30,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
     onSearchChange,
     items,
     onSelectItem,
+    onToggleEquip,
 }) => (
     <div className="ddb-tab-content-panel ddb-inventory-panel">
         <div className="ddb-inv-summary-bar">
@@ -111,9 +113,16 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
                                 onClick={() => onSelectItem(item)}
                                 title="Click to view details"
                             >
-                                <td className="td-equipped">
+                                <td className="td-equipped" onClick={event => event.stopPropagation()}>
                                     <div className="ddb-status-badges-stack">
-                                        {item.equipped ? <span className="ddb-equipped-badge">EQUIPPED</span> : <span className="ddb-unequipped-dot">—</span>}
+                                        <button
+                                            type="button"
+                                            className={`ddb-equip-toggle-btn ${item.equipped ? "is-equipped" : ""}`}
+                                            onClick={() => onToggleEquip(item)}
+                                            title={item.equipped ? "Click to Unequip" : "Click to Equip"}
+                                        >
+                                            {item.equipped ? "EQUIPPED" : "EQUIP"}
+                                        </button>
                                         {item.isAttuned && <span className="ddb-attuned-badge" title="Attuned (Augment)">ATTUNED</span>}
                                         {!item.isAttuned && (item.canAttune || item.requiresAttunement) && <span className="ddb-can-attune-badge" title="Requires Attunement">ATTUNE</span>}
                                     </div>

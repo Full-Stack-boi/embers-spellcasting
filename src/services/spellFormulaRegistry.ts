@@ -158,11 +158,22 @@ export function buildRegistry(spells: DDBParsedSpell[]): SpellFormulaRegistry {
     return new SpellFormulaRegistry(formulas);
 }
 
-/** A singleton registry — replaced on each character sync. */
+/** Character-scoped registries and fallback active registry */
+const _characterRegistries = new Map<number | string, SpellFormulaRegistry>();
 let _registry: SpellFormulaRegistry | null = null;
 
-export function setActiveRegistry(registry: SpellFormulaRegistry): void {
+export function setActiveRegistry(registry: SpellFormulaRegistry, characterId?: number | string): void {
     _registry = registry;
+    if (characterId != null) {
+        _characterRegistries.set(characterId, registry);
+    }
+}
+
+export function getRegistry(characterId?: number | string): SpellFormulaRegistry | null {
+    if (characterId != null && _characterRegistries.has(characterId)) {
+        return _characterRegistries.get(characterId)!;
+    }
+    return _registry;
 }
 
 export function getActiveRegistry(): SpellFormulaRegistry | null {
